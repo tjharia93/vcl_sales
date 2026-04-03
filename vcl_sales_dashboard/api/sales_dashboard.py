@@ -709,3 +709,114 @@ def get_customer_snapshot(customer):
     except Exception as e:
         frappe.log_error(f"get_customer_snapshot error: {str(e)}")
         return {"status": "error", "message": str(e), "data": {}}
+
+
+@frappe.whitelist()
+def get_outstanding_invoices(filters=None):
+    """Return outstanding Sales Invoices with summary KPIs. Supports sales_person, territory, date, search filters."""
+    try:
+        if isinstance(filters, str):
+            filters = frappe.parse_json(filters)
+
+        role_filter = get_role_filter()
+
+        conditions = ["si.docstatus = 1", "si.outstanding_amount > 0"]
+        values = {"today": today()}
+
+        # Role-based filter
+        if role_filter:
+            conditions.append("si.owner = %(role_owner)s")
+            values["role_owner"] = role_filter
+
+        # Sales Person filter — check Sales Team child table
+        if filters and filters.get("sales_person"):
+            conditions.append("""EXISTS (
+                SELECT 1 FROM `tabSales Team` st
+                WHERE st.parent = si.name AND st.parenttype = 'Sales Invoice'
+                AND st.sales_person = %(sales_person)s
+            )""")
+            values["sales_person"] = filters["sales_person"]
+
+        # Territory filter
+        if filters and filters.get("territory"):
+            conditions.append("si.territory = %(territory)s")
+            values["territory"] = filters["territory"]
+
+        # Date range filter
+        if filters and filters.get("date_from"):
+            conditions.append("si.posting_date >= %(date_from)s")
+            values["date_from"] = filters["date_from"]
+        if filters and filters.get("date_to"):
+            conditions.append("si.posting_date <= %(date_to)s")
+            values["date_to"] = filters["date_to"]
+
+        # Status filter (overdue / not_overdue)
+        if filters and filters.get("status_filter") == "overdue":
+            conditions.append("si.due_date < %(today)s")
+        elif filters and filters.get("status_filter") == "not_overdue":
+            conditions.append("si.due_date >= %(today)s")
+
+        # Search filter
+        if filters and filters.get("search") and len(filters["search"]) >= 2:
+            conditions.append("(si.customer_name LIKE %(search)s OR si.name LIKE %(search)s OR si.customer LIKE %(search)s)")
+            values["search"] = f"%{filters['search']}%"
+
+        where = " AND ".join(conditions)
+
+        # Get invoices
+        invoices = frappe.db.sql(f"""
+            SELECT
+                si.name, si.customer, si.customer_name,
+                si.posting_date, si.due_date,
+                si.grand_total, si.outstanding_amount,
+                si.territory, si.owner, si.status,
+                CASE WHEN si.due_date < %(today)s THEN 1 ELSE 0 END as is_overdue
+            FROM `tabSales Invoice` si
+            WHERE {where}
+            ORDER BY si.outstanding_amount DESC
+            LIMIT 100
+        """, values, as_dict=True)
+
+        # Get sales person for each invoice from Sales Team child
+        for inv in invoices:
+            sp = frappe.db.get_value(
+                "Sales Team",
+                {"parent": inv["name"], "parenttype": "Sales Invoice"},
+                "sales_person"
+            )
+            inv["sales_person"] = sp or ""
+            inv["grand_total"] = flt(inv.get("grand_total"))
+            inv["outstanding_amount"] = flt(inv.get("outstanding_amount"))
+            inv["posting_date"] = str(inv["posting_date"]) if inv.get("posting_date") else ""
+            inv["due_date"] = str(inv["due_date"]) if inv.get("due_date") else ""
+            if not inv.get("customer_name"):
+                inv["customer_name"] = inv.get("customer", "")
+            if not inv.get("territory"):
+                inv["territory"] = ""
+
+        # Summary KPIs
+        summary_sql = frappe.db.sql(f"""
+            SELECT
+                COUNT(*) as invoice_count,
+                COUNT(DISTINCT si.customer) as customer_count,
+                COALESCE(SUM(si.outstanding_amount), 0) as total_outstanding,
+                COALESCE(SUM(CASE WHEN si.due_date < %(today)s THEN si.outstanding_amount ELSE 0 END), 0) as total_overdue,
+                SUM(CASE WHEN si.due_date < %(today)s THEN 1 ELSE 0 END) as overdue_count,
+                COUNT(DISTINCT CASE WHEN si.due_date < %(today)s THEN si.customer END) as overdue_customer_count
+            FROM `tabSales Invoice` si
+            WHERE {where}
+        """, values, as_dict=True)[0]
+
+        summary = {
+            "invoice_count": cint(summary_sql.invoice_count),
+            "customer_count": cint(summary_sql.customer_count),
+            "total_outstanding": flt(summary_sql.total_outstanding),
+            "total_overdue": flt(summary_sql.total_overdue),
+            "overdue_count": cint(summary_sql.overdue_count),
+            "overdue_customer_count": cint(summary_sql.overdue_customer_count),
+        }
+
+        return {"status": "ok", "data": {"invoices": invoices, "summary": summary}}
+    except Exception as e:
+        frappe.log_error(f"get_outstanding_invoices error: {str(e)}")
+        return {"status": "error", "message": str(e), "data": {"invoices": [], "summary": {}}}
