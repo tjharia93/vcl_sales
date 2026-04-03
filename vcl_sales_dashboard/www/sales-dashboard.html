@@ -1,2 +1,1079 @@
-<!-- Phase 1: Sales Dashboard frontend — to be built -->
-<p>Sales Dashboard loading...</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCL Sales Dashboard</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-surface-alt: #fafbfc;
+      --bg-soft: #f0f2f5;
+
+      --border-color: #d9dee7;
+      --border-strong: #c9d0db;
+
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --space-8: 40px;
+
+      --container-max: 1400px;
+      --table-row-height: 44px;
+      --transition-fast: 0.15s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-dashboard);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a {
+      color: var(--vcl-primary);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page-shell {
+      min-height: 100vh;
+      background: var(--bg-page);
+    }
+
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    .topbar__inner,
+    .page-container {
+      width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+
+    .topbar__inner {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: 0.2px;
+    }
+
+    .brand__mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--vcl-primary);
+      color: var(--text-on-dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand__text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .brand__name {
+      font-size: 15px;
+    }
+
+    .brand__sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+
+    .nav__link {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .nav__link:hover {
+      text-decoration: none;
+      background: var(--bg-soft);
+      color: var(--text-primary);
+    }
+
+    .nav__link.is-active {
+      background: rgba(43, 57, 144, 0.08);
+      color: var(--vcl-primary);
+    }
+
+    .page-container {
+      padding-top: var(--space-7);
+      padding-bottom: 60px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    .page-header__meta {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .eyebrow {
+      color: var(--vcl-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      color: var(--text-primary);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    h1 {
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: 22px;
+      line-height: 1.25;
+    }
+
+    h3 {
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    h4 {
+      font-size: 16px;
+      line-height: 1.35;
+    }
+
+    .type-body {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .type-small {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .type-label {
+      font-family: var(--font-data);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .text-muted { color: var(--text-muted); }
+    .text-secondary { color: var(--text-secondary); }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+
+    .grid {
+      display: grid;
+      gap: var(--space-5);
+    }
+
+    .grid--2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+    }
+
+    .card__body {
+      padding: var(--space-5);
+    }
+
+    .btn-row,
+    .inline-filters {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font-data);
+      cursor: pointer;
+      background: var(--bg-soft);
+      color: var(--text-primary);
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    .btn--primary {
+      background: var(--vcl-primary);
+      color: var(--text-on-dark);
+      border-color: var(--vcl-primary);
+    }
+
+    .btn--primary:hover {
+      background: var(--vcl-primary-dark);
+      border-color: var(--vcl-primary-dark);
+      text-decoration: none;
+    }
+
+    .btn--outline {
+      background: var(--bg-surface);
+      color: var(--vcl-primary);
+      border-color: var(--border-strong);
+    }
+
+    .btn--secondary {
+      background: var(--vcl-secondary);
+      color: var(--text-on-dark);
+      border-color: var(--vcl-secondary);
+    }
+
+    .summary-banner {
+      background: linear-gradient(180deg, rgba(43,57,144,0.04), rgba(43,57,144,0.01));
+      border: 1px solid rgba(43,57,144,0.10);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      margin-bottom: var(--space-6);
+    }
+
+    .summary-banner__grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: var(--space-5);
+      align-items: center;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+
+    .kpi-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: var(--space-5);
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-card__label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .kpi-card__value {
+      font-size: 28px;
+      line-height: 1.15;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-card__meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      font-family: var(--font-data);
+    }
+
+    .pill--open {
+      background: var(--info-bg);
+      color: var(--info);
+      border-color: #cfe0ff;
+    }
+
+    .pill--pending {
+      background: var(--warning-bg);
+      color: var(--warning);
+      border-color: #f5dfaa;
+    }
+
+    .pill--overdue {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: #f6c7c2;
+    }
+
+    .pill--completed {
+      background: var(--success-bg);
+      color: var(--success);
+      border-color: #bfe3cb;
+    }
+
+    .pill--draft {
+      background: #f5f0ff;
+      color: #6941c6;
+      border-color: #dfd1ff;
+    }
+
+    .filter-group,
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 170px;
+    }
+
+    .field--grow {
+      flex: 1 1 260px;
+    }
+
+    label {
+      font-family: var(--font-data);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 40px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      padding: 10px 12px;
+      font-family: var(--font-data);
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-surface);
+      font-variant-numeric: tabular-nums;
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--vcl-primary);
+      box-shadow: 0 0 0 3px rgba(43, 57, 144, 0.10);
+    }
+
+    .search-input {
+      position: relative;
+    }
+
+    .search-input input {
+      padding-left: 40px;
+    }
+
+    .search-input::before {
+      content: "⌕";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      border: 1px solid #f5dfaa;
+      background: var(--warning-bg);
+      margin-bottom: var(--space-6);
+    }
+
+    .alert__icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      background: rgba(255,255,255,0.75);
+      flex: 0 0 auto;
+      font-family: var(--font-data);
+    }
+
+    .table-wrap {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-data);
+      font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+      background: #f7f8fa;
+      color: var(--text-secondary);
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      font-size: 13px;
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-bottom: 1px solid #eef1f5;
+      vertical-align: middle;
+      min-height: var(--table-row-height);
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfd;
+    }
+
+    tbody tr:hover {
+      background: #f7faff;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .table-note {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      background: #fafbfc;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-family: var(--font-data);
+    }
+
+    .progress-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .progress-row {
+      display: grid;
+      gap: 8px;
+    }
+
+    .progress-row__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-family: var(--font-data);
+      font-size: 13px;
+    }
+
+    .progress-bar {
+      height: 10px;
+      background: #eef2f7;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar__fill {
+      height: 100%;
+      background: var(--vcl-primary);
+      border-radius: 999px;
+    }
+
+    .mini-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-4);
+    }
+
+    .mini-stat {
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-alt);
+      border: 1px solid var(--border-color);
+    }
+
+    .mini-stat__label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .mini-stat__value {
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .mb-0 { margin-bottom: 0; }
+    .mb-5 { margin-bottom: 20px; }
+    .mt-5 { margin-top: 20px; }
+
+    @media (max-width: 1200px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .summary-banner__grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .topbar__inner,
+      .page-container {
+        padding-left: var(--space-4);
+        padding-right: var(--space-4);
+      }
+
+      .grid--2,
+      .kpi-grid,
+      .mini-stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 26px; }
+      h2 { font-size: 20px; }
+      h3 { font-size: 17px; }
+
+      .topbar__inner {
+        min-height: auto;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .page-container {
+        padding-top: var(--space-6);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand">
+          <div class="brand__mark">VCL</div>
+          <div class="brand__text">
+            <span class="brand__name">Vimit Converters Limited</span>
+            <span class="brand__sub">Sales Dashboard</span>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a class="nav__link is-active" href="#">Sales</a>
+          <a class="nav__link" href="#">Customers</a>
+          <a class="nav__link" href="#">Orders</a>
+          <a class="nav__link" href="#">Collections</a>
+          <a class="nav__link" href="#">Reports</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-container">
+      <section class="page-header">
+        <div class="page-header__meta">
+          <span class="eyebrow">Sales Operations</span>
+          <h1>VCL Sales Dashboard</h1>
+          <p class="type-body text-secondary mb-0">
+            Practical daily view for sales follow-up, open orders, customer collections, rep performance,
+            and operational exceptions.
+          </p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn--outline">Export Summary</button>
+          <button class="btn btn--primary">Create Sales Action</button>
+        </div>
+      </section>
+
+      <section class="summary-banner">
+        <div class="summary-banner__grid">
+          <div>
+            <div class="type-label">Management View</div>
+            <h2 style="margin-top:10px; margin-bottom:10px;">Today’s commercial priorities</h2>
+            <p class="type-body text-secondary mb-0">
+              Follow up overdue collections, protect dispatch for high-value orders, and push pending quotations
+              into confirmed sales orders before the afternoon cut-off.
+            </p>
+          </div>
+
+          <div class="mini-stat">
+            <div class="mini-stat__label">Month Sales</div>
+            <div class="mini-stat__value">KES 48.6M</div>
+            <div class="type-small">76% of monthly target</div>
+          </div>
+
+          <div class="mini-stat">
+            <div class="mini-stat__label">Outstanding AR</div>
+            <div class="mini-stat__value">KES 19.4M</div>
+            <div class="type-small">KES 6.2M overdue</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card mb-5">
+        <div class="card__body">
+          <div class="inline-filters">
+            <div class="field field--grow">
+              <label>Search</label>
+              <div class="search-input">
+                <input type="text" value="Search customer, sales rep, order, quotation or area" />
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <label>Sales Rep</label>
+              <select><option>All Sales Reps</option></select>
+            </div>
+
+            <div class="filter-group">
+              <label>Region</label>
+              <select><option>All Regions</option></select>
+            </div>
+
+            <div class="filter-group">
+              <label>Status</label>
+              <select><option>All Statuses</option></select>
+            </div>
+
+            <div class="filter-group">
+              <label>As At Date</label>
+              <input type="date" value="2026-04-03" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card__label">Sales This Month</div>
+          <div class="kpi-card__value">KES 48.6M</div>
+          <div class="kpi-card__meta">Target: KES 64.0M</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Open Quotations</div>
+          <div class="kpi-card__value">37</div>
+          <div class="kpi-card__meta">11 follow-up today</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Orders Pending Dispatch</div>
+          <div class="kpi-card__value">24</div>
+          <div class="kpi-card__meta">7 at risk due to payment hold</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card__label">Overdue Collections</div>
+          <div class="kpi-card__value">KES 6.2M</div>
+          <div class="kpi-card__meta">Across 18 customers</div>
+        </div>
+      </section>
+
+      <section class="alert">
+        <div class="alert__icon">!</div>
+        <div>
+          <div class="font-bold">Immediate attention required</div>
+          <div class="type-body">
+            Four major customers have dispatch-ready orders, but their accounts are outside approved credit terms.
+          </div>
+        </div>
+      </section>
+
+      <section class="grid grid--2 mb-5">
+        <div class="table-wrap">
+          <div class="card__body" style="padding-bottom:0;">
+            <div class="section-title">
+              <div>
+                <div class="type-label">Main Action Table</div>
+                <h3>Priority customer follow-up</h3>
+              </div>
+              <button class="btn btn--outline">View Full List</button>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Sales Rep</th>
+                <th>Status</th>
+                <th class="text-right">Exposure</th>
+                <th>Next Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">Mathai Supermarket Ltd</td>
+                <td>Shiro</td>
+                <td><span class="pill pill--overdue">Overdue</span></td>
+                <td class="text-right">KES 1.85M</td>
+                <td>Call accounts + confirm payment date</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Leelsnet Exams & Stationers</td>
+                <td>Simon</td>
+                <td><span class="pill pill--pending">Pending</span></td>
+                <td class="text-right">KES 920K</td>
+                <td>Approve revised quotation</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Tuskys Schools Division</td>
+                <td>Joyce</td>
+                <td><span class="pill pill--open">Open</span></td>
+                <td class="text-right">KES 2.40M</td>
+                <td>Confirm dispatch release</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Greenfield Bookshop</td>
+                <td>Nelson</td>
+                <td><span class="pill pill--draft">Draft</span></td>
+                <td class="text-right">KES 410K</td>
+                <td>Send final quotation</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Jambo Retailers</td>
+                <td>Gideon</td>
+                <td><span class="pill pill--completed">Completed</span></td>
+                <td class="text-right">KES 0</td>
+                <td>Payment received</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="table-note">
+            Use this block for daily actions, dispatch holds, collection follow-up, and quotation conversion.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__body">
+            <div class="section-title">
+              <div>
+                <div class="type-label">Sales Pipeline</div>
+                <h3>Rep progress vs target</h3>
+              </div>
+            </div>
+
+            <div class="progress-list">
+              <div class="progress-row">
+                <div class="progress-row__top"><span>Shiro</span><span>KES 12.4M / 15.0M</span></div>
+                <div class="progress-bar"><div class="progress-bar__fill" style="width:83%;"></div></div>
+              </div>
+
+              <div class="progress-row">
+                <div class="progress-row__top"><span>Nelson</span><span>KES 9.8M / 13.0M</span></div>
+                <div class="progress-bar"><div class="progress-bar__fill" style="width:75%;"></div></div>
+              </div>
+
+              <div class="progress-row">
+                <div class="progress-row__top"><span>Gideon</span><span>KES 8.1M / 11.0M</span></div>
+                <div class="progress-bar"><div class="progress-bar__fill" style="width:74%;"></div></div>
+              </div>
+
+              <div class="progress-row">
+                <div class="progress-row__top"><span>Joyce</span><span>KES 10.2M / 14.0M</span></div>
+                <div class="progress-bar"><div class="progress-bar__fill" style="width:73%;"></div></div>
+              </div>
+
+              <div class="progress-row">
+                <div class="progress-row__top"><span>Management</span><span>KES 8.1M / 11.0M</span></div>
+                <div class="progress-bar"><div class="progress-bar__fill" style="width:74%;"></div></div>
+              </div>
+            </div>
+
+            <div class="mini-stat-grid mt-5">
+              <div class="mini-stat">
+                <div class="mini-stat__label">Quotation Conversion</div>
+                <div class="mini-stat__value">42%</div>
+                <div class="type-small">Month to date</div>
+              </div>
+
+              <div class="mini-stat">
+                <div class="mini-stat__label">Average Collection Days</div>
+                <div class="mini-stat__value">49</div>
+                <div class="type-small">Target below 45</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid grid--2 mb-5">
+        <div class="table-wrap">
+          <div class="card__body" style="padding-bottom:0;">
+            <div class="section-title">
+              <div>
+                <div class="type-label">Collections</div>
+                <h3>Overdue receivables summary</h3>
+              </div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Bucket</th>
+                <th class="text-right">Balance</th>
+                <th>Rep</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">Mathai Supermarket Ltd</td>
+                <td>61–90 Days</td>
+                <td class="text-right">KES 1.85M</td>
+                <td>Shiro</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Tuskys Schools Division</td>
+                <td>31–60 Days</td>
+                <td class="text-right">KES 1.42M</td>
+                <td>Joyce</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Leelsnet Exams & Stationers</td>
+                <td>31–60 Days</td>
+                <td class="text-right">KES 920K</td>
+                <td>Simon</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">Greenfield Bookshop</td>
+                <td>90+ Days</td>
+                <td class="text-right">KES 615K</td>
+                <td>Nelson</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="table-note">
+            Good place to connect ageing, approvals, and release decisions later.
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="card__body" style="padding-bottom:0;">
+            <div class="section-title">
+              <div>
+                <div class="type-label">Orders</div>
+                <h3>Dispatch and order summary</h3>
+              </div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Order Ref</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th class="text-right">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-semibold">SO-00241</td>
+                <td>Back to School Exercise Books</td>
+                <td><span class="pill pill--pending">Pending Dispatch</span></td>
+                <td class="text-right">KES 2.65M</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">SO-00248</td>
+                <td>Computer Paper Plain</td>
+                <td><span class="pill pill--open">In Production</span></td>
+                <td class="text-right">KES 1.18M</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">SO-00252</td>
+                <td>Labels Printed Roll</td>
+                <td><span class="pill pill--overdue">At Risk</span></td>
+                <td class="text-right">KES 860K</td>
+              </tr>
+              <tr>
+                <td class="font-semibold">SO-00255</td>
+                <td>NCR Stationery</td>
+                <td><span class="pill pill--completed">Ready</span></td>
+                <td class="text-right">KES 530K</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="table-note">
+            Useful for linking sales, production, and dispatch oversight in one screen.
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__body">
+          <div class="section-title">
+            <div>
+              <div class="type-label">Quick Actions</div>
+              <h3>Sales team actions</h3>
+            </div>
+            <div class="type-small">Static prototype buttons for future integration</div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn--primary">Create Quotation</button>
+            <button class="btn btn--outline">Log Collection Follow-up</button>
+            <button class="btn btn--outline">View Ageing Report</button>
+            <button class="btn btn--secondary">Escalate Credit Hold</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
