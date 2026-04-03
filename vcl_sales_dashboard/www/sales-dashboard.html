@@ -551,20 +551,20 @@
           <div class="mapping-grid">
             <div class="mapping-box">
               <div class="type-label">KPI APIs</div>
-              <div class="code-chip">/api/method/vcl.api.sales_dashboard.get_kpis</div>
+              <div class="code-chip">/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_dashboard_summary</div>
               <ul>
-                <li>Expected keys: sales_order_total, open_quotations, pending_dispatch, overdue_receivables</li>
+                <li>Expected keys: open_orders_value, open_quotations_count, overdue_invoice_count, overdue_invoice_value</li>
                 <li>Missing keys are logged as invalid mapping errors</li>
                 <li>HTTP 403 / 401 is logged as permission failure</li>
               </ul>
             </div>
             <div class="mapping-box">
               <div class="type-label">Action Table API</div>
-              <div class="code-chip">/api/method/vcl.api.sales_dashboard.get_priority_actions</div>
+              <div class="code-chip">/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_action_queue</div>
               <ul>
-                <li>Expected array key: rows</li>
-                <li>Empty rows array is logged as empty query result</li>
-                <li>Malformed row objects are logged as mapping errors</li>
+                <li>Expected array key: data (array of action objects)</li>
+                <li>Each row requires: doctype, docname, customer, stage, recommended_action</li>
+                <li>Empty data array is logged as empty query result</li>
               </ul>
             </div>
             <div class="mapping-box">
@@ -600,8 +600,8 @@
       const debugStore = [];
 
       const endpointMap = {
-        kpis: "/api/method/vcl.api.sales_dashboard.get_kpis",
-        priorityActions: "/api/method/vcl.api.sales_dashboard.get_priority_actions"
+        kpis: "/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_dashboard_summary",
+        priorityActions: "/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_action_queue"
       };
 
       function pushDebug(type, message, source) {
@@ -719,25 +719,39 @@
           return;
         }
 
+        if (message.status === "error") {
+          pushDebug("error", "KPI API returned error: " + (message.message || "unknown"), "loadKpisFromApi");
+          mockLoadKpisFallback();
+          return;
+        }
+
+        var d = message.data || message;
+
         const requiredKeys = [
-          "sales_order_total",
-          "open_quotations",
-          "pending_dispatch",
-          "overdue_receivables"
+          "open_orders_value",
+          "open_quotations_count",
+          "overdue_invoice_count",
+          "overdue_invoice_value"
         ];
 
-        const valid = validateRequiredFields(message, requiredKeys, "loadKpisFromApi", "KPI payload");
+        const valid = validateRequiredFields(d, requiredKeys, "loadKpisFromApi", "KPI payload");
         if (!valid) {
           mockLoadKpisFallback();
           return;
         }
 
-        safeSetText("kpi-sales-order-total", message.sales_order_total, "loadKpisFromApi");
-        safeSetText("kpi-open-quotations", message.open_quotations, "loadKpisFromApi");
-        safeSetText("kpi-pending-dispatch", message.pending_dispatch, "loadKpisFromApi");
-        safeSetText("kpi-overdue-receivables", message.overdue_receivables, "loadKpisFromApi");
-        safeSetText("kpi-sales-order-mtd", message.sales_order_total, "loadKpisFromApi");
-        safeSetText("kpi-outstanding-receivables", message.overdue_receivables, "loadKpisFromApi");
+        function formatKES(val) {
+          if (val >= 1000000) return "KES " + (val / 1000000).toFixed(1) + "M";
+          if (val >= 1000) return "KES " + (val / 1000).toFixed(0) + "K";
+          return "KES " + val;
+        }
+
+        safeSetText("kpi-sales-order-total", formatKES(d.open_orders_value), "loadKpisFromApi");
+        safeSetText("kpi-open-quotations", d.open_quotations_count, "loadKpisFromApi");
+        safeSetText("kpi-pending-dispatch", d.open_orders_count, "loadKpisFromApi");
+        safeSetText("kpi-overdue-receivables", formatKES(d.overdue_invoice_value), "loadKpisFromApi");
+        safeSetText("kpi-sales-order-mtd", formatKES(d.open_orders_value), "loadKpisFromApi");
+        safeSetText("kpi-outstanding-receivables", formatKES(d.overdue_invoice_value), "loadKpisFromApi");
         pushDebug("success", "KPI API loaded successfully.", "loadKpisFromApi");
       }
 
@@ -751,6 +765,17 @@
         pushDebug("warn", "Using fallback KPI values because live API data was unavailable.", "mockLoadKpisFallback");
       }
 
+      function stageToPillClass(stage) {
+        var map = {
+          "overdue": "pill--overdue",
+          "expiring": "pill--pending",
+          "not_invoiced": "pill--draft",
+          "delayed": "pill--overdue",
+          "open": "pill--open"
+        };
+        return map[stage] || "pill--open";
+      }
+
       function renderPriorityActionsRows(rows) {
         const tbody = expectElement("priority-sales-actions-body", "renderPriorityActionsRows");
         if (!tbody) return;
@@ -760,12 +785,12 @@
         rows.forEach(function (row) {
           const tr = document.createElement("tr");
           tr.innerHTML = [
-            '<td class="font-semibold">' + (row.doctype_docname || '-') + '</td>',
-            '<td>' + (row.customer || '-') + '</td>',
-            '<td>' + (row.sales_person || '-') + '</td>',
-            '<td><span class="pill ' + (row.pill_class || 'pill--open') + '">' + (row.status || '-') + '</span></td>',
-            '<td class="text-right">' + (row.value_or_exposure || '-') + '</td>',
-            '<td>' + (row.next_action || '-') + '</td>'
+            '<td class="font-semibold">' + (row.doctype || '-') + ' / ' + (row.docname || '-') + '</td>',
+            '<td>' + (row.customer_name || row.customer || '-') + '</td>',
+            '<td>' + (row.sales_rep_name || row.sales_rep || '-') + '</td>',
+            '<td><span class="pill ' + stageToPillClass(row.stage) + '">' + (row.status || row.stage || '-') + '</span></td>',
+            '<td class="text-right">' + (row.age_days || 0) + ' days</td>',
+            '<td>' + (row.recommended_action || '-') + '</td>'
           ].join("");
           tbody.appendChild(tr);
         });
@@ -779,35 +804,41 @@
         }
 
         const message = payload.message || payload;
-        if (!message || !Array.isArray(message.rows)) {
-          pushDebug("error", "Invalid priority actions response. Expected rows array.", "loadPriorityActionsFromApi");
+
+        if (message.status === "error") {
+          pushDebug("error", "Priority actions API returned error: " + (message.message || "unknown"), "loadPriorityActionsFromApi");
           return;
         }
 
-        if (message.rows.length === 0) {
+        var rows = message.data || message.rows;
+        if (!rows || !Array.isArray(rows)) {
+          pushDebug("error", "Invalid priority actions response. Expected data array.", "loadPriorityActionsFromApi");
+          return;
+        }
+
+        if (rows.length === 0) {
           pushDebug("warn", "Priority actions query returned zero rows.", "loadPriorityActionsFromApi");
           return;
         }
 
         const requiredRowFields = [
-          "doctype_docname",
+          "doctype",
+          "docname",
           "customer",
-          "sales_person",
-          "status",
-          "value_or_exposure",
-          "next_action"
+          "stage",
+          "recommended_action"
         ];
 
         let mappingOk = true;
-        message.rows.forEach(function (row, index) {
+        rows.forEach(function (row, index) {
           const ok = validateRequiredFields(row, requiredRowFields, "loadPriorityActionsFromApi", "priority row #" + (index + 1));
           if (!ok) mappingOk = false;
         });
 
         if (!mappingOk) return;
 
-        renderPriorityActionsRows(message.rows);
-        pushDebug("success", message.rows.length + " priority action row(s) loaded from API.", "loadPriorityActionsFromApi");
+        renderPriorityActionsRows(rows);
+        pushDebug("success", rows.length + " priority action row(s) loaded from API.", "loadPriorityActionsFromApi");
       }
 
       function validatePriorityTableRows() {
