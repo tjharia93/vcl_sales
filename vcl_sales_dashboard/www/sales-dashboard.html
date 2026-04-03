@@ -327,15 +327,15 @@
           <div class="brand__mark">VCL</div>
           <div class="brand__text">
             <span class="brand__name">Vimit Converters Limited</span>
-            <span class="brand__sub">Sales Dashboard - ERPNext Mapped + API Debug</span>
+            <span class="brand__sub">Sales Dashboard</span>
           </div>
         </div>
         <nav class="nav">
-          <a class="nav__link is-active" href="#">Sales Order</a>
-          <a class="nav__link" href="#">Quotation</a>
-          <a class="nav__link" href="#">Customer</a>
-          <a class="nav__link" href="#">Sales Invoice</a>
-          <a class="nav__link" href="#">Payment Entry</a>
+          <a class="nav__link is-active" href="#">Sales Invoice</a>
+          <a class="nav__link disabled" href="#" style="opacity:0.4;pointer-events:none;">Sales Order</a>
+          <a class="nav__link disabled" href="#" style="opacity:0.4;pointer-events:none;">Quotation</a>
+          <a class="nav__link disabled" href="#" style="opacity:0.4;pointer-events:none;">Customer</a>
+          <a class="nav__link disabled" href="#" style="opacity:0.4;pointer-events:none;">Payment Entry</a>
         </nav>
       </div>
     </header>
@@ -343,38 +343,36 @@
     <main class="page-container">
       <section class="page-header">
         <div class="page-header__meta">
-          <span class="eyebrow">ERPNext Website Dashboard</span>
+          <span class="eyebrow">Sales Invoice Overview</span>
           <h1>VCL Sales Dashboard</h1>
           <p class="type-body text-secondary mb-0">
-            Upgraded with API-aware debug handling for failed fetches, empty query results, invalid mappings, and permission errors.
+            Outstanding and overdue Sales Invoices. Filter by Sales Person, Territory, or date range.
           </p>
         </div>
         <div class="btn-row">
           <button class="btn btn--outline" id="refresh-dashboard-btn">Refresh Data</button>
-          <button class="btn btn--primary">New Quotation</button>
         </div>
       </section>
 
       <section class="summary-banner">
         <div class="summary-banner__grid">
           <div>
-            <div class="type-label">Management Summary</div>
-            <h2 style="margin-top:10px; margin-bottom:10px;">Commercial priorities from ERPNext data</h2>
+            <div class="type-label">Collections Summary</div>
+            <h2 style="margin-top:10px; margin-bottom:10px;">Outstanding receivables from Sales Invoice</h2>
             <p class="type-body text-secondary mb-0">
-              Focus on overdue <span class="font-semibold">Sales Invoice</span> balances, credit-held
-              <span class="font-semibold">Sales Order</span> dispatches, and open <span class="font-semibold">Quotation</span>
-              follow-up to improve month-end conversion.
+              All KPIs below are sourced from <span class="font-semibold">Sales Invoice</span> with
+              <span class="font-semibold">outstanding_amount > 0</span>. Filter by Sales Person or Territory to drill down.
             </p>
           </div>
           <div class="mini-stat">
-            <div class="mini-stat__label">Sales Order MTD</div>
-            <div class="mini-stat__value" id="kpi-sales-order-mtd">KES 48.6M</div>
-            <div class="type-small">Based on submitted Sales Order value</div>
+            <div class="mini-stat__label">Total Outstanding</div>
+            <div class="mini-stat__value" id="kpi-total-outstanding">--</div>
+            <div class="type-small">All unpaid Sales Invoices</div>
           </div>
           <div class="mini-stat">
-            <div class="mini-stat__label">Outstanding Receivables</div>
-            <div class="mini-stat__value" id="kpi-outstanding-receivables">KES 19.4M</div>
-            <div class="type-small">Derived from Sales Invoice outstanding_amount</div>
+            <div class="mini-stat__label">Overdue Amount</div>
+            <div class="mini-stat__value" id="kpi-overdue-amount">--</div>
+            <div class="type-small">Past due date</div>
           </div>
         </div>
       </section>
@@ -383,26 +381,34 @@
         <div class="card__body">
           <div class="inline-filters">
             <div class="field field--grow">
-              <label>Search (customer / docname / item)</label>
+              <label>Search (customer / invoice name)</label>
               <div class="search-input">
-                <input id="search-field" type="text" value="Search Customer.name, Sales Order.name, Quotation.name, Item.item_name" />
+                <input id="search-field" type="text" placeholder="Search by customer name or invoice number..." value="" />
               </div>
             </div>
             <div class="filter-group">
-              <label>Sales Person</label>
-              <select id="filter-sales-person"><option>All Sales Persons</option></select>
+              <label>Sales Person / Partner</label>
+              <select id="filter-sales-person"><option value="">All Sales Persons</option></select>
             </div>
             <div class="filter-group">
               <label>Territory</label>
-              <select id="filter-territory"><option>All Territories</option></select>
+              <select id="filter-territory"><option value="">All Territories</option></select>
             </div>
             <div class="filter-group">
-              <label>Workflow State</label>
-              <select id="filter-workflow-state"><option>All Workflow States</option></select>
+              <label>Status</label>
+              <select id="filter-status">
+                <option value="">All</option>
+                <option value="overdue">Overdue Only</option>
+                <option value="not_overdue">Not Yet Due</option>
+              </select>
             </div>
             <div class="filter-group">
-              <label>Posting Date / Transaction Date</label>
-              <input id="filter-date" type="date" value="2026-04-03" />
+              <label>From Date</label>
+              <input id="filter-date-from" type="date" value="" />
+            </div>
+            <div class="filter-group">
+              <label>To Date</label>
+              <input id="filter-date-to" type="date" value="" />
             </div>
           </div>
         </div>
@@ -410,174 +416,93 @@
 
       <section class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-card__label">Submitted Sales Order Value</div>
-          <div class="kpi-card__value" id="kpi-sales-order-total">KES 48.6M</div>
-          <div class="kpi-card__meta">Source: Sales Order.grand_total</div>
+          <div class="kpi-card__label">Total Outstanding</div>
+          <div class="kpi-card__value" id="kpi-outstanding-total">--</div>
+          <div class="kpi-card__meta">Sales Invoice.outstanding_amount</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-card__label">Open Quotations</div>
-          <div class="kpi-card__value" id="kpi-open-quotations">37</div>
-          <div class="kpi-card__meta">Source: Quotation.docstatus = 0 / open pipeline logic</div>
+          <div class="kpi-card__label">Overdue Amount</div>
+          <div class="kpi-card__value" id="kpi-overdue-total">--</div>
+          <div class="kpi-card__meta">Past due_date</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-card__label">Orders Pending Dispatch</div>
-          <div class="kpi-card__value" id="kpi-pending-dispatch">24</div>
-          <div class="kpi-card__meta">Source: Sales Order.status / per_delivered</div>
+          <div class="kpi-card__label">Invoices Outstanding</div>
+          <div class="kpi-card__value" id="kpi-invoice-count">--</div>
+          <div class="kpi-card__meta">Count of unpaid invoices</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-card__label">Overdue Receivables</div>
-          <div class="kpi-card__value" id="kpi-overdue-receivables">KES 6.2M</div>
-          <div class="kpi-card__meta">Source: Sales Invoice.outstanding_amount + due_date</div>
+          <div class="kpi-card__label">Customers With Balance</div>
+          <div class="kpi-card__value" id="kpi-customer-count">--</div>
+          <div class="kpi-card__meta">Distinct customers owing</div>
         </div>
       </section>
 
-      <section class="alert" id="credit-alert-box">
+      <section class="alert" id="credit-alert-box" style="display:none;">
         <div class="alert__icon">!</div>
         <div>
-          <div class="font-bold">Immediate attention required</div>
-          <div class="type-body" id="credit-alert-message">
-            Four <span class="font-semibold">Sales Order</span> records are ready for dispatch, but the linked
-            <span class="font-semibold">Customer</span> accounts are beyond agreed terms based on outstanding
-            <span class="font-semibold">Sales Invoice</span> balances.
+          <div class="font-bold" id="credit-alert-title">Overdue alert</div>
+          <div class="type-body" id="credit-alert-message"></div>
+        </div>
+      </section>
+
+      <section class="table-wrap mb-5">
+        <div class="card__body" style="padding-bottom:0;">
+          <div class="section-title">
+            <div>
+              <div class="type-label">Sales Invoice</div>
+              <h3>Outstanding invoices</h3>
+            </div>
+            <div class="type-small" id="invoice-table-count"></div>
           </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Posting Date</th>
+              <th>Due Date</th>
+              <th>Sales Person</th>
+              <th>Territory</th>
+              <th class="text-right">Grand Total</th>
+              <th class="text-right">Outstanding</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="invoice-table-body">
+            <tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">Loading invoices...</td></tr>
+          </tbody>
+        </table>
+
+        <div class="table-note" id="invoice-table-note">
+          Showing submitted Sales Invoices with outstanding_amount > 0
         </div>
       </section>
 
       <section class="grid grid--2 mb-5">
-        <div class="table-wrap">
-          <div class="card__body" style="padding-bottom:0;">
-            <div class="section-title">
-              <div>
-                <div class="type-label">Main Action Table</div>
-                <h3>Priority sales actions</h3>
-              </div>
-              <button class="btn btn--outline">Open Report View</button>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>DocType / Docname</th>
-                <th>Customer</th>
-                <th>Sales Person</th>
-                <th>Status</th>
-                <th class="text-right">Value / Exposure</th>
-                <th>Next Action</th>
-              </tr>
-            </thead>
-            <tbody id="priority-sales-actions-body">
-              <tr>
-                <td class="font-semibold">Sales Invoice / ACC-SINV-2026-00184</td>
-                <td>MATHAI SUPERMARKET LTD</td>
-                <td>Shiro</td>
-                <td><span class="pill pill--overdue">Overdue</span></td>
-                <td class="text-right">KES 1.85M</td>
-                <td>Collections follow-up before dispatch release</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Quotation / QTN-2026-00047</td>
-                <td>LEELSNET EXAMS &amp; STATIONERS2024</td>
-                <td>Simon</td>
-                <td><span class="pill pill--pending">Pending</span></td>
-                <td class="text-right">KES 920K</td>
-                <td>Approve revised quotation and push to Sales Order</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Sales Order / SAL-ORD-2026-00241</td>
-                <td>TUSKYS SCHOOLS DIVISION</td>
-                <td>Joyce</td>
-                <td><span class="pill pill--open">Open</span></td>
-                <td class="text-right">KES 2.40M</td>
-                <td>Confirm production completion and dispatch</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="table-note">
-            Suggested build logic: combine Quotation, Sales Order, Sales Invoice, and Payment Entry actions into one management-facing queue.
-          </div>
-        </div>
-
-        <div class="card">
+        <div class="card" style="opacity:0.5;">
           <div class="card__body">
             <div class="section-title">
               <div>
-                <div class="type-label">Sales Team Performance</div>
-                <h3>Sales Person progress vs target</h3>
+                <div class="type-label">Coming Next</div>
+                <h3>Sales Orders</h3>
               </div>
+              <span class="pill pill--draft">Pending Build</span>
             </div>
-
-            <div class="progress-list">
-              <div class="progress-row">
-                <div class="progress-row__top"><span>Shiro</span><span>KES 12.4M / 15.0M</span></div>
-                <div class="progress-bar"><div class="progress-bar__fill" style="width:83%;"></div></div>
-              </div>
-              <div class="progress-row">
-                <div class="progress-row__top"><span>Nelson</span><span>KES 9.8M / 13.0M</span></div>
-                <div class="progress-bar"><div class="progress-bar__fill" style="width:75%;"></div></div>
-              </div>
-              <div class="progress-row">
-                <div class="progress-row__top"><span>Gideon</span><span>KES 8.1M / 11.0M</span></div>
-                <div class="progress-bar"><div class="progress-bar__fill" style="width:74%;"></div></div>
-              </div>
-            </div>
-
-            <div class="mini-stat-grid mt-5">
-              <div class="mini-stat">
-                <div class="mini-stat__label">Quotation Conversion</div>
-                <div class="mini-stat__value">42%</div>
-                <div class="type-small">Quotation → Sales Order</div>
-              </div>
-              <div class="mini-stat">
-                <div class="mini-stat__label">Average Collection Days</div>
-                <div class="mini-stat__value">49</div>
-                <div class="type-small">From invoice date to settlement</div>
-              </div>
-            </div>
+            <p class="type-body text-muted">Open sales orders, dispatch status, and delivery tracking will be added here.</p>
           </div>
         </div>
-      </section>
-
-      <section class="card mb-5">
-        <div class="card__body">
-          <div class="section-title">
-            <div>
-              <div class="type-label">ERPNext API Wiring Notes</div>
-              <h3>Endpoints expected by the debug system</h3>
+        <div class="card" style="opacity:0.5;">
+          <div class="card__body">
+            <div class="section-title">
+              <div>
+                <div class="type-label">Coming Next</div>
+                <h3>Quotations</h3>
+              </div>
+              <span class="pill pill--draft">Pending Build</span>
             </div>
-          </div>
-
-          <div class="mapping-grid">
-            <div class="mapping-box">
-              <div class="type-label">KPI APIs</div>
-              <div class="code-chip">/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_dashboard_summary</div>
-              <ul>
-                <li>Expected keys: open_orders_value, open_quotations_count, overdue_invoice_count, overdue_invoice_value</li>
-                <li>Missing keys are logged as invalid mapping errors</li>
-                <li>HTTP 403 / 401 is logged as permission failure</li>
-              </ul>
-            </div>
-            <div class="mapping-box">
-              <div class="type-label">Action Table API</div>
-              <div class="code-chip">/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_action_queue</div>
-              <ul>
-                <li>Expected array key: data (array of action objects)</li>
-                <li>Each row requires: doctype, docname, customer, stage, recommended_action</li>
-                <li>Empty data array is logged as empty query result</li>
-              </ul>
-            </div>
-            <div class="mapping-box">
-              <div class="type-label">Permission / Failure Handling</div>
-              <div class="code-chip">HTTP 401</div>
-              <div class="code-chip">HTTP 403</div>
-              <div class="code-chip">HTTP 500</div>
-              <ul>
-                <li>401/403 → permission error message</li>
-                <li>500 → failed API fetch</li>
-                <li>Network interruption → fetch failure</li>
-              </ul>
-            </div>
+            <p class="type-body text-muted">Open quotations, expiring soon, and conversion tracking will be added here.</p>
           </div>
         </div>
       </section>
@@ -597,302 +522,203 @@
 
   <script>
     (function () {
-      const debugStore = [];
+      var debugStore = [];
+      var API_BASE = "/api/method/vcl_sales_dashboard.api.sales_dashboard";
 
-      const endpointMap = {
-        kpis: "/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_dashboard_summary",
-        priorityActions: "/api/method/vcl_sales_dashboard.api.sales_dashboard.get_sales_action_queue"
-      };
-
-      function pushDebug(type, message, source) {
-        const entry = {
-          type: type || "info",
-          message: message || "Unknown message",
-          source: source || "system",
-          timestamp: new Date().toLocaleString()
-        };
-        debugStore.push(entry);
+      function pushDebug(type, msg, src) {
+        debugStore.push({ type: type, message: msg, source: src || "system", timestamp: new Date().toLocaleString() });
         renderDebug();
       }
 
       function renderDebug() {
-        const list = document.getElementById("debug-list");
-        const empty = document.getElementById("debug-empty");
-        const status = document.getElementById("debug-status");
+        var list = document.getElementById("debug-list");
+        var empty = document.getElementById("debug-empty");
+        var status = document.getElementById("debug-status");
         if (!list || !empty || !status) return;
-
         list.innerHTML = "";
-
-        if (debugStore.length === 0) {
-          empty.classList.remove("hidden");
-          status.textContent = "No failures detected";
-          return;
-        }
-
+        if (debugStore.length === 0) { empty.classList.remove("hidden"); status.textContent = "No issues"; return; }
         empty.classList.add("hidden");
-        status.textContent = debugStore.length + " message(s) logged";
-
-        debugStore.forEach(function (entry) {
-          const li = document.createElement("li");
-          li.className = "debug-item--" + entry.type;
-          li.textContent = "[" + entry.timestamp + "] [" + entry.source + "] " + entry.message;
+        status.textContent = debugStore.length + " message(s)";
+        debugStore.forEach(function (e) {
+          var li = document.createElement("li");
+          li.className = "debug-item--" + e.type;
+          li.textContent = "[" + e.timestamp + "] [" + e.source + "] " + e.message;
           list.appendChild(li);
         });
       }
 
-      function expectElement(id, source) {
-        const element = document.getElementById(id);
-        if (!element) {
-          pushDebug("error", "Missing required DOM element: #" + id, source);
-        }
-        return element;
+      function formatKES(val) {
+        val = parseFloat(val) || 0;
+        if (val >= 1000000) return "KES " + (val / 1000000).toFixed(1) + "M";
+        if (val >= 1000) return "KES " + (val / 1000).toFixed(0) + "K";
+        return "KES " + val.toFixed(0);
       }
 
-      function safeSetText(id, value, source) {
-        const element = expectElement(id, source);
-        if (!element) return;
-        if (value === null || value === undefined || value === "") {
-          pushDebug("warn", "Empty value supplied for #" + id, source);
-          return;
-        }
-        element.textContent = value;
+      function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = (val !== null && val !== undefined) ? val : "--";
       }
 
-      function validateFilters() {
-        ["search-field", "filter-sales-person", "filter-territory", "filter-workflow-state", "filter-date"]
-          .forEach(function (id) { expectElement(id, "filter-validation"); });
-      }
-
-      function validateCoreSections() {
-        ["kpi-sales-order-total", "kpi-open-quotations", "kpi-pending-dispatch", "kpi-overdue-receivables", "credit-alert-message", "priority-sales-actions-body"]
-          .forEach(function (id) { expectElement(id, "section-validation"); });
-      }
-
-      async function fetchJsonWithDebug(url, source) {
-        try {
-          const response = await fetch(url, {
-            method: "GET",
-            headers: { "Accept": "application/json" },
-            credentials: "same-origin"
+      // ── Fetch helper ──
+      async function apiFetch(endpoint, params) {
+        var url = new URL(API_BASE + "." + endpoint, window.location.origin);
+        if (params) {
+          Object.keys(params).forEach(function (k) {
+            if (params[k] !== "" && params[k] !== null && params[k] !== undefined) {
+              url.searchParams.set(k, typeof params[k] === "object" ? JSON.stringify(params[k]) : params[k]);
+            }
           });
-
-          if (response.status === 401 || response.status === 403) {
-            pushDebug("error", "Permission error from ERPNext endpoint (" + response.status + "): " + url, source);
-            return null;
-          }
-
-          if (!response.ok) {
-            pushDebug("error", "Failed API fetch (" + response.status + ") from " + url, source);
-            return null;
-          }
-
-          const data = await response.json();
-          return data;
-        } catch (error) {
-          pushDebug("error", "API fetch failed for " + url + " - " + error.message, source);
+        }
+        try {
+          var resp = await fetch(url, { method: "GET", headers: { "Accept": "application/json", "X-Frappe-CSRF-Token": (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || "" }, credentials: "same-origin" });
+          if (!resp.ok) { pushDebug("error", endpoint + " returned " + resp.status, "apiFetch"); return null; }
+          var json = await resp.json();
+          var msg = json.message || json;
+          if (msg.status === "error") { pushDebug("error", endpoint + ": " + (msg.message || "unknown error"), "apiFetch"); return null; }
+          return msg.data || msg;
+        } catch (err) {
+          pushDebug("error", endpoint + " fetch failed: " + err.message, "apiFetch");
           return null;
         }
       }
 
-      function validateRequiredFields(obj, fields, source, objectLabel) {
-        let ok = true;
-        fields.forEach(function (field) {
-          if (!(field in obj)) {
-            ok = false;
-            pushDebug("error", "Invalid field mapping: '" + field + "' missing in " + objectLabel, source);
-          }
-        });
-        return ok;
-      }
-
-      async function loadKpisFromApi() {
-        const payload = await fetchJsonWithDebug(endpointMap.kpis, "loadKpisFromApi");
-        if (!payload) {
-          mockLoadKpisFallback();
-          return;
-        }
-
-        const message = payload.message || payload;
-        if (!message || typeof message !== "object") {
-          pushDebug("error", "Invalid KPI response structure from ERPNext.", "loadKpisFromApi");
-          mockLoadKpisFallback();
-          return;
-        }
-
-        if (message.status === "error") {
-          pushDebug("error", "KPI API returned error: " + (message.message || "unknown"), "loadKpisFromApi");
-          mockLoadKpisFallback();
-          return;
-        }
-
-        var d = message.data || message;
-
-        const requiredKeys = [
-          "open_orders_value",
-          "open_quotations_count",
-          "overdue_invoice_count",
-          "overdue_invoice_value"
-        ];
-
-        const valid = validateRequiredFields(d, requiredKeys, "loadKpisFromApi", "KPI payload");
-        if (!valid) {
-          mockLoadKpisFallback();
-          return;
-        }
-
-        function formatKES(val) {
-          if (val >= 1000000) return "KES " + (val / 1000000).toFixed(1) + "M";
-          if (val >= 1000) return "KES " + (val / 1000).toFixed(0) + "K";
-          return "KES " + val;
-        }
-
-        safeSetText("kpi-sales-order-total", formatKES(d.open_orders_value), "loadKpisFromApi");
-        safeSetText("kpi-open-quotations", d.open_quotations_count, "loadKpisFromApi");
-        safeSetText("kpi-pending-dispatch", d.open_orders_count, "loadKpisFromApi");
-        safeSetText("kpi-overdue-receivables", formatKES(d.overdue_invoice_value), "loadKpisFromApi");
-        safeSetText("kpi-sales-order-mtd", formatKES(d.open_orders_value), "loadKpisFromApi");
-        safeSetText("kpi-outstanding-receivables", formatKES(d.overdue_invoice_value), "loadKpisFromApi");
-        pushDebug("success", "KPI API loaded successfully.", "loadKpisFromApi");
-      }
-
-      function mockLoadKpisFallback() {
-        safeSetText("kpi-sales-order-total", "KES 48.6M", "mockLoadKpisFallback");
-        safeSetText("kpi-open-quotations", "37", "mockLoadKpisFallback");
-        safeSetText("kpi-pending-dispatch", "24", "mockLoadKpisFallback");
-        safeSetText("kpi-overdue-receivables", "KES 6.2M", "mockLoadKpisFallback");
-        safeSetText("kpi-sales-order-mtd", "KES 48.6M", "mockLoadKpisFallback");
-        safeSetText("kpi-outstanding-receivables", "KES 19.4M", "mockLoadKpisFallback");
-        pushDebug("warn", "Using fallback KPI values because live API data was unavailable.", "mockLoadKpisFallback");
-      }
-
-      function stageToPillClass(stage) {
-        var map = {
-          "overdue": "pill--overdue",
-          "expiring": "pill--pending",
-          "not_invoiced": "pill--draft",
-          "delayed": "pill--overdue",
-          "open": "pill--open"
+      // ── Get current filter values ──
+      function getFilters() {
+        return {
+          sales_person: (document.getElementById("filter-sales-person") || {}).value || "",
+          territory: (document.getElementById("filter-territory") || {}).value || "",
+          status_filter: (document.getElementById("filter-status") || {}).value || "",
+          date_from: (document.getElementById("filter-date-from") || {}).value || "",
+          date_to: (document.getElementById("filter-date-to") || {}).value || "",
+          search: (document.getElementById("search-field") || {}).value || ""
         };
-        return map[stage] || "pill--open";
       }
 
-      function renderPriorityActionsRows(rows) {
-        const tbody = expectElement("priority-sales-actions-body", "renderPriorityActionsRows");
+      // ── Load filter dropdowns from ERPNext ──
+      async function loadFilterOptions() {
+        var data = await apiFetch("get_filter_options", {});
+        if (!data) { pushDebug("warn", "Could not load filter options", "loadFilterOptions"); return; }
+
+        var spSelect = document.getElementById("filter-sales-person");
+        if (spSelect && data.sales_reps) {
+          data.sales_reps.forEach(function (sp) {
+            var opt = document.createElement("option");
+            opt.value = sp.name;
+            opt.textContent = sp.full_name || sp.name;
+            spSelect.appendChild(opt);
+          });
+          pushDebug("success", data.sales_reps.length + " sales persons loaded", "loadFilterOptions");
+        }
+
+        var tSelect = document.getElementById("filter-territory");
+        if (tSelect && data.territories) {
+          data.territories.forEach(function (t) {
+            var opt = document.createElement("option");
+            opt.value = t.name;
+            opt.textContent = t.name;
+            tSelect.appendChild(opt);
+          });
+          pushDebug("success", data.territories.length + " territories loaded", "loadFilterOptions");
+        }
+      }
+
+      // ── Load Sales Invoice list ──
+      async function loadInvoices() {
+        var filters = getFilters();
+        var data = await apiFetch("get_outstanding_invoices", { filters: filters });
+
+        if (!data) {
+          document.getElementById("invoice-table-body").innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">Failed to load invoices. Check debug panel.</td></tr>';
+          return;
+        }
+
+        var invoices = data.invoices || [];
+        var summary = data.summary || {};
+
+        // Update KPIs
+        setText("kpi-outstanding-total", formatKES(summary.total_outstanding || 0));
+        setText("kpi-overdue-total", formatKES(summary.total_overdue || 0));
+        setText("kpi-invoice-count", summary.invoice_count || 0);
+        setText("kpi-customer-count", summary.customer_count || 0);
+        setText("kpi-total-outstanding", formatKES(summary.total_outstanding || 0));
+        setText("kpi-overdue-amount", formatKES(summary.total_overdue || 0));
+
+        // Alert
+        var alertBox = document.getElementById("credit-alert-box");
+        var alertMsg = document.getElementById("credit-alert-message");
+        if (alertBox && summary.total_overdue > 0) {
+          alertBox.style.display = "flex";
+          if (alertMsg) alertMsg.textContent = summary.overdue_count + " invoices totalling " + formatKES(summary.total_overdue) + " are past due date across " + (summary.overdue_customer_count || "multiple") + " customers.";
+        } else if (alertBox) {
+          alertBox.style.display = "none";
+        }
+
+        // Render table
+        var tbody = document.getElementById("invoice-table-body");
         if (!tbody) return;
 
+        if (invoices.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">No outstanding invoices found.</td></tr>';
+          setText("invoice-table-count", "0 invoices");
+          return;
+        }
+
+        setText("invoice-table-count", invoices.length + " invoices shown");
         tbody.innerHTML = "";
 
-        rows.forEach(function (row) {
-          const tr = document.createElement("tr");
+        invoices.forEach(function (inv) {
+          var isOverdue = inv.is_overdue ? true : false;
+          var pillClass = isOverdue ? "pill--overdue" : "pill--open";
+          var pillText = isOverdue ? "Overdue" : "Outstanding";
+          var tr = document.createElement("tr");
           tr.innerHTML = [
-            '<td class="font-semibold">' + (row.doctype || '-') + ' / ' + (row.docname || '-') + '</td>',
-            '<td>' + (row.customer_name || row.customer || '-') + '</td>',
-            '<td>' + (row.sales_rep_name || row.sales_rep || '-') + '</td>',
-            '<td><span class="pill ' + stageToPillClass(row.stage) + '">' + (row.status || row.stage || '-') + '</span></td>',
-            '<td class="text-right">' + (row.age_days || 0) + ' days</td>',
-            '<td>' + (row.recommended_action || '-') + '</td>'
+            '<td class="font-semibold"><a href="/app/sales-invoice/' + (inv.name || '') + '">' + (inv.name || '-') + '</a></td>',
+            '<td>' + (inv.customer_name || inv.customer || '-') + '</td>',
+            '<td>' + (inv.posting_date || '-') + '</td>',
+            '<td>' + (inv.due_date || '-') + '</td>',
+            '<td>' + (inv.sales_person || inv.owner || '-') + '</td>',
+            '<td>' + (inv.territory || '-') + '</td>',
+            '<td class="text-right">' + formatKES(inv.grand_total || 0) + '</td>',
+            '<td class="text-right font-bold">' + formatKES(inv.outstanding_amount || 0) + '</td>',
+            '<td><span class="pill ' + pillClass + '">' + pillText + '</span></td>'
           ].join("");
           tbody.appendChild(tr);
         });
+
+        pushDebug("success", invoices.length + " invoices loaded", "loadInvoices");
       }
 
-      async function loadPriorityActionsFromApi() {
-        const payload = await fetchJsonWithDebug(endpointMap.priorityActions, "loadPriorityActionsFromApi");
-        if (!payload) {
-          pushDebug("warn", "Using existing static priority actions because API data was unavailable.", "loadPriorityActionsFromApi");
-          return;
-        }
-
-        const message = payload.message || payload;
-
-        if (message.status === "error") {
-          pushDebug("error", "Priority actions API returned error: " + (message.message || "unknown"), "loadPriorityActionsFromApi");
-          return;
-        }
-
-        var rows = message.data || message.rows;
-        if (!rows || !Array.isArray(rows)) {
-          pushDebug("error", "Invalid priority actions response. Expected data array.", "loadPriorityActionsFromApi");
-          return;
-        }
-
-        if (rows.length === 0) {
-          pushDebug("warn", "Priority actions query returned zero rows.", "loadPriorityActionsFromApi");
-          return;
-        }
-
-        const requiredRowFields = [
-          "doctype",
-          "docname",
-          "customer",
-          "stage",
-          "recommended_action"
-        ];
-
-        let mappingOk = true;
-        rows.forEach(function (row, index) {
-          const ok = validateRequiredFields(row, requiredRowFields, "loadPriorityActionsFromApi", "priority row #" + (index + 1));
-          if (!ok) mappingOk = false;
+      // ── Filter change handlers ──
+      function bindFilters() {
+        ["filter-sales-person", "filter-territory", "filter-status", "filter-date-from", "filter-date-to"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener("change", function () { loadInvoices(); });
         });
 
-        if (!mappingOk) return;
-
-        renderPriorityActionsRows(rows);
-        pushDebug("success", rows.length + " priority action row(s) loaded from API.", "loadPriorityActionsFromApi");
-      }
-
-      function validatePriorityTableRows() {
-        const tbody = expectElement("priority-sales-actions-body", "validatePriorityTableRows");
-        if (!tbody) return;
-
-        const rows = tbody.querySelectorAll("tr");
-        if (!rows.length) {
-          pushDebug("error", "Priority sales actions table has zero visible rows.", "validatePriorityTableRows");
-        } else {
-          pushDebug("success", rows.length + " visible priority row(s) present.", "validatePriorityTableRows");
+        var searchEl = document.getElementById("search-field");
+        var searchTimeout;
+        if (searchEl) {
+          searchEl.addEventListener("input", function () {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function () { loadInvoices(); }, 400);
+          });
         }
       }
 
-      function validateBusinessRules() {
-        expectElement("credit-alert-box", "validateBusinessRules");
-      }
-
-      async function runDashboardChecks() {
+      // ── Boot ──
+      async function boot() {
         debugStore.length = 0;
         renderDebug();
-
-        validateFilters();
-        validateCoreSections();
-
-        await loadKpisFromApi();
-        await loadPriorityActionsFromApi();
-
-        validatePriorityTableRows();
-        validateBusinessRules();
-
+        await loadFilterOptions();
+        await loadInvoices();
+        bindFilters();
         renderDebug();
       }
 
-      window.addEventListener("error", function (event) {
-        pushDebug("error", event.message, "window.onerror");
-      });
-
-      window.addEventListener("unhandledrejection", function (event) {
-        const message = event.reason && event.reason.message ? event.reason.message : String(event.reason);
-        pushDebug("error", "Unhandled promise rejection: " + message, "window.unhandledrejection");
-      });
-
       document.addEventListener("DOMContentLoaded", function () {
-        const refreshButton = document.getElementById("refresh-dashboard-btn");
-        if (refreshButton) {
-          refreshButton.addEventListener("click", function () {
-            pushDebug("info", "Manual refresh triggered.", "refresh-button");
-            runDashboardChecks();
-          });
-        } else {
-          pushDebug("error", "Refresh button is missing.", "boot");
-        }
-        runDashboardChecks();
+        var refreshBtn = document.getElementById("refresh-dashboard-btn");
+        if (refreshBtn) refreshBtn.addEventListener("click", function () { boot(); });
+        boot();
       });
     })();
   </script>
