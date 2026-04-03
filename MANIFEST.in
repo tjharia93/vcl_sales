@@ -1,0 +1,11 @@
+include MANIFEST.in
+include requirements.txt
+include *.md
+include *.py
+include *.txt
+recursive-include vcl_sales_dashboard *.py
+recursive-include vcl_sales_dashboard *.html
+recursive-include vcl_sales_dashboard *.css
+recursive-include vcl_sales_dashboard *.js
+recursive-include vcl_sales_dashboard *.json
+recursive-include vcl_sales_dashboard *.txt
