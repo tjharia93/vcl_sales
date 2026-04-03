@@ -1,4 +1,6 @@
 import frappe
+import json
+import os
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
 
 
@@ -903,3 +905,55 @@ def get_sales_by_person():
     except Exception as e:
         frappe.log_error(f"get_sales_by_person error: {str(e)}")
         return {"status": "error", "message": str(e), "data": {"mtd": [], "ytd": []}}
+
+
+def _load_targets_json():
+    """Load the sales targets JSON file."""
+    data_path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "data", "sales_targets_2026.json"
+    )
+    if not os.path.exists(data_path):
+        return None
+    with open(data_path, "r") as f:
+        return json.load(f)
+
+
+@frappe.whitelist()
+def get_sales_targets(month=None):
+    """Return sales targets for the given month or current month. Includes monthly, by_product, by_customer."""
+    try:
+        targets = _load_targets_json()
+        if not targets:
+            return {"status": "error", "message": "Targets file not found", "data": {}}
+
+        if not month:
+            d = getdate(today())
+            month = f"{d.year}-{d.month:02d}"
+
+        monthly_target = targets.get("monthly_targets", {}).get(month, 0)
+        annual_target = targets.get("annual_target", 0)
+
+        # YTD target: sum of all months up to and including current month
+        ytd_target = 0
+        for m, val in targets.get("monthly_targets", {}).items():
+            if m <= month:
+                ytd_target += val
+
+        by_product = targets.get("by_product_monthly", {}).get(month, {})
+        by_customer = targets.get("by_customer_monthly", {}).get(month, {})
+
+        return {
+            "status": "ok",
+            "data": {
+                "month": month,
+                "monthly_target": flt(monthly_target),
+                "annual_target": flt(annual_target),
+                "ytd_target": flt(ytd_target),
+                "by_product": by_product,
+                "by_customer": by_customer,
+            }
+        }
+    except Exception as e:
+        frappe.log_error(f"get_sales_targets error: {str(e)}")
+        return {"status": "error", "message": str(e), "data": {}}

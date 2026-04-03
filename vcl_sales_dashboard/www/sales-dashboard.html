@@ -361,19 +361,27 @@
             <div class="type-label">Sales Summary</div>
             <h2 style="margin-top:10px; margin-bottom:10px;">Sales Invoice overview</h2>
             <p class="type-body text-secondary mb-0">
-              Net sales from <span class="font-semibold">Sales Invoice</span> (submitted).
-              Outstanding and overdue balances. Filter by Sales Person or Territory.
+              Net sales from <span class="font-semibold">Sales Invoice</span> (submitted) vs 2026 targets.
+              Filter by Sales Person or Territory.
             </p>
           </div>
           <div class="mini-stat">
             <div class="mini-stat__label">Net Sales MTD</div>
             <div class="mini-stat__value" id="kpi-net-sales-mtd">--</div>
-            <div class="type-small">This month's invoiced sales</div>
+            <div class="type-small">Target: <span id="kpi-target-mtd">--</span></div>
+            <div style="margin-top:6px;height:6px;background:#eef2f7;border-radius:999px;overflow:hidden;">
+              <div id="kpi-mtd-bar" style="height:100%;background:var(--vcl-primary);border-radius:999px;width:0%;transition:width 0.5s;"></div>
+            </div>
+            <div class="type-small" id="kpi-mtd-pct" style="margin-top:4px;"></div>
           </div>
           <div class="mini-stat">
             <div class="mini-stat__label">Net Sales YTD</div>
             <div class="mini-stat__value" id="kpi-net-sales-ytd">--</div>
-            <div class="type-small">Year to date invoiced sales</div>
+            <div class="type-small">Target: <span id="kpi-target-ytd">--</span></div>
+            <div style="margin-top:6px;height:6px;background:#eef2f7;border-radius:999px;overflow:hidden;">
+              <div id="kpi-ytd-bar" style="height:100%;background:var(--vcl-primary);border-radius:999px;width:0%;transition:width 0.5s;"></div>
+            </div>
+            <div class="type-small" id="kpi-ytd-pct" style="margin-top:4px;"></div>
           </div>
         </div>
       </section>
@@ -642,15 +650,50 @@
         }
       }
 
-      // ── Load Net Sales KPIs ──
+      // ── Load Net Sales KPIs + Targets ──
       async function loadNetSales() {
         var data = await apiFetch("get_net_sales_summary", {});
+        var targets = await apiFetch("get_sales_targets", {});
+
         if (!data) { pushDebug("warn", "Could not load net sales summary", "loadNetSales"); return; }
-        setText("kpi-net-sales-mtd", formatKES(data.net_sales_mtd || 0));
-        setText("kpi-net-sales-ytd", formatKES(data.net_sales_ytd || 0));
-        setText("kpi-net-mtd-card", formatKES(data.net_sales_mtd || 0));
-        setText("kpi-net-ytd-card", formatKES(data.net_sales_ytd || 0));
-        pushDebug("success", "Net sales loaded: MTD=" + formatKES(data.net_sales_mtd) + " YTD=" + formatKES(data.net_sales_ytd), "loadNetSales");
+
+        var mtdActual = data.net_sales_mtd || 0;
+        var ytdActual = data.net_sales_ytd || 0;
+
+        setText("kpi-net-sales-mtd", formatKES(mtdActual));
+        setText("kpi-net-sales-ytd", formatKES(ytdActual));
+        setText("kpi-net-mtd-card", formatKES(mtdActual));
+        setText("kpi-net-ytd-card", formatKES(ytdActual));
+
+        if (targets) {
+          var mtdTarget = targets.monthly_target || 0;
+          var ytdTarget = targets.ytd_target || 0;
+
+          setText("kpi-target-mtd", formatKES(mtdTarget));
+          setText("kpi-target-ytd", formatKES(ytdTarget));
+
+          // Progress bars
+          var mtdPct = mtdTarget > 0 ? Math.min(Math.round(mtdActual / mtdTarget * 100), 100) : 0;
+          var ytdPct = ytdTarget > 0 ? Math.min(Math.round(ytdActual / ytdTarget * 100), 100) : 0;
+
+          var mtdBar = document.getElementById("kpi-mtd-bar");
+          var ytdBar = document.getElementById("kpi-ytd-bar");
+          if (mtdBar) mtdBar.style.width = mtdPct + "%";
+          if (ytdBar) ytdBar.style.width = ytdPct + "%";
+
+          // Color bar red if below 50%, yellow if below 80%
+          if (mtdBar) mtdBar.style.background = mtdPct < 50 ? "var(--danger)" : mtdPct < 80 ? "var(--warning)" : "var(--success)";
+          if (ytdBar) ytdBar.style.background = ytdPct < 50 ? "var(--danger)" : ytdPct < 80 ? "var(--warning)" : "var(--success)";
+
+          setText("kpi-mtd-pct", mtdPct + "% of target");
+          setText("kpi-ytd-pct", ytdPct + "% of target");
+
+          pushDebug("success", "Targets loaded: MTD target=" + formatKES(mtdTarget) + " YTD target=" + formatKES(ytdTarget), "loadNetSales");
+        } else {
+          pushDebug("warn", "Could not load sales targets", "loadNetSales");
+        }
+
+        pushDebug("success", "Net sales loaded: MTD=" + formatKES(mtdActual) + " YTD=" + formatKES(ytdActual), "loadNetSales");
       }
 
       // ── Chart ──
