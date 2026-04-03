@@ -820,3 +820,86 @@ def get_outstanding_invoices(filters=None):
     except Exception as e:
         frappe.log_error(f"get_outstanding_invoices error: {str(e)}")
         return {"status": "error", "message": str(e), "data": {"invoices": [], "summary": {}}}
+
+
+@frappe.whitelist()
+def get_net_sales_summary():
+    """Return net sales MTD and YTD from submitted Sales Invoices."""
+    try:
+        month_start = get_first_day(today())
+        year_start = getdate(today()).replace(month=1, day=1)
+
+        # MTD
+        mtd = frappe.db.sql("""
+            SELECT COALESCE(SUM(net_total), 0) as total
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1 AND posting_date >= %(month_start)s
+        """, {"month_start": month_start}, as_dict=True)[0]
+
+        # YTD
+        ytd = frappe.db.sql("""
+            SELECT COALESCE(SUM(net_total), 0) as total
+            FROM `tabSales Invoice`
+            WHERE docstatus = 1 AND posting_date >= %(year_start)s
+        """, {"year_start": year_start}, as_dict=True)[0]
+
+        return {
+            "status": "ok",
+            "data": {
+                "net_sales_mtd": flt(mtd.total),
+                "net_sales_ytd": flt(ytd.total),
+            }
+        }
+    except Exception as e:
+        frappe.log_error(f"get_net_sales_summary error: {str(e)}")
+        return {"status": "error", "message": str(e), "data": {}}
+
+
+@frappe.whitelist()
+def get_sales_by_person():
+    """Return net sales by Sales Person for MTD and YTD (from Sales Invoice > Sales Team child)."""
+    try:
+        month_start = get_first_day(today())
+        year_start = getdate(today()).replace(month=1, day=1)
+
+        # MTD by Sales Person
+        mtd_rows = frappe.db.sql("""
+            SELECT
+                COALESCE(st.sales_person, 'Unassigned') as sales_person,
+                SUM(si.net_total * st.allocated_percentage / 100) as net_total
+            FROM `tabSales Invoice` si
+            LEFT JOIN `tabSales Team` st ON st.parent = si.name AND st.parenttype = 'Sales Invoice'
+            WHERE si.docstatus = 1
+              AND si.posting_date >= %(month_start)s
+            GROUP BY st.sales_person
+            ORDER BY net_total DESC
+        """, {"month_start": month_start}, as_dict=True)
+
+        # YTD by Sales Person
+        ytd_rows = frappe.db.sql("""
+            SELECT
+                COALESCE(st.sales_person, 'Unassigned') as sales_person,
+                SUM(si.net_total * st.allocated_percentage / 100) as net_total
+            FROM `tabSales Invoice` si
+            LEFT JOIN `tabSales Team` st ON st.parent = si.name AND st.parenttype = 'Sales Invoice'
+            WHERE si.docstatus = 1
+              AND si.posting_date >= %(year_start)s
+            GROUP BY st.sales_person
+            ORDER BY net_total DESC
+        """, {"year_start": year_start}, as_dict=True)
+
+        for row in mtd_rows:
+            row["net_total"] = flt(row.get("net_total"))
+        for row in ytd_rows:
+            row["net_total"] = flt(row.get("net_total"))
+
+        return {
+            "status": "ok",
+            "data": {
+                "mtd": mtd_rows,
+                "ytd": ytd_rows,
+            }
+        }
+    except Exception as e:
+        frappe.log_error(f"get_sales_by_person error: {str(e)}")
+        return {"status": "error", "message": str(e), "data": {"mtd": [], "ytd": []}}
