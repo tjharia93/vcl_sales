@@ -764,7 +764,7 @@ def get_outstanding_invoices(filters=None):
         role_filter = get_role_filter()
         csr_map = get_csr_map()
 
-        conditions = ["si.docstatus = 1", "si.outstanding_amount > 0"]
+        conditions = ["si.docstatus IN (0, 1)", "si.outstanding_amount > 0"]
         values = {"today": today()}
 
         # Role-based filter — if sales rep, only show their assigned customers
@@ -883,14 +883,14 @@ def get_net_sales_summary():
         mtd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1 AND posting_date >= %(month_start)s
+            WHERE docstatus IN (0, 1) AND posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)[0]
 
         # YTD
         ytd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1 AND posting_date >= %(year_start)s
+            WHERE docstatus IN (0, 1) AND posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)[0]
 
         return {
@@ -917,14 +917,14 @@ def get_sales_by_person():
         mtd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(month_start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)
 
         # YTD invoices
         ytd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(year_start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)
 
         # Aggregate by sales rep using CSR map
