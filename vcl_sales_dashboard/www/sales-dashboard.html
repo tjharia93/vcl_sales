@@ -3,69 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VCL Sales Dashboard</title>
+  <title>VCL Sales Dashboard - ERPNext Mapped with API Debug</title>
   <style>
     :root {
       --vcl-primary: #2B3990;
       --vcl-primary-dark: #1f2a6d;
       --vcl-secondary: #ED1C24;
-
       --bg-page: #f5f6f8;
       --bg-surface: #ffffff;
       --bg-surface-alt: #fafbfc;
       --bg-soft: #f0f2f5;
-
       --border-color: #d9dee7;
       --border-strong: #c9d0db;
-
       --text-primary: #1f2937;
       --text-secondary: #5b6472;
       --text-muted: #7a8596;
       --text-on-dark: #ffffff;
-
       --success: #167c45;
       --success-bg: #eaf7ef;
-
       --warning: #a16207;
       --warning-bg: #fff7e6;
-
       --danger: #b42318;
       --danger-bg: #fdecec;
-
       --info: #175cd3;
       --info-bg: #edf4ff;
-
       --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
       --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
-
       --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
       --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
-
       --radius-sm: 6px;
       --radius-md: 10px;
       --radius-lg: 14px;
-
       --space-2: 8px;
       --space-3: 12px;
       --space-4: 16px;
       --space-5: 20px;
       --space-6: 24px;
       --space-7: 32px;
-      --space-8: 40px;
-
-      --container-max: 1400px;
+      --container-max: 1440px;
       --table-row-height: 44px;
       --transition-fast: 0.15s ease;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: var(--font-dashboard);
@@ -75,20 +55,9 @@
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
-
-    a {
-      color: var(--vcl-primary);
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .page-shell {
-      min-height: 100vh;
-      background: var(--bg-page);
-    }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .page-shell { min-height: 100vh; background: var(--bg-page); }
 
     .topbar {
       background: var(--bg-surface);
@@ -97,16 +66,13 @@
       top: 0;
       z-index: 20;
     }
-
-    .topbar__inner,
-    .page-container {
+    .topbar__inner, .page-container {
       width: 100%;
       max-width: var(--container-max);
       margin: 0 auto;
       padding-left: var(--space-6);
       padding-right: var(--space-6);
     }
-
     .topbar__inner {
       min-height: 64px;
       display: flex;
@@ -115,585 +81,241 @@
       gap: var(--space-4);
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      font-weight: 700;
-      color: var(--text-primary);
-      letter-spacing: 0.2px;
-    }
-
+    .brand { display: flex; align-items: center; gap: var(--space-3); font-weight: 700; color: var(--text-primary); letter-spacing: 0.2px; }
     .brand__mark {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: var(--vcl-primary);
-      color: var(--text-on-dark);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 13px;
-      box-shadow: var(--shadow-sm);
+      width: 38px; height: 38px; border-radius: 10px; background: var(--vcl-primary); color: var(--text-on-dark);
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; box-shadow: var(--shadow-sm);
     }
+    .brand__text { display: flex; flex-direction: column; line-height: 1.1; }
+    .brand__name { font-size: 15px; }
+    .brand__sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
 
-    .brand__text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
-    }
-
-    .brand__name {
-      font-size: 15px;
-    }
-
-    .brand__sub {
-      font-size: 11px;
-      color: var(--text-secondary);
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-    }
-
-    .nav {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-      flex-wrap: wrap;
-    }
-
+    .nav { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .nav__link {
-      display: inline-flex;
-      align-items: center;
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      color: var(--text-secondary);
-      font-size: 14px;
-      font-weight: 600;
-      transition: background var(--transition-fast), color var(--transition-fast);
+      display: inline-flex; align-items: center; padding: 10px 14px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); font-size: 14px; font-weight: 600; transition: background var(--transition-fast), color var(--transition-fast);
     }
+    .nav__link:hover { text-decoration: none; background: var(--bg-soft); color: var(--text-primary); }
+    .nav__link.is-active { background: rgba(43, 57, 144, 0.08); color: var(--vcl-primary); }
 
-    .nav__link:hover {
-      text-decoration: none;
-      background: var(--bg-soft);
-      color: var(--text-primary);
-    }
-
-    .nav__link.is-active {
-      background: rgba(43, 57, 144, 0.08);
-      color: var(--vcl-primary);
-    }
-
-    .page-container {
-      padding-top: var(--space-7);
-      padding-bottom: 60px;
-    }
-
+    .page-container { padding-top: var(--space-7); padding-bottom: 32px; }
     .page-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-      flex-wrap: wrap;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
+      margin-bottom: var(--space-6); flex-wrap: wrap;
     }
-
-    .page-header__meta {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-    }
-
-    .eyebrow {
-      color: var(--vcl-primary);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-size: 11px;
-      font-weight: 700;
-    }
+    .page-header__meta { display: flex; flex-direction: column; gap: var(--space-2); }
+    .eyebrow { color: var(--vcl-primary); text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; font-weight: 700; }
 
     h1, h2, h3, h4 {
-      margin: 0;
-      color: var(--text-primary);
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      margin: 0; color: var(--text-primary); font-weight: 700; letter-spacing: -0.01em;
     }
+    h1 { font-size: 30px; line-height: 1.2; }
+    h2 { font-size: 22px; line-height: 1.25; }
+    h3 { font-size: 18px; line-height: 1.3; }
+    h4 { font-size: 16px; line-height: 1.35; }
 
-    h1 {
-      font-size: 30px;
-      line-height: 1.2;
-    }
-
-    h2 {
-      font-size: 22px;
-      line-height: 1.25;
-    }
-
-    h3 {
-      font-size: 18px;
-      line-height: 1.3;
-    }
-
-    h4 {
-      font-size: 16px;
-      line-height: 1.35;
-    }
-
-    .type-body {
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .type-small {
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--text-muted);
-    }
-
+    .type-body { font-size: 14px; line-height: 1.6; }
+    .type-small { font-size: 12px; line-height: 1.5; color: var(--text-muted); }
     .type-label {
-      font-family: var(--font-data);
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.4;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+      font-family: var(--font-data); font-size: 12px; font-weight: 700; line-height: 1.4;
+      color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
     }
 
-    .text-muted { color: var(--text-muted); }
     .text-secondary { color: var(--text-secondary); }
+    .text-muted { color: var(--text-muted); }
     .text-right { text-align: right; }
     .font-bold { font-weight: 700; }
     .font-semibold { font-weight: 600; }
 
-    .grid {
-      display: grid;
-      gap: var(--space-5);
-    }
-
-    .grid--2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    .grid { display: grid; gap: var(--space-5); }
+    .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
     .card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-card);
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
     }
+    .card__body { padding: var(--space-5); }
 
-    .card__body {
-      padding: var(--space-5);
-    }
-
-    .btn-row,
-    .inline-filters {
-      display: flex;
-      align-items: center;
-      gap: var(--space-3);
-      flex-wrap: wrap;
+    .btn-row, .inline-filters {
+      display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
     }
 
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 40px;
-      padding: 0 16px;
-      border-radius: var(--radius-sm);
-      border: 1px solid transparent;
-      font-size: 14px;
-      font-weight: 700;
-      font-family: var(--font-data);
-      cursor: pointer;
-      background: var(--bg-soft);
-      color: var(--text-primary);
-      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+      display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: var(--radius-sm);
+      border: 1px solid transparent; font-size: 14px; font-weight: 700; font-family: var(--font-data);
+      cursor: pointer; background: var(--bg-soft); color: var(--text-primary); transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
     }
-
-    .btn--primary {
-      background: var(--vcl-primary);
-      color: var(--text-on-dark);
-      border-color: var(--vcl-primary);
-    }
-
-    .btn--primary:hover {
-      background: var(--vcl-primary-dark);
-      border-color: var(--vcl-primary-dark);
-      text-decoration: none;
-    }
-
-    .btn--outline {
-      background: var(--bg-surface);
-      color: var(--vcl-primary);
-      border-color: var(--border-strong);
-    }
-
-    .btn--secondary {
-      background: var(--vcl-secondary);
-      color: var(--text-on-dark);
-      border-color: var(--vcl-secondary);
-    }
+    .btn--primary { background: var(--vcl-primary); color: var(--text-on-dark); border-color: var(--vcl-primary); }
+    .btn--primary:hover { background: var(--vcl-primary-dark); border-color: var(--vcl-primary-dark); text-decoration: none; }
+    .btn--outline { background: var(--bg-surface); color: var(--vcl-primary); border-color: var(--border-strong); }
+    .btn--secondary { background: var(--vcl-secondary); color: var(--text-on-dark); border-color: var(--vcl-secondary); }
 
     .summary-banner {
       background: linear-gradient(180deg, rgba(43,57,144,0.04), rgba(43,57,144,0.01));
-      border: 1px solid rgba(43,57,144,0.10);
-      border-radius: var(--radius-lg);
-      padding: var(--space-5);
-      margin-bottom: var(--space-6);
+      border: 1px solid rgba(43,57,144,0.10); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-6);
     }
-
     .summary-banner__grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: var(--space-5);
-      align-items: center;
+      display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-5); align-items: center;
     }
 
     .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);
     }
-
     .kpi-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      padding: var(--space-5);
-      box-shadow: var(--shadow-card);
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); box-shadow: var(--shadow-card);
     }
-
     .kpi-card__label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-weight: 700;
-      margin-bottom: 10px;
+      font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; margin-bottom: 10px;
     }
-
     .kpi-card__value {
-      font-size: 28px;
-      line-height: 1.15;
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: var(--text-primary);
-      font-variant-numeric: tabular-nums;
+      font-size: 28px; line-height: 1.15; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); font-variant-numeric: tabular-nums;
     }
-
-    .kpi-card__meta {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
+    .kpi-card__meta { font-size: 12px; color: var(--text-muted); }
 
     .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 28px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      border: 1px solid transparent;
-      white-space: nowrap;
-      font-family: var(--font-data);
+      display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 4px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; border: 1px solid transparent; white-space: nowrap; font-family: var(--font-data);
     }
+    .pill--open { background: var(--info-bg); color: var(--info); border-color: #cfe0ff; }
+    .pill--pending { background: var(--warning-bg); color: var(--warning); border-color: #f5dfaa; }
+    .pill--overdue { background: var(--danger-bg); color: var(--danger); border-color: #f6c7c2; }
+    .pill--completed { background: var(--success-bg); color: var(--success); border-color: #bfe3cb; }
+    .pill--draft { background: #f5f0ff; color: #6941c6; border-color: #dfd1ff; }
 
-    .pill--open {
-      background: var(--info-bg);
-      color: var(--info);
-      border-color: #cfe0ff;
+    .filter-group, .field {
+      display: flex; flex-direction: column; gap: 6px; min-width: 170px;
     }
-
-    .pill--pending {
-      background: var(--warning-bg);
-      color: var(--warning);
-      border-color: #f5dfaa;
-    }
-
-    .pill--overdue {
-      background: var(--danger-bg);
-      color: var(--danger);
-      border-color: #f6c7c2;
-    }
-
-    .pill--completed {
-      background: var(--success-bg);
-      color: var(--success);
-      border-color: #bfe3cb;
-    }
-
-    .pill--draft {
-      background: #f5f0ff;
-      color: #6941c6;
-      border-color: #dfd1ff;
-    }
-
-    .filter-group,
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 170px;
-    }
-
-    .field--grow {
-      flex: 1 1 260px;
-    }
+    .field--grow { flex: 1 1 260px; }
 
     label {
-      font-family: var(--font-data);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
+      font-family: var(--font-data); font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
     }
 
-    input,
-    select {
-      width: 100%;
-      min-height: 40px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--border-strong);
-      padding: 10px 12px;
-      font-family: var(--font-data);
-      font-size: 14px;
-      color: var(--text-primary);
-      background: var(--bg-surface);
-      font-variant-numeric: tabular-nums;
-      outline: none;
+    input, select {
+      width: 100%; min-height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); padding: 10px 12px;
+      font-family: var(--font-data); font-size: 14px; color: var(--text-primary); background: var(--bg-surface); font-variant-numeric: tabular-nums; outline: none;
       transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
-
-    input:focus,
-    select:focus {
-      border-color: var(--vcl-primary);
-      box-shadow: 0 0 0 3px rgba(43, 57, 144, 0.10);
+    input:focus, select:focus {
+      border-color: var(--vcl-primary); box-shadow: 0 0 0 3px rgba(43, 57, 144, 0.10);
     }
 
-    .search-input {
-      position: relative;
-    }
-
-    .search-input input {
-      padding-left: 40px;
-    }
-
+    .search-input { position: relative; }
+    .search-input input { padding-left: 40px; }
     .search-input::before {
-      content: "⌕";
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 16px;
-      pointer-events: none;
+      content: "⌕"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none;
     }
 
     .alert {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--space-3);
-      border-radius: var(--radius-md);
-      padding: var(--space-4);
-      border: 1px solid #f5dfaa;
-      background: var(--warning-bg);
-      margin-bottom: var(--space-6);
+      display: flex; align-items: flex-start; gap: var(--space-3); border-radius: var(--radius-md); padding: var(--space-4);
+      border: 1px solid #f5dfaa; background: var(--warning-bg); margin-bottom: var(--space-6);
     }
-
     .alert__icon {
-      width: 28px;
-      height: 28px;
-      border-radius: 999px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      background: rgba(255,255,255,0.75);
-      flex: 0 0 auto;
-      font-family: var(--font-data);
+      width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700;
+      background: rgba(255,255,255,0.75); flex: 0 0 auto; font-family: var(--font-data);
     }
 
     .table-wrap {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: var(--shadow-card);
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card);
     }
-
     table {
-      width: 100%;
-      border-collapse: collapse;
-      font-family: var(--font-data);
-      font-variant-numeric: tabular-nums;
+      width: 100%; border-collapse: collapse; font-family: var(--font-data); font-variant-numeric: tabular-nums;
     }
-
     thead th {
-      background: #f7f8fa;
-      color: var(--text-secondary);
-      text-align: left;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-weight: 700;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border-color);
-      white-space: nowrap;
+      background: #f7f8fa; color: var(--text-secondary); text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 700; padding: 14px 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap;
     }
-
     tbody td {
-      font-size: 13px;
-      color: var(--text-primary);
-      padding: 12px 16px;
-      border-bottom: 1px solid #eef1f5;
-      vertical-align: middle;
-      min-height: var(--table-row-height);
+      font-size: 13px; color: var(--text-primary); padding: 12px 16px; border-bottom: 1px solid #eef1f5; vertical-align: middle; min-height: var(--table-row-height);
     }
-
-    tbody tr:nth-child(even) {
-      background: #fcfcfd;
-    }
-
-    tbody tr:hover {
-      background: #f7faff;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
+    tbody tr:nth-child(even) { background: #fcfcfd; }
+    tbody tr:hover { background: #f7faff; }
+    tbody tr:last-child td { border-bottom: 0; }
     .table-note {
-      padding: 12px 16px;
-      border-top: 1px solid var(--border-color);
-      background: #fafbfc;
-      color: var(--text-secondary);
-      font-size: 12px;
-      font-family: var(--font-data);
+      padding: 12px 16px; border-top: 1px solid var(--border-color); background: #fafbfc; color: var(--text-secondary); font-size: 12px; font-family: var(--font-data);
     }
 
-    .progress-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .progress-row {
-      display: grid;
-      gap: 8px;
-    }
-
+    .progress-list { display: grid; gap: 12px; }
+    .progress-row { display: grid; gap: 8px; }
     .progress-row__top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      font-family: var(--font-data);
-      font-size: 13px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-data); font-size: 13px;
     }
-
-    .progress-bar {
-      height: 10px;
-      background: #eef2f7;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-bar__fill {
-      height: 100%;
-      background: var(--vcl-primary);
-      border-radius: 999px;
-    }
+    .progress-bar { height: 10px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; background: var(--vcl-primary); border-radius: 999px; }
 
     .mini-stat-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--space-4);
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4);
     }
-
     .mini-stat {
-      padding: var(--space-4);
-      border-radius: var(--radius-md);
-      background: var(--bg-surface-alt);
-      border: 1px solid var(--border-color);
+      padding: var(--space-4); border-radius: var(--radius-md); background: var(--bg-surface-alt); border: 1px solid var(--border-color);
     }
-
     .mini-stat__label {
-      font-size: 12px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; margin-bottom: 8px;
     }
-
-    .mini-stat__value {
-      font-size: 22px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
+    .mini-stat__value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
     .section-title {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
     }
+
+    .mapping-grid {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4);
+    }
+    .mapping-box {
+      border: 1px solid var(--border-color); background: var(--bg-surface-alt); border-radius: var(--radius-md); padding: var(--space-4);
+    }
+    .mapping-box ul {
+      margin: 10px 0 0; padding-left: 18px; font-family: var(--font-data); font-size: 13px; line-height: 1.55; color: var(--text-secondary);
+    }
+    .mapping-box li + li { margin-top: 6px; }
+
+    .code-chip {
+      display: inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: var(--vcl-primary);
+      font-family: var(--font-data); font-size: 12px; font-weight: 700; margin: 3px 6px 0 0;
+    }
+
+    .debug-panel {
+      margin-top: var(--space-6); background: #111827; color: #f9fafb; border: 1px solid #374151; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card);
+    }
+    .debug-panel__header {
+      padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #0f172a; border-bottom: 1px solid #374151; font-family: var(--font-data);
+    }
+    .debug-panel__title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .debug-panel__status { font-size: 12px; color: #cbd5e1; }
+    .debug-panel__body { padding: 16px; font-family: var(--font-data); font-size: 13px; }
+    .debug-list { margin: 0; padding-left: 18px; line-height: 1.6; }
+    .debug-list li + li { margin-top: 8px; }
+    .debug-item--error { color: #fca5a5; }
+    .debug-item--warn { color: #fde68a; }
+    .debug-item--info { color: #93c5fd; }
+    .debug-item--success { color: #86efac; }
+    .debug-empty { color: #86efac; font-weight: 700; }
+    .hidden { display: none; }
 
     .mb-0 { margin-bottom: 0; }
     .mb-5 { margin-bottom: 20px; }
     .mt-5 { margin-top: 20px; }
 
     @media (max-width: 1200px) {
-      .kpi-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
-      .summary-banner__grid {
-        grid-template-columns: 1fr;
-      }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .summary-banner__grid { grid-template-columns: 1fr; }
+      .mapping-grid { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 900px) {
-      .topbar__inner,
-      .page-container {
-        padding-left: var(--space-4);
-        padding-right: var(--space-4);
-      }
-
-      .grid--2,
-      .kpi-grid,
-      .mini-stat-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .nav {
-        width: 100%;
-      }
+      .topbar__inner, .page-container { padding-left: var(--space-4); padding-right: var(--space-4); }
+      .grid--2, .grid--3, .kpi-grid, .mini-stat-grid { grid-template-columns: 1fr; }
+      .nav { width: 100%; }
     }
-
     @media (max-width: 640px) {
       h1 { font-size: 26px; }
       h2 { font-size: 20px; }
       h3 { font-size: 17px; }
-
       .topbar__inner {
-        min-height: auto;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        align-items: flex-start;
-        flex-direction: column;
+        min-height: auto; padding-top: 12px; padding-bottom: 12px; align-items: flex-start; flex-direction: column;
       }
-
-      .page-container {
-        padding-top: var(--space-6);
-      }
+      .page-container { padding-top: var(--space-6); }
     }
   </style>
 </head>
@@ -705,16 +327,15 @@
           <div class="brand__mark">VCL</div>
           <div class="brand__text">
             <span class="brand__name">Vimit Converters Limited</span>
-            <span class="brand__sub">Sales Dashboard</span>
+            <span class="brand__sub">Sales Dashboard - ERPNext Mapped + API Debug</span>
           </div>
         </div>
-
         <nav class="nav">
-          <a class="nav__link is-active" href="#">Sales</a>
-          <a class="nav__link" href="#">Customers</a>
-          <a class="nav__link" href="#">Orders</a>
-          <a class="nav__link" href="#">Collections</a>
-          <a class="nav__link" href="#">Reports</a>
+          <a class="nav__link is-active" href="#">Sales Order</a>
+          <a class="nav__link" href="#">Quotation</a>
+          <a class="nav__link" href="#">Customer</a>
+          <a class="nav__link" href="#">Sales Invoice</a>
+          <a class="nav__link" href="#">Payment Entry</a>
         </nav>
       </div>
     </header>
@@ -722,41 +343,38 @@
     <main class="page-container">
       <section class="page-header">
         <div class="page-header__meta">
-          <span class="eyebrow">Sales Operations</span>
+          <span class="eyebrow">ERPNext Website Dashboard</span>
           <h1>VCL Sales Dashboard</h1>
           <p class="type-body text-secondary mb-0">
-            Practical daily view for sales follow-up, open orders, customer collections, rep performance,
-            and operational exceptions.
+            Upgraded with API-aware debug handling for failed fetches, empty query results, invalid mappings, and permission errors.
           </p>
         </div>
-
         <div class="btn-row">
-          <button class="btn btn--outline">Export Summary</button>
-          <button class="btn btn--primary">Create Sales Action</button>
+          <button class="btn btn--outline" id="refresh-dashboard-btn">Refresh Data</button>
+          <button class="btn btn--primary">New Quotation</button>
         </div>
       </section>
 
       <section class="summary-banner">
         <div class="summary-banner__grid">
           <div>
-            <div class="type-label">Management View</div>
-            <h2 style="margin-top:10px; margin-bottom:10px;">Today’s commercial priorities</h2>
+            <div class="type-label">Management Summary</div>
+            <h2 style="margin-top:10px; margin-bottom:10px;">Commercial priorities from ERPNext data</h2>
             <p class="type-body text-secondary mb-0">
-              Follow up overdue collections, protect dispatch for high-value orders, and push pending quotations
-              into confirmed sales orders before the afternoon cut-off.
+              Focus on overdue <span class="font-semibold">Sales Invoice</span> balances, credit-held
+              <span class="font-semibold">Sales Order</span> dispatches, and open <span class="font-semibold">Quotation</span>
+              follow-up to improve month-end conversion.
             </p>
           </div>
-
           <div class="mini-stat">
-            <div class="mini-stat__label">Month Sales</div>
-            <div class="mini-stat__value">KES 48.6M</div>
-            <div class="type-small">76% of monthly target</div>
+            <div class="mini-stat__label">Sales Order MTD</div>
+            <div class="mini-stat__value" id="kpi-sales-order-mtd">KES 48.6M</div>
+            <div class="type-small">Based on submitted Sales Order value</div>
           </div>
-
           <div class="mini-stat">
-            <div class="mini-stat__label">Outstanding AR</div>
-            <div class="mini-stat__value">KES 19.4M</div>
-            <div class="type-small">KES 6.2M overdue</div>
+            <div class="mini-stat__label">Outstanding Receivables</div>
+            <div class="mini-stat__value" id="kpi-outstanding-receivables">KES 19.4M</div>
+            <div class="type-small">Derived from Sales Invoice outstanding_amount</div>
           </div>
         </div>
       </section>
@@ -765,30 +383,26 @@
         <div class="card__body">
           <div class="inline-filters">
             <div class="field field--grow">
-              <label>Search</label>
+              <label>Search (customer / docname / item)</label>
               <div class="search-input">
-                <input type="text" value="Search customer, sales rep, order, quotation or area" />
+                <input id="search-field" type="text" value="Search Customer.name, Sales Order.name, Quotation.name, Item.item_name" />
               </div>
             </div>
-
             <div class="filter-group">
-              <label>Sales Rep</label>
-              <select><option>All Sales Reps</option></select>
+              <label>Sales Person</label>
+              <select id="filter-sales-person"><option>All Sales Persons</option></select>
             </div>
-
             <div class="filter-group">
-              <label>Region</label>
-              <select><option>All Regions</option></select>
+              <label>Territory</label>
+              <select id="filter-territory"><option>All Territories</option></select>
             </div>
-
             <div class="filter-group">
-              <label>Status</label>
-              <select><option>All Statuses</option></select>
+              <label>Workflow State</label>
+              <select id="filter-workflow-state"><option>All Workflow States</option></select>
             </div>
-
             <div class="filter-group">
-              <label>As At Date</label>
-              <input type="date" value="2026-04-03" />
+              <label>Posting Date / Transaction Date</label>
+              <input id="filter-date" type="date" value="2026-04-03" />
             </div>
           </div>
         </div>
@@ -796,36 +410,35 @@
 
       <section class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-card__label">Sales This Month</div>
-          <div class="kpi-card__value">KES 48.6M</div>
-          <div class="kpi-card__meta">Target: KES 64.0M</div>
+          <div class="kpi-card__label">Submitted Sales Order Value</div>
+          <div class="kpi-card__value" id="kpi-sales-order-total">KES 48.6M</div>
+          <div class="kpi-card__meta">Source: Sales Order.grand_total</div>
         </div>
-
         <div class="kpi-card">
           <div class="kpi-card__label">Open Quotations</div>
-          <div class="kpi-card__value">37</div>
-          <div class="kpi-card__meta">11 follow-up today</div>
+          <div class="kpi-card__value" id="kpi-open-quotations">37</div>
+          <div class="kpi-card__meta">Source: Quotation.docstatus = 0 / open pipeline logic</div>
         </div>
-
         <div class="kpi-card">
           <div class="kpi-card__label">Orders Pending Dispatch</div>
-          <div class="kpi-card__value">24</div>
-          <div class="kpi-card__meta">7 at risk due to payment hold</div>
+          <div class="kpi-card__value" id="kpi-pending-dispatch">24</div>
+          <div class="kpi-card__meta">Source: Sales Order.status / per_delivered</div>
         </div>
-
         <div class="kpi-card">
-          <div class="kpi-card__label">Overdue Collections</div>
-          <div class="kpi-card__value">KES 6.2M</div>
-          <div class="kpi-card__meta">Across 18 customers</div>
+          <div class="kpi-card__label">Overdue Receivables</div>
+          <div class="kpi-card__value" id="kpi-overdue-receivables">KES 6.2M</div>
+          <div class="kpi-card__meta">Source: Sales Invoice.outstanding_amount + due_date</div>
         </div>
       </section>
 
-      <section class="alert">
+      <section class="alert" id="credit-alert-box">
         <div class="alert__icon">!</div>
         <div>
           <div class="font-bold">Immediate attention required</div>
-          <div class="type-body">
-            Four major customers have dispatch-ready orders, but their accounts are outside approved credit terms.
+          <div class="type-body" id="credit-alert-message">
+            Four <span class="font-semibold">Sales Order</span> records are ready for dispatch, but the linked
+            <span class="font-semibold">Customer</span> accounts are beyond agreed terms based on outstanding
+            <span class="font-semibold">Sales Invoice</span> balances.
           </div>
         </div>
       </section>
@@ -836,63 +449,53 @@
             <div class="section-title">
               <div>
                 <div class="type-label">Main Action Table</div>
-                <h3>Priority customer follow-up</h3>
+                <h3>Priority sales actions</h3>
               </div>
-              <button class="btn btn--outline">View Full List</button>
+              <button class="btn btn--outline">Open Report View</button>
             </div>
           </div>
 
           <table>
             <thead>
               <tr>
+                <th>DocType / Docname</th>
                 <th>Customer</th>
-                <th>Sales Rep</th>
+                <th>Sales Person</th>
                 <th>Status</th>
-                <th class="text-right">Exposure</th>
+                <th class="text-right">Value / Exposure</th>
                 <th>Next Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="priority-sales-actions-body">
               <tr>
-                <td class="font-semibold">Mathai Supermarket Ltd</td>
+                <td class="font-semibold">Sales Invoice / ACC-SINV-2026-00184</td>
+                <td>MATHAI SUPERMARKET LTD</td>
                 <td>Shiro</td>
                 <td><span class="pill pill--overdue">Overdue</span></td>
                 <td class="text-right">KES 1.85M</td>
-                <td>Call accounts + confirm payment date</td>
+                <td>Collections follow-up before dispatch release</td>
               </tr>
               <tr>
-                <td class="font-semibold">Leelsnet Exams & Stationers</td>
+                <td class="font-semibold">Quotation / QTN-2026-00047</td>
+                <td>LEELSNET EXAMS &amp; STATIONERS2024</td>
                 <td>Simon</td>
                 <td><span class="pill pill--pending">Pending</span></td>
                 <td class="text-right">KES 920K</td>
-                <td>Approve revised quotation</td>
+                <td>Approve revised quotation and push to Sales Order</td>
               </tr>
               <tr>
-                <td class="font-semibold">Tuskys Schools Division</td>
+                <td class="font-semibold">Sales Order / SAL-ORD-2026-00241</td>
+                <td>TUSKYS SCHOOLS DIVISION</td>
                 <td>Joyce</td>
                 <td><span class="pill pill--open">Open</span></td>
                 <td class="text-right">KES 2.40M</td>
-                <td>Confirm dispatch release</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Greenfield Bookshop</td>
-                <td>Nelson</td>
-                <td><span class="pill pill--draft">Draft</span></td>
-                <td class="text-right">KES 410K</td>
-                <td>Send final quotation</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Jambo Retailers</td>
-                <td>Gideon</td>
-                <td><span class="pill pill--completed">Completed</span></td>
-                <td class="text-right">KES 0</td>
-                <td>Payment received</td>
+                <td>Confirm production completion and dispatch</td>
               </tr>
             </tbody>
           </table>
 
           <div class="table-note">
-            Use this block for daily actions, dispatch holds, collection follow-up, and quotation conversion.
+            Suggested build logic: combine Quotation, Sales Order, Sales Invoice, and Payment Entry actions into one management-facing queue.
           </div>
         </div>
 
@@ -900,8 +503,8 @@
           <div class="card__body">
             <div class="section-title">
               <div>
-                <div class="type-label">Sales Pipeline</div>
-                <h3>Rep progress vs target</h3>
+                <div class="type-label">Sales Team Performance</div>
+                <h3>Sales Person progress vs target</h3>
               </div>
             </div>
 
@@ -910,24 +513,12 @@
                 <div class="progress-row__top"><span>Shiro</span><span>KES 12.4M / 15.0M</span></div>
                 <div class="progress-bar"><div class="progress-bar__fill" style="width:83%;"></div></div>
               </div>
-
               <div class="progress-row">
                 <div class="progress-row__top"><span>Nelson</span><span>KES 9.8M / 13.0M</span></div>
                 <div class="progress-bar"><div class="progress-bar__fill" style="width:75%;"></div></div>
               </div>
-
               <div class="progress-row">
                 <div class="progress-row__top"><span>Gideon</span><span>KES 8.1M / 11.0M</span></div>
-                <div class="progress-bar"><div class="progress-bar__fill" style="width:74%;"></div></div>
-              </div>
-
-              <div class="progress-row">
-                <div class="progress-row__top"><span>Joyce</span><span>KES 10.2M / 14.0M</span></div>
-                <div class="progress-bar"><div class="progress-bar__fill" style="width:73%;"></div></div>
-              </div>
-
-              <div class="progress-row">
-                <div class="progress-row__top"><span>Management</span><span>KES 8.1M / 11.0M</span></div>
                 <div class="progress-bar"><div class="progress-bar__fill" style="width:74%;"></div></div>
               </div>
             </div>
@@ -936,144 +527,343 @@
               <div class="mini-stat">
                 <div class="mini-stat__label">Quotation Conversion</div>
                 <div class="mini-stat__value">42%</div>
-                <div class="type-small">Month to date</div>
+                <div class="type-small">Quotation → Sales Order</div>
               </div>
-
               <div class="mini-stat">
                 <div class="mini-stat__label">Average Collection Days</div>
                 <div class="mini-stat__value">49</div>
-                <div class="type-small">Target below 45</div>
+                <div class="type-small">From invoice date to settlement</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="grid grid--2 mb-5">
-        <div class="table-wrap">
-          <div class="card__body" style="padding-bottom:0;">
-            <div class="section-title">
-              <div>
-                <div class="type-label">Collections</div>
-                <h3>Overdue receivables summary</h3>
-              </div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Bucket</th>
-                <th class="text-right">Balance</th>
-                <th>Rep</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="font-semibold">Mathai Supermarket Ltd</td>
-                <td>61–90 Days</td>
-                <td class="text-right">KES 1.85M</td>
-                <td>Shiro</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Tuskys Schools Division</td>
-                <td>31–60 Days</td>
-                <td class="text-right">KES 1.42M</td>
-                <td>Joyce</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Leelsnet Exams & Stationers</td>
-                <td>31–60 Days</td>
-                <td class="text-right">KES 920K</td>
-                <td>Simon</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">Greenfield Bookshop</td>
-                <td>90+ Days</td>
-                <td class="text-right">KES 615K</td>
-                <td>Nelson</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="table-note">
-            Good place to connect ageing, approvals, and release decisions later.
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <div class="card__body" style="padding-bottom:0;">
-            <div class="section-title">
-              <div>
-                <div class="type-label">Orders</div>
-                <h3>Dispatch and order summary</h3>
-              </div>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Order Ref</th>
-                <th>Customer</th>
-                <th>Status</th>
-                <th class="text-right">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="font-semibold">SO-00241</td>
-                <td>Back to School Exercise Books</td>
-                <td><span class="pill pill--pending">Pending Dispatch</span></td>
-                <td class="text-right">KES 2.65M</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">SO-00248</td>
-                <td>Computer Paper Plain</td>
-                <td><span class="pill pill--open">In Production</span></td>
-                <td class="text-right">KES 1.18M</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">SO-00252</td>
-                <td>Labels Printed Roll</td>
-                <td><span class="pill pill--overdue">At Risk</span></td>
-                <td class="text-right">KES 860K</td>
-              </tr>
-              <tr>
-                <td class="font-semibold">SO-00255</td>
-                <td>NCR Stationery</td>
-                <td><span class="pill pill--completed">Ready</span></td>
-                <td class="text-right">KES 530K</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="table-note">
-            Useful for linking sales, production, and dispatch oversight in one screen.
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
+      <section class="card mb-5">
         <div class="card__body">
           <div class="section-title">
             <div>
-              <div class="type-label">Quick Actions</div>
-              <h3>Sales team actions</h3>
+              <div class="type-label">ERPNext API Wiring Notes</div>
+              <h3>Endpoints expected by the debug system</h3>
             </div>
-            <div class="type-small">Static prototype buttons for future integration</div>
           </div>
 
-          <div class="btn-row">
-            <button class="btn btn--primary">Create Quotation</button>
-            <button class="btn btn--outline">Log Collection Follow-up</button>
-            <button class="btn btn--outline">View Ageing Report</button>
-            <button class="btn btn--secondary">Escalate Credit Hold</button>
+          <div class="mapping-grid">
+            <div class="mapping-box">
+              <div class="type-label">KPI APIs</div>
+              <div class="code-chip">/api/method/vcl.api.sales_dashboard.get_kpis</div>
+              <ul>
+                <li>Expected keys: sales_order_total, open_quotations, pending_dispatch, overdue_receivables</li>
+                <li>Missing keys are logged as invalid mapping errors</li>
+                <li>HTTP 403 / 401 is logged as permission failure</li>
+              </ul>
+            </div>
+            <div class="mapping-box">
+              <div class="type-label">Action Table API</div>
+              <div class="code-chip">/api/method/vcl.api.sales_dashboard.get_priority_actions</div>
+              <ul>
+                <li>Expected array key: rows</li>
+                <li>Empty rows array is logged as empty query result</li>
+                <li>Malformed row objects are logged as mapping errors</li>
+              </ul>
+            </div>
+            <div class="mapping-box">
+              <div class="type-label">Permission / Failure Handling</div>
+              <div class="code-chip">HTTP 401</div>
+              <div class="code-chip">HTTP 403</div>
+              <div class="code-chip">HTTP 500</div>
+              <ul>
+                <li>401/403 → permission error message</li>
+                <li>500 → failed API fetch</li>
+                <li>Network interruption → fetch failure</li>
+              </ul>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section class="debug-panel" id="debug-panel">
+        <div class="debug-panel__header">
+          <div class="debug-panel__title">Dashboard Debug / Failure Messages</div>
+          <div class="debug-panel__status" id="debug-status">Waiting for checks...</div>
+        </div>
+        <div class="debug-panel__body">
+          <div id="debug-empty" class="debug-empty hidden">No failures detected.</div>
+          <ol id="debug-list" class="debug-list"></ol>
         </div>
       </section>
     </main>
   </div>
+
+  <script>
+    (function () {
+      const debugStore = [];
+
+      const endpointMap = {
+        kpis: "/api/method/vcl.api.sales_dashboard.get_kpis",
+        priorityActions: "/api/method/vcl.api.sales_dashboard.get_priority_actions"
+      };
+
+      function pushDebug(type, message, source) {
+        const entry = {
+          type: type || "info",
+          message: message || "Unknown message",
+          source: source || "system",
+          timestamp: new Date().toLocaleString()
+        };
+        debugStore.push(entry);
+        renderDebug();
+      }
+
+      function renderDebug() {
+        const list = document.getElementById("debug-list");
+        const empty = document.getElementById("debug-empty");
+        const status = document.getElementById("debug-status");
+        if (!list || !empty || !status) return;
+
+        list.innerHTML = "";
+
+        if (debugStore.length === 0) {
+          empty.classList.remove("hidden");
+          status.textContent = "No failures detected";
+          return;
+        }
+
+        empty.classList.add("hidden");
+        status.textContent = debugStore.length + " message(s) logged";
+
+        debugStore.forEach(function (entry) {
+          const li = document.createElement("li");
+          li.className = "debug-item--" + entry.type;
+          li.textContent = "[" + entry.timestamp + "] [" + entry.source + "] " + entry.message;
+          list.appendChild(li);
+        });
+      }
+
+      function expectElement(id, source) {
+        const element = document.getElementById(id);
+        if (!element) {
+          pushDebug("error", "Missing required DOM element: #" + id, source);
+        }
+        return element;
+      }
+
+      function safeSetText(id, value, source) {
+        const element = expectElement(id, source);
+        if (!element) return;
+        if (value === null || value === undefined || value === "") {
+          pushDebug("warn", "Empty value supplied for #" + id, source);
+          return;
+        }
+        element.textContent = value;
+      }
+
+      function validateFilters() {
+        ["search-field", "filter-sales-person", "filter-territory", "filter-workflow-state", "filter-date"]
+          .forEach(function (id) { expectElement(id, "filter-validation"); });
+      }
+
+      function validateCoreSections() {
+        ["kpi-sales-order-total", "kpi-open-quotations", "kpi-pending-dispatch", "kpi-overdue-receivables", "credit-alert-message", "priority-sales-actions-body"]
+          .forEach(function (id) { expectElement(id, "section-validation"); });
+      }
+
+      async function fetchJsonWithDebug(url, source) {
+        try {
+          const response = await fetch(url, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            credentials: "same-origin"
+          });
+
+          if (response.status === 401 || response.status === 403) {
+            pushDebug("error", "Permission error from ERPNext endpoint (" + response.status + "): " + url, source);
+            return null;
+          }
+
+          if (!response.ok) {
+            pushDebug("error", "Failed API fetch (" + response.status + ") from " + url, source);
+            return null;
+          }
+
+          const data = await response.json();
+          return data;
+        } catch (error) {
+          pushDebug("error", "API fetch failed for " + url + " - " + error.message, source);
+          return null;
+        }
+      }
+
+      function validateRequiredFields(obj, fields, source, objectLabel) {
+        let ok = true;
+        fields.forEach(function (field) {
+          if (!(field in obj)) {
+            ok = false;
+            pushDebug("error", "Invalid field mapping: '" + field + "' missing in " + objectLabel, source);
+          }
+        });
+        return ok;
+      }
+
+      async function loadKpisFromApi() {
+        const payload = await fetchJsonWithDebug(endpointMap.kpis, "loadKpisFromApi");
+        if (!payload) {
+          mockLoadKpisFallback();
+          return;
+        }
+
+        const message = payload.message || payload;
+        if (!message || typeof message !== "object") {
+          pushDebug("error", "Invalid KPI response structure from ERPNext.", "loadKpisFromApi");
+          mockLoadKpisFallback();
+          return;
+        }
+
+        const requiredKeys = [
+          "sales_order_total",
+          "open_quotations",
+          "pending_dispatch",
+          "overdue_receivables"
+        ];
+
+        const valid = validateRequiredFields(message, requiredKeys, "loadKpisFromApi", "KPI payload");
+        if (!valid) {
+          mockLoadKpisFallback();
+          return;
+        }
+
+        safeSetText("kpi-sales-order-total", message.sales_order_total, "loadKpisFromApi");
+        safeSetText("kpi-open-quotations", message.open_quotations, "loadKpisFromApi");
+        safeSetText("kpi-pending-dispatch", message.pending_dispatch, "loadKpisFromApi");
+        safeSetText("kpi-overdue-receivables", message.overdue_receivables, "loadKpisFromApi");
+        safeSetText("kpi-sales-order-mtd", message.sales_order_total, "loadKpisFromApi");
+        safeSetText("kpi-outstanding-receivables", message.overdue_receivables, "loadKpisFromApi");
+        pushDebug("success", "KPI API loaded successfully.", "loadKpisFromApi");
+      }
+
+      function mockLoadKpisFallback() {
+        safeSetText("kpi-sales-order-total", "KES 48.6M", "mockLoadKpisFallback");
+        safeSetText("kpi-open-quotations", "37", "mockLoadKpisFallback");
+        safeSetText("kpi-pending-dispatch", "24", "mockLoadKpisFallback");
+        safeSetText("kpi-overdue-receivables", "KES 6.2M", "mockLoadKpisFallback");
+        safeSetText("kpi-sales-order-mtd", "KES 48.6M", "mockLoadKpisFallback");
+        safeSetText("kpi-outstanding-receivables", "KES 19.4M", "mockLoadKpisFallback");
+        pushDebug("warn", "Using fallback KPI values because live API data was unavailable.", "mockLoadKpisFallback");
+      }
+
+      function renderPriorityActionsRows(rows) {
+        const tbody = expectElement("priority-sales-actions-body", "renderPriorityActionsRows");
+        if (!tbody) return;
+
+        tbody.innerHTML = "";
+
+        rows.forEach(function (row) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = [
+            '<td class="font-semibold">' + (row.doctype_docname || '-') + '</td>',
+            '<td>' + (row.customer || '-') + '</td>',
+            '<td>' + (row.sales_person || '-') + '</td>',
+            '<td><span class="pill ' + (row.pill_class || 'pill--open') + '">' + (row.status || '-') + '</span></td>',
+            '<td class="text-right">' + (row.value_or_exposure || '-') + '</td>',
+            '<td>' + (row.next_action || '-') + '</td>'
+          ].join("");
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function loadPriorityActionsFromApi() {
+        const payload = await fetchJsonWithDebug(endpointMap.priorityActions, "loadPriorityActionsFromApi");
+        if (!payload) {
+          pushDebug("warn", "Using existing static priority actions because API data was unavailable.", "loadPriorityActionsFromApi");
+          return;
+        }
+
+        const message = payload.message || payload;
+        if (!message || !Array.isArray(message.rows)) {
+          pushDebug("error", "Invalid priority actions response. Expected rows array.", "loadPriorityActionsFromApi");
+          return;
+        }
+
+        if (message.rows.length === 0) {
+          pushDebug("warn", "Priority actions query returned zero rows.", "loadPriorityActionsFromApi");
+          return;
+        }
+
+        const requiredRowFields = [
+          "doctype_docname",
+          "customer",
+          "sales_person",
+          "status",
+          "value_or_exposure",
+          "next_action"
+        ];
+
+        let mappingOk = true;
+        message.rows.forEach(function (row, index) {
+          const ok = validateRequiredFields(row, requiredRowFields, "loadPriorityActionsFromApi", "priority row #" + (index + 1));
+          if (!ok) mappingOk = false;
+        });
+
+        if (!mappingOk) return;
+
+        renderPriorityActionsRows(message.rows);
+        pushDebug("success", message.rows.length + " priority action row(s) loaded from API.", "loadPriorityActionsFromApi");
+      }
+
+      function validatePriorityTableRows() {
+        const tbody = expectElement("priority-sales-actions-body", "validatePriorityTableRows");
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll("tr");
+        if (!rows.length) {
+          pushDebug("error", "Priority sales actions table has zero visible rows.", "validatePriorityTableRows");
+        } else {
+          pushDebug("success", rows.length + " visible priority row(s) present.", "validatePriorityTableRows");
+        }
+      }
+
+      function validateBusinessRules() {
+        expectElement("credit-alert-box", "validateBusinessRules");
+      }
+
+      async function runDashboardChecks() {
+        debugStore.length = 0;
+        renderDebug();
+
+        validateFilters();
+        validateCoreSections();
+
+        await loadKpisFromApi();
+        await loadPriorityActionsFromApi();
+
+        validatePriorityTableRows();
+        validateBusinessRules();
+
+        renderDebug();
+      }
+
+      window.addEventListener("error", function (event) {
+        pushDebug("error", event.message, "window.onerror");
+      });
+
+      window.addEventListener("unhandledrejection", function (event) {
+        const message = event.reason && event.reason.message ? event.reason.message : String(event.reason);
+        pushDebug("error", "Unhandled promise rejection: " + message, "window.unhandledrejection");
+      });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const refreshButton = document.getElementById("refresh-dashboard-btn");
+        if (refreshButton) {
+          refreshButton.addEventListener("click", function () {
+            pushDebug("info", "Manual refresh triggered.", "refresh-button");
+            runDashboardChecks();
+          });
+        } else {
+          pushDebug("error", "Refresh button is missing.", "boot");
+        }
+        runDashboardChecks();
+      });
+    })();
+  </script>
 </body>
 </html>
