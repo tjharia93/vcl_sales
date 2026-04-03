@@ -48,15 +48,56 @@ def apply_owner_filter(role_filter, filters, conditions, values, table_alias="")
         values["sales_rep_filter"] = filters["sales_rep"]
 
 
+def get_csr_map(as_of_date=None):
+    """Return dict of {customer: sales_representative} from Customer Sales Rep Assignment.
+    Uses the active assignment with highest priority for each customer as of the given date."""
+    if not as_of_date:
+        as_of_date = today()
+
+    assignments = frappe.db.sql("""
+        SELECT customer, sales_representative, priority
+        FROM `tabCustomer Sales Rep Assignment`
+        WHERE status = 'Active'
+          AND effective_from <= %(as_of)s
+          AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %(as_of)s)
+        ORDER BY customer, priority ASC
+    """, {"as_of": as_of_date}, as_dict=True)
+
+    csr_map = {}
+    for row in assignments:
+        cust = row.get("customer")
+        if cust and cust not in csr_map:
+            csr_map[cust] = row.get("sales_representative") or ""
+    return csr_map
+
+
+def get_customers_for_rep(sales_rep, as_of_date=None):
+    """Return list of customer names assigned to a sales rep as of the given date."""
+    csr_map = get_csr_map(as_of_date)
+    return [cust for cust, rep in csr_map.items() if rep == sales_rep]
+
+
 @frappe.whitelist()
 def get_filter_options():
-    """Return filter dropdown options for sales reps, territories, customer groups."""
+    """Return filter dropdown options for sales reps (from CSR Assignment), territories, customer groups."""
     try:
-        sales_reps = frappe.get_all(
-            "Sales Person",
-            fields=["name", "sales_person_name as full_name"],
-            order_by="name"
-        )
+        # Get distinct active sales reps from Customer Sales Rep Assignment
+        sales_reps = frappe.db.sql("""
+            SELECT DISTINCT sales_representative as name, sales_representative as full_name
+            FROM `tabCustomer Sales Rep Assignment`
+            WHERE status = 'Active'
+              AND sales_representative IS NOT NULL
+              AND sales_representative != ''
+            ORDER BY sales_representative
+        """, as_dict=True)
+
+        # Fallback to Sales Person doctype if CSR Assignment is empty
+        if not sales_reps:
+            sales_reps = frappe.get_all(
+                "Sales Person",
+                fields=["name", "sales_person_name as full_name"],
+                order_by="name"
+            )
 
         territories = frappe.get_all(
             "Territory",
@@ -721,23 +762,35 @@ def get_outstanding_invoices(filters=None):
             filters = frappe.parse_json(filters)
 
         role_filter = get_role_filter()
+        csr_map = get_csr_map()
 
         conditions = ["si.docstatus = 1", "si.outstanding_amount > 0"]
         values = {"today": today()}
 
-        # Role-based filter
+        # Role-based filter — if sales rep, only show their assigned customers
         if role_filter:
-            conditions.append("si.owner = %(role_owner)s")
-            values["role_owner"] = role_filter
+            my_customers = get_customers_for_rep(role_filter)
+            if my_customers:
+                placeholders = ", ".join([f"%(rc{i})s" for i in range(len(my_customers))])
+                conditions.append(f"si.customer IN ({placeholders})")
+                for i, c in enumerate(my_customers):
+                    values[f"rc{i}"] = c
+            else:
+                # Fallback to owner
+                conditions.append("si.owner = %(role_owner)s")
+                values["role_owner"] = role_filter
 
-        # Sales Person filter — check Sales Team child table
+        # Sales Person filter — use Customer Sales Rep Assignment
         if filters and filters.get("sales_person"):
-            conditions.append("""EXISTS (
-                SELECT 1 FROM `tabSales Team` st
-                WHERE st.parent = si.name AND st.parenttype = 'Sales Invoice'
-                AND st.sales_person = %(sales_person)s
-            )""")
-            values["sales_person"] = filters["sales_person"]
+            rep_customers = get_customers_for_rep(filters["sales_person"])
+            if rep_customers:
+                placeholders = ", ".join([f"%(sp{i})s" for i in range(len(rep_customers))])
+                conditions.append(f"si.customer IN ({placeholders})")
+                for i, c in enumerate(rep_customers):
+                    values[f"sp{i}"] = c
+            else:
+                # No customers for this rep — return empty
+                conditions.append("1 = 0")
 
         # Territory filter
         if filters and filters.get("territory"):
@@ -779,14 +832,9 @@ def get_outstanding_invoices(filters=None):
             LIMIT 100
         """, values, as_dict=True)
 
-        # Get sales person for each invoice from Sales Team child
+        # Enrich with sales person from CSR Assignment
         for inv in invoices:
-            sp = frappe.db.get_value(
-                "Sales Team",
-                {"parent": inv["name"], "parenttype": "Sales Invoice"},
-                "sales_person"
-            )
-            inv["sales_person"] = sp or ""
+            inv["sales_person"] = csr_map.get(inv.get("customer"), "")
             inv["grand_total"] = flt(inv.get("grand_total"))
             inv["outstanding_amount"] = flt(inv.get("outstanding_amount"))
             inv["posting_date"] = str(inv["posting_date"]) if inv.get("posting_date") else ""
@@ -859,41 +907,47 @@ def get_net_sales_summary():
 
 @frappe.whitelist()
 def get_sales_by_person():
-    """Return net sales by Sales Person for MTD and YTD (from Sales Invoice > Sales Team child)."""
+    """Return net sales by Sales Rep for MTD and YTD using Customer Sales Rep Assignment mapping."""
     try:
         month_start = get_first_day(today())
         year_start = getdate(today()).replace(month=1, day=1)
+        csr_map = get_csr_map()
 
-        # MTD by Sales Person
-        mtd_rows = frappe.db.sql("""
-            SELECT
-                COALESCE(st.sales_person, 'Unassigned') as sales_person,
-                SUM(si.net_total * st.allocated_percentage / 100) as net_total
+        # MTD invoices
+        mtd_invoices = frappe.db.sql("""
+            SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            LEFT JOIN `tabSales Team` st ON st.parent = si.name AND st.parenttype = 'Sales Invoice'
-            WHERE si.docstatus = 1
-              AND si.posting_date >= %(month_start)s
-            GROUP BY st.sales_person
-            ORDER BY net_total DESC
+            WHERE si.docstatus = 1 AND si.posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)
 
-        # YTD by Sales Person
-        ytd_rows = frappe.db.sql("""
-            SELECT
-                COALESCE(st.sales_person, 'Unassigned') as sales_person,
-                SUM(si.net_total * st.allocated_percentage / 100) as net_total
+        # YTD invoices
+        ytd_invoices = frappe.db.sql("""
+            SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            LEFT JOIN `tabSales Team` st ON st.parent = si.name AND st.parenttype = 'Sales Invoice'
-            WHERE si.docstatus = 1
-              AND si.posting_date >= %(year_start)s
-            GROUP BY st.sales_person
-            ORDER BY net_total DESC
+            WHERE si.docstatus = 1 AND si.posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)
 
-        for row in mtd_rows:
-            row["net_total"] = flt(row.get("net_total"))
-        for row in ytd_rows:
-            row["net_total"] = flt(row.get("net_total"))
+        # Aggregate by sales rep using CSR map
+        from collections import defaultdict
+
+        mtd_agg = defaultdict(float)
+        for inv in mtd_invoices:
+            rep = csr_map.get(inv.customer, "Unassigned")
+            mtd_agg[rep] += flt(inv.net_total)
+
+        ytd_agg = defaultdict(float)
+        for inv in ytd_invoices:
+            rep = csr_map.get(inv.customer, "Unassigned")
+            ytd_agg[rep] += flt(inv.net_total)
+
+        mtd_rows = sorted(
+            [{"sales_person": k, "net_total": flt(v)} for k, v in mtd_agg.items()],
+            key=lambda x: -x["net_total"]
+        )
+        ytd_rows = sorted(
+            [{"sales_person": k, "net_total": flt(v)} for k, v in ytd_agg.items()],
+            key=lambda x: -x["net_total"]
+        )
 
         return {
             "status": "ok",
