@@ -318,6 +318,7 @@
       .page-container { padding-top: var(--space-6); }
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="page-shell">
@@ -357,22 +358,22 @@
       <section class="summary-banner">
         <div class="summary-banner__grid">
           <div>
-            <div class="type-label">Collections Summary</div>
-            <h2 style="margin-top:10px; margin-bottom:10px;">Outstanding receivables from Sales Invoice</h2>
+            <div class="type-label">Sales Summary</div>
+            <h2 style="margin-top:10px; margin-bottom:10px;">Sales Invoice overview</h2>
             <p class="type-body text-secondary mb-0">
-              All KPIs below are sourced from <span class="font-semibold">Sales Invoice</span> with
-              <span class="font-semibold">outstanding_amount > 0</span>. Filter by Sales Person or Territory to drill down.
+              Net sales from <span class="font-semibold">Sales Invoice</span> (submitted).
+              Outstanding and overdue balances. Filter by Sales Person or Territory.
             </p>
           </div>
           <div class="mini-stat">
-            <div class="mini-stat__label">Total Outstanding</div>
-            <div class="mini-stat__value" id="kpi-total-outstanding">--</div>
-            <div class="type-small">All unpaid Sales Invoices</div>
+            <div class="mini-stat__label">Net Sales MTD</div>
+            <div class="mini-stat__value" id="kpi-net-sales-mtd">--</div>
+            <div class="type-small">This month's invoiced sales</div>
           </div>
           <div class="mini-stat">
-            <div class="mini-stat__label">Overdue Amount</div>
-            <div class="mini-stat__value" id="kpi-overdue-amount">--</div>
-            <div class="type-small">Past due date</div>
+            <div class="mini-stat__label">Net Sales YTD</div>
+            <div class="mini-stat__value" id="kpi-net-sales-ytd">--</div>
+            <div class="type-small">Year to date invoiced sales</div>
           </div>
         </div>
       </section>
@@ -416,24 +417,24 @@
 
       <section class="kpi-grid">
         <div class="kpi-card">
+          <div class="kpi-card__label">Net Sales MTD</div>
+          <div class="kpi-card__value" id="kpi-net-mtd-card">--</div>
+          <div class="kpi-card__meta">Sales Invoice net_total this month</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__label">Net Sales YTD</div>
+          <div class="kpi-card__value" id="kpi-net-ytd-card">--</div>
+          <div class="kpi-card__meta">Sales Invoice net_total this year</div>
+        </div>
+        <div class="kpi-card">
           <div class="kpi-card__label">Total Outstanding</div>
           <div class="kpi-card__value" id="kpi-outstanding-total">--</div>
-          <div class="kpi-card__meta">Sales Invoice.outstanding_amount</div>
+          <div class="kpi-card__meta">Unpaid invoice balance</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-card__label">Overdue Amount</div>
           <div class="kpi-card__value" id="kpi-overdue-total">--</div>
-          <div class="kpi-card__meta">Past due_date</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-card__label">Invoices Outstanding</div>
-          <div class="kpi-card__value" id="kpi-invoice-count">--</div>
-          <div class="kpi-card__meta">Count of unpaid invoices</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-card__label">Customers With Balance</div>
-          <div class="kpi-card__value" id="kpi-customer-count">--</div>
-          <div class="kpi-card__meta">Distinct customers owing</div>
+          <div class="kpi-card__meta">Past due date</div>
         </div>
       </section>
 
@@ -442,6 +443,25 @@
         <div>
           <div class="font-bold" id="credit-alert-title">Overdue alert</div>
           <div class="type-body" id="credit-alert-message"></div>
+        </div>
+      </section>
+
+      <section class="card mb-5">
+        <div class="card__body">
+          <div class="section-title">
+            <div>
+              <div class="type-label">Sales by Sales Person</div>
+              <h3>Invoice totals by Sales Person</h3>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="chart-toggle-mtd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__chartToggle('mtd')">MTD</button>
+              <button class="btn btn--outline" id="chart-toggle-ytd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__chartToggle('ytd')">YTD</button>
+            </div>
+          </div>
+          <div style="position:relative; width:100%; overflow-x:auto;">
+            <canvas id="sales-person-chart" height="280"></canvas>
+          </div>
+          <div class="type-small mt-5" id="chart-note">Showing MTD net sales by Sales Person</div>
         </div>
       </section>
 
@@ -622,6 +642,108 @@
         }
       }
 
+      // ── Load Net Sales KPIs ──
+      async function loadNetSales() {
+        var data = await apiFetch("get_net_sales_summary", {});
+        if (!data) { pushDebug("warn", "Could not load net sales summary", "loadNetSales"); return; }
+        setText("kpi-net-sales-mtd", formatKES(data.net_sales_mtd || 0));
+        setText("kpi-net-sales-ytd", formatKES(data.net_sales_ytd || 0));
+        setText("kpi-net-mtd-card", formatKES(data.net_sales_mtd || 0));
+        setText("kpi-net-ytd-card", formatKES(data.net_sales_ytd || 0));
+        pushDebug("success", "Net sales loaded: MTD=" + formatKES(data.net_sales_mtd) + " YTD=" + formatKES(data.net_sales_ytd), "loadNetSales");
+      }
+
+      // ── Chart ──
+      var chartInstance = null;
+      var chartDataCache = { mtd: null, ytd: null };
+      var currentChartMode = "mtd";
+
+      async function loadChartData() {
+        var data = await apiFetch("get_sales_by_person", {});
+        if (!data) { pushDebug("warn", "Could not load sales by person chart data", "loadChartData"); return; }
+        chartDataCache.mtd = data.mtd || [];
+        chartDataCache.ytd = data.ytd || [];
+        renderChart(currentChartMode);
+        pushDebug("success", "Chart data loaded: " + (data.mtd || []).length + " sales persons", "loadChartData");
+      }
+
+      function renderChart(mode) {
+        var canvas = document.getElementById("sales-person-chart");
+        if (!canvas) return;
+
+        var rows = chartDataCache[mode] || [];
+        if (rows.length === 0) {
+          if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+          var ctx = canvas.getContext("2d");
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.font = "14px Inter, sans-serif";
+          ctx.fillStyle = "#7a8596";
+          ctx.textAlign = "center";
+          ctx.fillText("No data available", canvas.width / 2, 140);
+          return;
+        }
+
+        var labels = rows.map(function (r) { return r.sales_person || "Unassigned"; });
+        var values = rows.map(function (r) { return parseFloat(r.net_total) || 0; });
+        var colors = ["#2B3990", "#ED1C24", "#167c45", "#a16207", "#175cd3", "#6941c6", "#0f766e", "#9333ea", "#c2410c", "#64748b"];
+
+        if (chartInstance) chartInstance.destroy();
+
+        chartInstance = new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [{
+              label: mode === "mtd" ? "Net Sales MTD" : "Net Sales YTD",
+              data: values,
+              backgroundColor: labels.map(function (_, i) { return colors[i % colors.length]; }),
+              borderRadius: 6,
+              maxBarThickness: 60
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function (ctx) { return formatKES(ctx.raw); }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (val) { return formatKES(val); },
+                  font: { size: 11 }
+                },
+                grid: { color: "#eef1f5" }
+              },
+              x: {
+                ticks: { font: { size: 12, weight: 600 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+
+        var note = document.getElementById("chart-note");
+        if (note) note.textContent = mode === "mtd" ? "Showing MTD net sales by Sales Person" : "Showing YTD net sales by Sales Person";
+      }
+
+      window.__chartToggle = function (mode) {
+        currentChartMode = mode;
+        renderChart(mode);
+        var mtdBtn = document.getElementById("chart-toggle-mtd");
+        var ytdBtn = document.getElementById("chart-toggle-ytd");
+        if (mtdBtn && ytdBtn) {
+          mtdBtn.className = mode === "mtd" ? "btn" : "btn btn--outline";
+          ytdBtn.className = mode === "ytd" ? "btn" : "btn btn--outline";
+        }
+      };
+
       // ── Load Sales Invoice list ──
       async function loadInvoices() {
         var filters = getFilters();
@@ -635,13 +757,9 @@
         var invoices = data.invoices || [];
         var summary = data.summary || {};
 
-        // Update KPIs
+        // Update outstanding KPIs
         setText("kpi-outstanding-total", formatKES(summary.total_outstanding || 0));
         setText("kpi-overdue-total", formatKES(summary.total_overdue || 0));
-        setText("kpi-invoice-count", summary.invoice_count || 0);
-        setText("kpi-customer-count", summary.customer_count || 0);
-        setText("kpi-total-outstanding", formatKES(summary.total_outstanding || 0));
-        setText("kpi-overdue-amount", formatKES(summary.total_overdue || 0));
 
         // Alert
         var alertBox = document.getElementById("credit-alert-box");
@@ -710,7 +828,7 @@
         debugStore.length = 0;
         renderDebug();
         await loadFilterOptions();
-        await loadInvoices();
+        await Promise.all([loadNetSales(), loadChartData(), loadInvoices()]);
         bindFilters();
         renderDebug();
       }
