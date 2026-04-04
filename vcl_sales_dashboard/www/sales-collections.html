@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCL Collections Dashboard</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-soft: #f0f2f5;
+      --border-color: #d9dee7;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --container-max: 1440px;
+      --transition-fast: 0.15s ease;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-dashboard); background: var(--bg-page); color: var(--text-primary); line-height: 1.45; }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar { background: var(--bg-surface); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 20; }
+    .topbar__inner { max-width: var(--container-max); margin: 0 auto; padding: 0 var(--space-6); min-height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar__title { font-size: 18px; font-weight: 700; color: var(--vcl-primary); }
+    .topbar__nav a { margin-left: var(--space-4); font-size: 14px; color: var(--text-secondary); }
+
+    .page-container { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6); }
+
+    .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5); margin-bottom: var(--space-5); }
+    .card__title { font-size: 15px; font-weight: 600; margin: 0 0 var(--space-4); color: var(--text-primary); }
+
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5); }
+    .kpi-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); text-align: center; box-shadow: var(--shadow-card); }
+    .kpi-card .kpi-val { font-size: 26px; font-weight: 700; color: var(--vcl-primary); }
+    .kpi-card .kpi-lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-card.danger .kpi-val { color: var(--danger); }
+    .kpi-card.warning .kpi-val { color: var(--warning); }
+
+    /* Filters */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5); align-items: flex-end; }
+    .filter-bar .fg { display: flex; flex-direction: column; gap: 4px; }
+    .filter-bar label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .filter-bar select, .filter-bar input { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; min-width: 140px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast); }
+    .btn-primary { background: var(--vcl-primary); color: var(--text-on-dark); }
+    .btn-primary:hover { background: var(--vcl-primary-dark); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-outline { background: var(--bg-surface); color: var(--vcl-primary); border: 1px solid var(--vcl-primary); }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-data); }
+    .data-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+    .data-table tr:hover { background: var(--bg-soft); cursor: pointer; }
+    .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .data-table .nowrap { white-space: nowrap; }
+
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .st-not-contacted { background: var(--bg-soft); color: var(--text-muted); }
+    .st-contacted { background: var(--info-bg); color: var(--info); }
+    .st-promise-to-pay { background: var(--success-bg); color: var(--success); }
+    .st-part-payment-expected { background: #e8f5e9; color: #2e7d32; }
+    .st-in-dispute { background: var(--warning-bg); color: var(--warning); }
+    .st-waiting-for-statement, .st-waiting-for-credit-note { background: #fff3e0; color: #e65100; }
+    .st-escalated { background: var(--danger-bg); color: var(--danger); }
+    .st-cleared { background: var(--success-bg); color: var(--success); }
+
+    /* Detail panel (slide-in) */
+    .detail-overlay { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,0.3); z-index: 100; display: none; }
+    .detail-overlay.open { display: block; }
+    .detail-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 560px; max-width: 100vw; background: var(--bg-surface); box-shadow: -4px 0 20px rgba(0,0,0,0.1); z-index: 101; overflow-y: auto; padding: var(--space-6); display: none; }
+    .detail-panel.open { display: block; }
+    .detail-panel .close-btn { position: absolute; top: var(--space-4); right: var(--space-4); background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+    .detail-panel h3 { margin: 0 0 var(--space-4); font-size: 17px; padding-right: 40px; }
+    .detail-section { margin-bottom: var(--space-5); }
+    .detail-section h4 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; margin: 0 0 var(--space-2); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px var(--space-4); font-size: 13px; }
+    .detail-grid .dlbl { color: var(--text-muted); }
+    .detail-grid .dval { font-weight: 600; }
+
+    /* Follow-up timeline */
+    .timeline { list-style: none; padding: 0; margin: 0; }
+    .timeline li { position: relative; padding: 0 0 var(--space-4) 24px; border-left: 2px solid var(--border-color); }
+    .timeline li:last-child { border-left-color: transparent; }
+    .timeline li::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--vcl-primary); }
+    .timeline .tl-date { font-size: 11px; color: var(--text-muted); }
+    .timeline .tl-status { font-size: 12px; font-weight: 600; }
+    .timeline .tl-text { font-size: 13px; margin-top: 2px; }
+
+    /* Follow-up form */
+    .fu-form { margin-top: var(--space-4); }
+    .fu-form .form-group { margin-bottom: var(--space-3); }
+    .fu-form label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .fu-form select, .fu-form input, .fu-form textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; }
+    .fu-form textarea { min-height: 60px; resize: vertical; }
+    .fu-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+    .pagination { display: flex; align-items: center; gap: var(--space-3); justify-content: center; margin-top: var(--space-5); font-size: 13px; }
+
+    /* Rep summary */
+    .rep-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rep-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border-color); font-size: 11px; text-transform: uppercase; color: var(--text-muted); }
+    .rep-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+    .rep-table .num { text-align: right; }
+
+    /* Warning queues */
+    .queue-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+    .queue-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); cursor: pointer; text-align: center; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+    .queue-card:hover { border-color: var(--vcl-primary); box-shadow: var(--shadow-card); }
+    .queue-card.active { border-color: var(--vcl-primary); border-width: 2px; }
+    .queue-card .qc-val { font-size: 22px; font-weight: 700; }
+    .queue-card .qc-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .queue-card.qc-danger .qc-val { color: var(--danger); }
+    .queue-card.qc-warning .qc-val { color: var(--warning); }
+    .queue-card.qc-info .qc-val { color: var(--info); }
+
+    .queue-table-wrap { max-height: 300px; overflow-y: auto; }
+    .queue-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .queue-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--border-color); font-size: 10px; text-transform: uppercase; color: var(--text-muted); position: sticky; top: 0; background: var(--bg-surface); }
+    .queue-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
+    .queue-table tr:hover { background: var(--bg-soft); cursor: pointer; }
+
+    /* Trend chart (simple bar) */
+    .trend-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .trend-table th { text-align: left; padding: 5px 8px; border-bottom: 2px solid var(--border-color); font-size: 10px; text-transform: uppercase; color: var(--text-muted); }
+    .trend-table td { padding: 5px 8px; border-bottom: 1px solid var(--border-color); }
+    .trend-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .trend-bar { display: inline-block; height: 14px; border-radius: 2px; vertical-align: middle; min-width: 2px; }
+    .trend-pos { color: var(--danger); }
+    .trend-neg { color: var(--success); }
+    .trend-zero { color: var(--text-muted); }
+
+    .hidden { display: none; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--vcl-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__inner">
+    <div class="topbar__title">Collections Dashboard</div>
+    <nav class="topbar__nav">
+      {% if is_manager %}<a href="/sales-collections-import">Import</a>{% endif %}
+      <a href="/sales-dashboard">Sales Dashboard</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page-container">
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card"><div class="kpi-val" id="kpi-book">--</div><div class="kpi-lbl">Total Book</div></div>
+    <div class="kpi-card danger"><div class="kpi-val" id="kpi-overdue">--</div><div class="kpi-lbl">Total Overdue</div></div>
+    <div class="kpi-card danger"><div class="kpi-val" id="kpi-overdue30">--</div><div class="kpi-lbl">Overdue 30+</div></div>
+    <div class="kpi-card warning"><div class="kpi-val" id="kpi-due-cm">--</div><div class="kpi-lbl">Due This Month</div></div>
+    <div class="kpi-card"><div class="kpi-val" id="kpi-not-contacted">--</div><div class="kpi-lbl">Not Contacted</div></div>
+    <div class="kpi-card"><div class="kpi-val" id="kpi-escalated">--</div><div class="kpi-lbl">Escalated</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card">
+    <div class="filter-bar" id="filter-bar">
+      <div class="fg">
+        <label>Period</label>
+        <select id="f-period"><option value="">Loading...</option></select>
+      </div>
+      <div class="fg {% if not is_manager %}hidden{% endif %}">
+        <label>Sales Rep</label>
+        <select id="f-rep"><option value="">All Reps</option></select>
+      </div>
+      <div class="fg">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="">All</option>
+          <option value="Not Contacted">Not Contacted</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Promise to Pay">Promise to Pay</option>
+          <option value="Part Payment Expected">Part Payment Expected</option>
+          <option value="In Dispute">In Dispute</option>
+          <option value="Waiting for Statement">Waiting for Statement</option>
+          <option value="Waiting for Credit Note">Waiting for Credit Note</option>
+          <option value="Escalated">Escalated</option>
+          <option value="Cleared">Cleared</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Search</label>
+        <input type="text" id="f-search" placeholder="Customer name..." />
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="applyFilters()">Apply</button>
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <label><input type="checkbox" id="f-overdue-only" /> Overdue only</label>
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <label><input type="checkbox" id="f-no-comment" /> No comment only</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rep Summary (managers only) -->
+  {% if is_manager %}
+  <div class="card" id="rep-summary-card">
+    <h3 class="card__title">Rep Summary</h3>
+    <div id="rep-summary-body"><span class="spinner"></span></div>
+  </div>
+  {% endif %}
+
+  <!-- Warning / Review Queues (managers only) -->
+  {% if is_manager %}
+  <div class="card" id="warning-queues-card">
+    <h3 class="card__title">Review Queues</h3>
+    <div class="queue-cards" id="queue-cards"></div>
+    <div id="queue-detail" class="hidden">
+      <div class="queue-table-wrap">
+        <table class="queue-table" id="queue-detail-table">
+          <thead id="queue-detail-head"></thead>
+          <tbody id="queue-detail-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Customer List -->
+  <div class="card">
+    <h3 class="card__title">Customer List <span id="list-count" style="font-weight:400;color:var(--text-muted);font-size:13px;"></span></h3>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="customer-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Rep</th>
+            <th>Terms</th>
+            <th class="num">Total</th>
+            <th class="num">Overdue</th>
+            <th class="num">Overdue 30+</th>
+            <th class="num">Due CM</th>
+            <th>Status</th>
+            <th>Next Action</th>
+          </tr>
+        </thead>
+        <tbody id="customer-tbody">
+          <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <button class="close-btn" onclick="closeDetail()">&times;</button>
+  <div id="detail-content"></div>
+</div>
+
+<script>
+  const isManager = {{ is_manager|tojson }};
+  let currentFilters = {};
+  let currentPage = 0;
+  const PAGE_SIZE = 50;
+
+  function fmtC(v) { return parseFloat(v||0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); }
+  function statusClass(s) { return 'st-' + (s||'not-contacted').toLowerCase().replace(/\s+/g, '-'); }
+
+  function api(method, args) {
+    return fetch('/api/method/' + method, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': frappe.csrf_token },
+      body: JSON.stringify(args)
+    }).then(r => r.json()).then(r => r.message || r);
+  }
+
+  async function loadPeriods() {
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_available_periods', {});
+    const sel = document.getElementById('f-period');
+    sel.innerHTML = '<option value="">All Periods</option>';
+    if (res.status === 'ok' && res.data) {
+      res.data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.period_start + '|' + p.period_end;
+        opt.textContent = p.import_label || (p.period_start + ' to ' + p.period_end);
+        sel.appendChild(opt);
+      });
+      // Auto-select first period
+      if (res.data.length > 0) {
+        sel.value = res.data[0].period_start + '|' + res.data[0].period_end;
+      }
+    }
+  }
+
+  async function loadRepOptions() {
+    if (!isManager) return;
+    try {
+      const res = await fetch('/api/resource/Customer Sales Rep Assignment?filters=[["status","=","Active"]]&fields=["distinct sales_representative as name"]&limit_page_length=100&order_by=sales_representative asc', {
+        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+      }).then(r => r.json());
+      const sel = document.getElementById('f-rep');
+      if (res.data) {
+        res.data.forEach(r => {
+          if (r.name) {
+            const opt = document.createElement('option');
+            opt.value = r.name;
+            opt.textContent = r.name;
+            sel.appendChild(opt);
+          }
+        });
+      }
+    } catch(e) {}
+  }
+
+  function getFilterValues() {
+    const periodVal = document.getElementById('f-period').value;
+    const filters = {};
+    if (periodVal) {
+      const parts = periodVal.split('|');
+      filters.period_start = parts[0];
+      filters.period_end = parts[1];
+    }
+    const rep = document.getElementById('f-rep').value;
+    if (rep) filters.sales_rep_user = rep;
+    const status = document.getElementById('f-status').value;
+    if (status) filters.status = status;
+    const search = document.getElementById('f-search').value.trim();
+    if (search) filters.search_text = search;
+    if (document.getElementById('f-overdue-only').checked) filters.overdue_only = 1;
+    if (document.getElementById('f-no-comment').checked) filters.no_comment_only = 1;
+    return filters;
+  }
+
+  async function applyFilters() {
+    currentPage = 0;
+    currentFilters = getFilterValues();
+    const tasks = [loadSummary(), loadCustomerList()];
+    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); }
+    await Promise.all(tasks);
+  }
+
+  async function loadSummary() {
+    const f = currentFilters;
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_summary', {
+      period_start: f.period_start, period_end: f.period_end, sales_rep_user: f.sales_rep_user
+    });
+    if (res.status === 'ok' && res.data) {
+      const d = res.data;
+      document.getElementById('kpi-book').textContent = fmtC(d.total_balance);
+      document.getElementById('kpi-overdue').textContent = fmtC(d.total_overdue);
+      document.getElementById('kpi-overdue30').textContent = fmtC(d.total_overdue_30);
+      document.getElementById('kpi-due-cm').textContent = fmtC(d.total_due_current_month);
+      document.getElementById('kpi-not-contacted').textContent = d.not_contacted || 0;
+      document.getElementById('kpi-escalated').textContent = d.escalated || 0;
+    }
+  }
+
+  async function loadRepSummary() {
+    if (!isManager) return;
+    const f = currentFilters;
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_rep_summary', {
+      period_start: f.period_start, period_end: f.period_end
+    });
+    const body = document.getElementById('rep-summary-body');
+    if (res.status === 'ok' && res.data && res.data.length) {
+      let html = '<table class="rep-table"><thead><tr><th>Sales Rep</th><th class="num">Customers</th><th class="num">Total Balance</th><th class="num">Overdue</th><th class="num">Overdue 30+</th><th class="num">Due CM</th><th class="num">Not Contacted</th></tr></thead><tbody>';
+      res.data.forEach(r => {
+        html += `<tr>
+          <td>${r.sales_rep || 'Unassigned'}</td>
+          <td class="num">${r.customer_count}</td>
+          <td class="num">${fmtC(r.total_balance)}</td>
+          <td class="num">${fmtC(r.total_overdue)}</td>
+          <td class="num">${fmtC(r.total_overdue_30)}</td>
+          <td class="num">${fmtC(r.due_current_month)}</td>
+          <td class="num">${r.not_contacted}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    } else {
+      body.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No rep data.</p>';
+    }
+  }
+
+  async function loadCustomerList() {
+    const f = { ...currentFilters, limit: PAGE_SIZE, offset: currentPage * PAGE_SIZE };
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_customer_list', { filters: JSON.stringify(f) });
+    const tbody = document.getElementById('customer-tbody');
+    const countEl = document.getElementById('list-count');
+
+    if (res.status !== 'ok' || !res.data || !res.data.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;">No records found.</td></tr>';
+      countEl.textContent = '(0)';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    countEl.textContent = `(${res.total} total)`;
+    let html = '';
+    res.data.forEach(r => {
+      const sc = statusClass(r.latest_follow_up_status);
+      html += `<tr onclick="openDetail('${r.name}')">
+        <td class="nowrap">${r.customer_name_display || r.excel_customer_name}</td>
+        <td class="nowrap">${r.assigned_sales_representative || '<span style="color:var(--text-muted)">--</span>'}</td>
+        <td>${r.terms || ''}</td>
+        <td class="num">${fmtC(r.total_balance)}</td>
+        <td class="num">${fmtC(r.overdue_amount)}</td>
+        <td class="num">${fmtC(r.overdue_30_amount)}</td>
+        <td class="num">${fmtC(r.due_current_month)}</td>
+        <td><span class="status-badge ${sc}">${r.latest_follow_up_status || 'Not Contacted'}</span></td>
+        <td class="nowrap">${r.next_action_date || ''}</td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+
+    // Pagination
+    const totalPages = Math.ceil(res.total / PAGE_SIZE);
+    let pHtml = '';
+    if (totalPages > 1) {
+      pHtml += `<button class="btn btn-sm btn-outline" ${currentPage===0?'disabled':''} onclick="goPage(${currentPage-1})">Prev</button>`;
+      pHtml += `<span>Page ${currentPage+1} of ${totalPages}</span>`;
+      pHtml += `<button class="btn btn-sm btn-outline" ${currentPage>=totalPages-1?'disabled':''} onclick="goPage(${currentPage+1})">Next</button>`;
+    }
+    document.getElementById('pagination').innerHTML = pHtml;
+  }
+
+  function goPage(p) { currentPage = p; loadCustomerList(); }
+
+  // ── Detail Panel ──────────────────────────────────────────────────
+
+  async function openDetail(snapshotName) {
+    document.getElementById('detail-overlay').classList.add('open');
+    document.getElementById('detail-panel').classList.add('open');
+    document.getElementById('detail-content').innerHTML = '<div style="text-align:center;padding:40px;"><span class="spinner"></span></div>';
+
+    const [detailRes, fuRes] = await Promise.all([
+      api('vcl_sales_dashboard.api.collections_dashboard.get_customer_snapshot_detail', { snapshot_name: snapshotName }),
+      api('vcl_sales_dashboard.api.collections_dashboard.get_follow_ups', { snapshot_name: snapshotName })
+    ]);
+
+    if (detailRes.status !== 'ok') {
+      document.getElementById('detail-content').innerHTML = '<p style="color:var(--danger);">Error loading detail.</p>';
+      return;
+    }
+
+    const d = detailRes.data;
+    const followUps = (fuRes.status === 'ok' ? fuRes.data : []) || [];
+
+    // Load trend async (non-blocking render)
+    const trendPromise = loadMonthTrend(d.customer, d.excel_customer_name);
+
+    let html = `<h3>${d.customer_name_display || d.excel_customer_name}</h3>`;
+
+    // Info grid
+    html += `<div class="detail-section">
+      <h4>Customer Info</h4>
+      <div class="detail-grid">
+        <div class="dlbl">Customer</div><div class="dval">${d.customer || 'Not Matched'}</div>
+        <div class="dlbl">Sales Rep</div><div class="dval">${d.assigned_sales_representative || '--'}</div>
+        <div class="dlbl">Terms</div><div class="dval">${d.terms || '--'}</div>
+        <div class="dlbl">Period</div><div class="dval">${d.period_start} to ${d.period_end}</div>
+        <div class="dlbl">Customer Match</div><div class="dval">${d.customer_match_status}</div>
+        <div class="dlbl">Rep Match</div><div class="dval">${d.assignment_match_status}</div>
+      </div>
+    </div>`;
+
+    // Ageing buckets
+    const buckets = [
+      ['Current', d.bucket_current], ['1-15', d.bucket_1_15], ['16-30', d.bucket_16_30],
+      ['31-45', d.bucket_31_45], ['46-60', d.bucket_46_60], ['61-75', d.bucket_61_75],
+      ['76-90', d.bucket_76_90], ['91-105', d.bucket_91_105], ['106-120', d.bucket_106_120],
+      ['121-135', d.bucket_121_135], ['136-150', d.bucket_136_150], ['151-165', d.bucket_151_165],
+      ['166-180', d.bucket_166_180], ['181+', d.bucket_181_over]
+    ];
+    html += `<div class="detail-section"><h4>Ageing Buckets</h4><div class="detail-grid">`;
+    buckets.forEach(([lbl, val]) => {
+      const v = parseFloat(val||0);
+      if (v !== 0) html += `<div class="dlbl">${lbl}</div><div class="dval">${fmtC(v)}</div>`;
+    });
+    html += `</div></div>`;
+
+    // Totals
+    html += `<div class="detail-section"><h4>Totals</h4><div class="detail-grid">
+      <div class="dlbl">Total Balance</div><div class="dval">${fmtC(d.total_balance)}</div>
+      <div class="dlbl">Overdue</div><div class="dval" style="color:var(--danger)">${fmtC(d.overdue_amount)}</div>
+      <div class="dlbl">Overdue 30+</div><div class="dval" style="color:var(--danger)">${fmtC(d.overdue_30_amount)}</div>
+      <div class="dlbl">Due Current Month</div><div class="dval">${fmtC(d.due_current_month)}</div>
+      <div class="dlbl">Due Next Month</div><div class="dval">${fmtC(d.due_next_month)}</div>
+      <div class="dlbl">PD Cheques CM</div><div class="dval">${fmtC(d.pd_cheques_cm)}</div>
+    </div></div>`;
+
+    // Month-on-month trend placeholder
+    html += `<div id="trend-section"></div>`;
+
+    // Follow-up timeline
+    html += `<div class="detail-section"><h4>Follow-Up History</h4>`;
+    if (followUps.length) {
+      html += '<ul class="timeline">';
+      followUps.forEach(fu => {
+        html += `<li>
+          <div class="tl-date">${fu.comment_date || ''} by ${fu.comment_by || ''} (${fu.comment_type || ''})</div>
+          <div class="tl-status"><span class="status-badge ${statusClass(fu.follow_up_status)}">${fu.follow_up_status}</span></div>
+          <div class="tl-text">${fu.comment_text || ''}</div>
+          ${fu.promised_payment_date ? '<div class="tl-date">Promised: '+fu.promised_payment_date+' | Expected: '+fmtC(fu.expected_collection_amount)+'</div>' : ''}
+        </li>`;
+      });
+      html += '</ul>';
+    } else {
+      html += '<p style="color:var(--text-muted);font-size:13px;">No follow-ups yet.</p>';
+    }
+    html += '</div>';
+
+    // Add follow-up form
+    html += `<div class="detail-section">
+      <h4>Add Follow-Up</h4>
+      <div class="fu-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <select id="fu-type"><option>Call</option><option>Visit</option><option>Email</option><option>WhatsApp</option><option>Internal Note</option><option>Escalation</option></select>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="fu-status"><option>Not Contacted</option><option>Contacted</option><option>Promise to Pay</option><option>Part Payment Expected</option><option>In Dispute</option><option>Waiting for Statement</option><option>Waiting for Credit Note</option><option>Escalated</option><option>Cleared</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Comment *</label>
+          <textarea id="fu-text" placeholder="Enter follow-up notes..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Promised Payment Date</label>
+            <input type="date" id="fu-promised-date" />
+          </div>
+          <div class="form-group">
+            <label>Expected Amount</label>
+            <input type="number" id="fu-amount" step="0.01" min="0" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Priority</label>
+            <select id="fu-priority"><option value="">--</option><option>High</option><option>Medium</option><option>Low</option></select>
+          </div>
+          <div class="form-group">
+            <label>Next Action Date</label>
+            <input type="date" id="fu-next-action" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label><input type="checkbox" id="fu-escalation" /> Escalation Needed</label>
+        </div>
+        <button class="btn btn-primary" onclick="submitFollowUp('${snapshotName}')">Save Follow-Up</button>
+      </div>
+    </div>`;
+
+    document.getElementById('detail-content').innerHTML = html;
+
+    // Render trend when ready (non-blocking)
+    trendPromise.then(trendHtml => {
+      const trendEl = document.getElementById('trend-section');
+      if (trendEl && trendHtml) trendEl.innerHTML = trendHtml;
+    });
+  }
+
+  function closeDetail() {
+    document.getElementById('detail-overlay').classList.remove('open');
+    document.getElementById('detail-panel').classList.remove('open');
+  }
+
+  async function submitFollowUp(snapshotName) {
+    const text = document.getElementById('fu-text').value.trim();
+    if (!text) { alert('Comment text is required.'); return; }
+
+    const payload = {
+      comment_type: document.getElementById('fu-type').value,
+      follow_up_status: document.getElementById('fu-status').value,
+      comment_text: text,
+      promised_payment_date: document.getElementById('fu-promised-date').value || null,
+      expected_collection_amount: document.getElementById('fu-amount').value || null,
+      priority: document.getElementById('fu-priority').value || null,
+      next_action_date: document.getElementById('fu-next-action').value || null,
+      escalation_needed: document.getElementById('fu-escalation').checked ? 1 : 0,
+    };
+
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.add_follow_up', {
+      snapshot_name: snapshotName,
+      payload: JSON.stringify(payload)
+    });
+
+    if (res.status === 'ok') {
+      openDetail(snapshotName);
+      loadCustomerList();
+      loadSummary();
+    } else {
+      alert('Error: ' + (res.message || 'Unknown error'));
+    }
+  }
+
+  // ── Warning Queues ─────────────────────────────────────────────────
+
+  let warningData = {};
+  let activeQueue = null;
+
+  const QUEUE_META = {
+    customer_not_matched:  { label: 'Customer Not Matched', cls: 'qc-danger' },
+    no_rep_assignment:     { label: 'No Rep Assignment',    cls: 'qc-warning' },
+    multiple_assignments:  { label: 'Multiple Assignments', cls: 'qc-warning' },
+    promise_to_pay_due:    { label: 'Promise Due',          cls: 'qc-danger' },
+    escalated:             { label: 'Escalated',            cls: 'qc-danger' },
+    in_dispute:            { label: 'In Dispute',           cls: 'qc-warning' },
+    no_comment_overdue:    { label: 'Overdue No Contact',   cls: 'qc-info' },
+  };
+
+  async function loadWarningQueues() {
+    if (!isManager) return;
+    const f = currentFilters;
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_warning_queues', {
+      period_start: f.period_start, period_end: f.period_end
+    });
+    const container = document.getElementById('queue-cards');
+    if (res.status !== 'ok') { container.innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading queues.</p>'; return; }
+
+    warningData = res.queues || {};
+    const summary = res.summary || {};
+    let html = '';
+    for (const [key, meta] of Object.entries(QUEUE_META)) {
+      const count = summary[key] || 0;
+      html += `<div class="queue-card ${meta.cls}${activeQueue===key?' active':''}" onclick="showQueue('${key}')">
+        <div class="qc-val">${count}</div>
+        <div class="qc-lbl">${meta.label}</div>
+      </div>`;
+    }
+    container.innerHTML = html;
+
+    if (activeQueue && warningData[activeQueue]) {
+      renderQueueTable(activeQueue);
+    }
+  }
+
+  function showQueue(key) {
+    if (activeQueue === key) {
+      activeQueue = null;
+      document.getElementById('queue-detail').classList.add('hidden');
+      document.querySelectorAll('.queue-card').forEach(c => c.classList.remove('active'));
+      return;
+    }
+    activeQueue = key;
+    document.querySelectorAll('.queue-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    renderQueueTable(key);
+  }
+
+  function renderQueueTable(key) {
+    const rows = warningData[key] || [];
+    const detail = document.getElementById('queue-detail');
+    const head = document.getElementById('queue-detail-head');
+    const body = document.getElementById('queue-detail-body');
+
+    if (!rows.length) {
+      detail.classList.remove('hidden');
+      head.innerHTML = '';
+      body.innerHTML = '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">No records in this queue.</td></tr>';
+      return;
+    }
+
+    detail.classList.remove('hidden');
+    head.innerHTML = '<tr><th>Customer</th><th>Rep</th><th>Match Status</th><th class="num">Balance</th><th class="num">Overdue</th><th>Status</th><th>Promised Date</th></tr>';
+
+    let html = '';
+    rows.forEach(r => {
+      const sc = statusClass(r.latest_follow_up_status);
+      html += `<tr onclick="openDetail('${r.name}')">
+        <td>${r.customer_name_display || r.excel_customer_name}</td>
+        <td>${r.assigned_sales_representative || '--'}</td>
+        <td>${r.customer_match_status === 'Customer Not Matched' ? '<span style="color:var(--danger)">'+r.customer_match_status+'</span>' : r.assignment_match_status || '--'}</td>
+        <td class="num">${fmtC(r.total_balance)}</td>
+        <td class="num">${fmtC(r.overdue_amount)}</td>
+        <td><span class="status-badge ${sc}">${r.latest_follow_up_status || 'Not Contacted'}</span></td>
+        <td>${r.promised_payment_date || ''}</td>
+      </tr>`;
+    });
+    body.innerHTML = html;
+  }
+
+  // ── Month-on-Month Trend ──────────────────────────────────────────
+
+  async function loadMonthTrend(customer, excelName) {
+    const args = {};
+    if (customer) args.customer = customer;
+    else args.excel_customer_name = excelName;
+
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_customer_month_trend', args);
+    if (res.status !== 'ok' || !res.data || res.data.length < 1) return '';
+
+    const data = res.data;
+    const maxBal = Math.max(...data.map(d => Math.abs(parseFloat(d.total_balance || 0))), 1);
+
+    let html = '<div class="detail-section"><h4>Month-on-Month Trend</h4>';
+    html += '<table class="trend-table"><thead><tr><th>Period</th><th class="num">Balance</th><th class="num">Change</th><th>Trend</th><th class="num">Overdue</th><th>Status</th></tr></thead><tbody>';
+
+    data.forEach(d => {
+      const bal = parseFloat(d.total_balance || 0);
+      const chg = parseFloat(d.balance_change || 0);
+      const barW = Math.round((Math.abs(bal) / maxBal) * 120);
+      const chgCls = chg > 0 ? 'trend-pos' : (chg < 0 ? 'trend-neg' : 'trend-zero');
+      const chgIcon = chg > 0 ? '&#9650;' : (chg < 0 ? '&#9660;' : '&#8212;');
+      const label = d.snapshot_label || d.period_start;
+      const sc = statusClass(d.latest_follow_up_status);
+
+      html += `<tr>
+        <td>${label}</td>
+        <td class="num">${fmtC(bal)}</td>
+        <td class="num ${chgCls}">${chgIcon} ${fmtC(Math.abs(chg))}</td>
+        <td><span class="trend-bar" style="width:${barW}px;background:var(--vcl-primary);"></span></td>
+        <td class="num">${fmtC(d.overdue_amount)}</td>
+        <td><span class="status-badge ${sc}">${d.latest_follow_up_status || '--'}</span></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    await Promise.all([loadPeriods(), loadRepOptions()]);
+    applyFilters();
+  });
+</script>
+
+</body>
+</html>

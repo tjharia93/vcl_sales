@@ -1,0 +1,175 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-04-04 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "linkage_section",
+    "collections_customer_snapshot",
+    "collections_import",
+    "customer",
+    "follow_up_section",
+    "comment_date",
+    "comment_by",
+    "comment_type",
+    "follow_up_status",
+    "column_break_follow_up",
+    "promised_payment_date",
+    "expected_collection_amount",
+    "priority",
+    "next_action_date",
+    "escalation_needed",
+    "comment_text_section",
+    "comment_text"
+  ],
+  "fields": [
+    {
+      "fieldname": "linkage_section",
+      "fieldtype": "Section Break",
+      "label": "Linkage"
+    },
+    {
+      "fieldname": "collections_customer_snapshot",
+      "fieldtype": "Link",
+      "label": "Collections Customer Snapshot",
+      "options": "Collections Customer Snapshot",
+      "reqd": 1
+    },
+    {
+      "fieldname": "collections_import",
+      "fieldtype": "Link",
+      "label": "Collections Import",
+      "options": "Collections Import"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer"
+    },
+    {
+      "fieldname": "follow_up_section",
+      "fieldtype": "Section Break",
+      "label": "Follow Up"
+    },
+    {
+      "fieldname": "comment_date",
+      "fieldtype": "Datetime",
+      "label": "Comment Date",
+      "default": "__now"
+    },
+    {
+      "fieldname": "comment_by",
+      "fieldtype": "Link",
+      "label": "Comment By",
+      "options": "User",
+      "default": "__user"
+    },
+    {
+      "fieldname": "comment_type",
+      "fieldtype": "Select",
+      "label": "Comment Type",
+      "options": "Call\nVisit\nEmail\nWhatsApp\nInternal Note\nEscalation"
+    },
+    {
+      "fieldname": "follow_up_status",
+      "fieldtype": "Select",
+      "label": "Follow Up Status",
+      "options": "Not Contacted\nContacted\nPromise to Pay\nPart Payment Expected\nIn Dispute\nWaiting for Statement\nWaiting for Credit Note\nEscalated\nCleared"
+    },
+    {
+      "fieldname": "column_break_follow_up",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "promised_payment_date",
+      "fieldtype": "Date",
+      "label": "Promised Payment Date"
+    },
+    {
+      "fieldname": "expected_collection_amount",
+      "fieldtype": "Currency",
+      "label": "Expected Collection Amount"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "High\nMedium\nLow"
+    },
+    {
+      "fieldname": "next_action_date",
+      "fieldtype": "Date",
+      "label": "Next Action Date"
+    },
+    {
+      "fieldname": "escalation_needed",
+      "fieldtype": "Check",
+      "label": "Escalation Needed"
+    },
+    {
+      "fieldname": "comment_text_section",
+      "fieldtype": "Section Break",
+      "label": "Comment"
+    },
+    {
+      "fieldname": "comment_text",
+      "fieldtype": "Long Text",
+      "label": "Comment Text",
+      "reqd": 1
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-04 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "Collections Follow Up",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Finance Manager",
+      "write": 1
+    },
+    {
+      "create": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "write": 1
+    },
+    {
+      "create": 1,
+      "read": 1,
+      "role": "Sales User",
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

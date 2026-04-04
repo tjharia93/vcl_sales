@@ -11,4 +11,6 @@ website_route_rules = [
     {"from_route": "/sales-discrepancy", "to_route": "sales-discrepancy"},
     {"from_route": "/sales-customer/<name>", "to_route": "sales-customer"},
     {"from_route": "/sales-manager", "to_route": "sales-manager"},
+    {"from_route": "/sales-collections", "to_route": "sales-collections"},
+    {"from_route": "/sales-collections-import", "to_route": "sales-collections-import"},
 ]

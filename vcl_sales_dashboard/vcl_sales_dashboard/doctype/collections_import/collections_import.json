@@ -1,0 +1,272 @@
+{
+  "actions": [],
+  "autoname": "format:COLL-IMP-{period_start}-{#####}",
+  "creation": "2026-04-04 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "import_details_section",
+    "import_label",
+    "period_start",
+    "period_end",
+    "source_file",
+    "column_break_1",
+    "status",
+    "uploaded_by",
+    "upload_datetime",
+    "validation_summary_section",
+    "sheet_name_used",
+    "rows_found",
+    "rows_imported",
+    "rows_skipped",
+    "column_break_2",
+    "customers_matched",
+    "customers_unmatched",
+    "assignment_matched",
+    "assignment_unmatched",
+    "multiple_assignments_found",
+    "validation_log",
+    "totals_section",
+    "total_balance",
+    "total_overdue",
+    "total_overdue_30",
+    "column_break_3",
+    "total_due_current_month",
+    "total_due_next_month",
+    "total_pd_cheques_cm",
+    "controls_section",
+    "replace_existing_month",
+    "import_notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "import_details_section",
+      "fieldtype": "Section Break",
+      "label": "Import Details"
+    },
+    {
+      "fieldname": "import_label",
+      "fieldtype": "Data",
+      "label": "Import Label",
+      "description": "e.g. Jan 2025"
+    },
+    {
+      "fieldname": "period_start",
+      "fieldtype": "Date",
+      "label": "Period Start",
+      "reqd": 1
+    },
+    {
+      "fieldname": "period_end",
+      "fieldtype": "Date",
+      "label": "Period End",
+      "reqd": 1
+    },
+    {
+      "fieldname": "source_file",
+      "fieldtype": "Attach",
+      "label": "Source File",
+      "reqd": 1
+    },
+    {
+      "fieldname": "column_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nValidated\nImported\nFailed",
+      "default": "Draft"
+    },
+    {
+      "fieldname": "uploaded_by",
+      "fieldtype": "Link",
+      "label": "Uploaded By",
+      "options": "User",
+      "default": "__user"
+    },
+    {
+      "fieldname": "upload_datetime",
+      "fieldtype": "Datetime",
+      "label": "Upload Datetime",
+      "default": "__now"
+    },
+    {
+      "fieldname": "validation_summary_section",
+      "fieldtype": "Section Break",
+      "label": "Validation Summary",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "sheet_name_used",
+      "fieldtype": "Data",
+      "label": "Sheet Name Used",
+      "read_only": 1
+    },
+    {
+      "fieldname": "rows_found",
+      "fieldtype": "Int",
+      "label": "Rows Found",
+      "read_only": 1
+    },
+    {
+      "fieldname": "rows_imported",
+      "fieldtype": "Int",
+      "label": "Rows Imported",
+      "read_only": 1
+    },
+    {
+      "fieldname": "rows_skipped",
+      "fieldtype": "Int",
+      "label": "Rows Skipped",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "customers_matched",
+      "fieldtype": "Int",
+      "label": "Customers Matched",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customers_unmatched",
+      "fieldtype": "Int",
+      "label": "Customers Unmatched",
+      "read_only": 1
+    },
+    {
+      "fieldname": "assignment_matched",
+      "fieldtype": "Int",
+      "label": "Assignment Matched",
+      "read_only": 1
+    },
+    {
+      "fieldname": "assignment_unmatched",
+      "fieldtype": "Int",
+      "label": "Assignment Unmatched",
+      "read_only": 1
+    },
+    {
+      "fieldname": "multiple_assignments_found",
+      "fieldtype": "Int",
+      "label": "Multiple Assignments Found",
+      "read_only": 1
+    },
+    {
+      "fieldname": "validation_log",
+      "fieldtype": "Long Text",
+      "label": "Validation Log",
+      "read_only": 1
+    },
+    {
+      "fieldname": "totals_section",
+      "fieldtype": "Section Break",
+      "label": "Totals",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "total_balance",
+      "fieldtype": "Currency",
+      "label": "Total Balance",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_overdue",
+      "fieldtype": "Currency",
+      "label": "Total Overdue",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_overdue_30",
+      "fieldtype": "Currency",
+      "label": "Total Overdue 30+",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_3",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "total_due_current_month",
+      "fieldtype": "Currency",
+      "label": "Total Due Current Month",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_due_next_month",
+      "fieldtype": "Currency",
+      "label": "Total Due Next Month",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_pd_cheques_cm",
+      "fieldtype": "Currency",
+      "label": "Total PD Cheques CM",
+      "read_only": 1
+    },
+    {
+      "fieldname": "controls_section",
+      "fieldtype": "Section Break",
+      "label": "Controls"
+    },
+    {
+      "fieldname": "replace_existing_month",
+      "fieldtype": "Check",
+      "label": "Replace Existing Month",
+      "description": "Check to allow replacing existing snapshot data for the same period"
+    },
+    {
+      "fieldname": "import_notes",
+      "fieldtype": "Small Text",
+      "label": "Import Notes"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-04 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "Collections Import",
+  "naming_rule": "Expression",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Finance Manager",
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager"
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
