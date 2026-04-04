@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import today, getdate, flt, cint
+from vcl_sales_dashboard.api.sales_dashboard import get_csr_map
 
 
 def get_role_filter():
@@ -12,14 +13,15 @@ def get_role_filter():
 
 
 def check_customer_access(customer):
-    """Check if the current user has permission to view this customer."""
+    """Check if the current user has permission to view this customer via CSR Assignment."""
     if not frappe.db.exists("Customer", customer):
         frappe.throw("Customer not found", frappe.DoesNotExistError)
 
     role_filter = get_role_filter()
     if role_filter:
-        owner = frappe.db.get_value("Customer", customer, "owner")
-        if owner != role_filter:
+        csr_map = get_csr_map()
+        assigned_rep = csr_map.get(customer, "")
+        if assigned_rep != role_filter:
             frappe.throw("Not permitted", frappe.PermissionError)
 
 

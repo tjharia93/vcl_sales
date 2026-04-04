@@ -33,19 +33,29 @@ def apply_filters_to_conditions(filters, conditions, values, table_alias=""):
 
 
 def apply_owner_filter(role_filter, filters, conditions, values, table_alias=""):
-    """Apply owner-based filtering for role and my_records toggle."""
+    """Apply CSR-based filtering. Uses Customer Sales Rep Assignment to filter by customer."""
     prefix = f"{table_alias}." if table_alias else ""
+    csr_map = get_csr_map()
 
+    # Determine which sales rep to filter by
+    target_rep = None
     if role_filter:
-        conditions.append(f"{prefix}owner = %(role_owner)s")
-        values["role_owner"] = role_filter
+        target_rep = role_filter
     elif filters and filters.get("my_records"):
-        conditions.append(f"{prefix}owner = %(my_user)s")
-        values["my_user"] = frappe.session.user
+        target_rep = frappe.session.user
 
     if filters and filters.get("sales_rep"):
-        conditions.append(f"{prefix}owner = %(sales_rep_filter)s")
-        values["sales_rep_filter"] = filters["sales_rep"]
+        target_rep = filters["sales_rep"]
+
+    if target_rep:
+        rep_customers = [c for c, r in csr_map.items() if r == target_rep]
+        if rep_customers:
+            ph = ", ".join([f"%(csr_c{i})s" for i in range(len(rep_customers))])
+            conditions.append(f"{prefix}customer IN ({ph})")
+            for i, c in enumerate(rep_customers):
+                values[f"csr_c{i}"] = c
+        else:
+            conditions.append("1 = 0")  # No customers assigned
 
 
 def get_csr_map(as_of_date=None):
@@ -222,11 +232,12 @@ def get_sales_action_queue(filters=None):
             filters = frappe.parse_json(filters)
 
         role_filter = get_role_filter()
+        csr_map = get_csr_map()
         actions = []
 
         # a) Overdue invoices
         si_conditions = [
-            "si.docstatus = 1",
+            "si.docstatus IN (0, 1)",
             "si.outstanding_amount > 0",
             "si.due_date < %(today)s"
         ]
@@ -242,11 +253,8 @@ def get_sales_action_queue(filters=None):
                 si.name as docname,
                 DATEDIFF(%(today)s, si.due_date) as age_days,
                 si.status,
-                'Escalate' as recommended_action,
-                si.owner as sales_rep,
-                COALESCE(u.full_name, si.owner) as sales_rep_name
+                'Escalate' as recommended_action
             FROM `tabSales Invoice` si
-            LEFT JOIN `tabUser` u ON u.name = si.owner
             WHERE {si_where}
             ORDER BY si.due_date ASC
             LIMIT 50
@@ -255,7 +263,7 @@ def get_sales_action_queue(filters=None):
 
         # b) Expiring quotations (valid_till <= today + 3 days)
         eq_conditions = [
-            "q.docstatus = 1",
+            "q.docstatus IN (0, 1)",
             "q.status = 'Open'",
             "q.valid_till <= %(expiry_threshold)s",
             "q.valid_till >= %(today)s"
@@ -272,11 +280,8 @@ def get_sales_action_queue(filters=None):
                 q.name as docname,
                 DATEDIFF(%(today)s, q.transaction_date) as age_days,
                 q.status,
-                'Follow Up' as recommended_action,
-                q.owner as sales_rep,
-                COALESCE(u.full_name, q.owner) as sales_rep_name
+                'Follow Up' as recommended_action
             FROM `tabQuotation` q
-            LEFT JOIN `tabUser` u ON u.name = q.owner
             WHERE {eq_where}
             ORDER BY q.valid_till ASC
             LIMIT 50
@@ -285,7 +290,7 @@ def get_sales_action_queue(filters=None):
 
         # c) Delivered but not invoiced
         dni_conditions = [
-            "so.docstatus = 1",
+            "so.docstatus IN (0, 1)",
             "so.per_delivered = 100",
             "so.per_billed < 100"
         ]
@@ -301,11 +306,8 @@ def get_sales_action_queue(filters=None):
                 so.name as docname,
                 DATEDIFF(%(today)s, so.transaction_date) as age_days,
                 so.status,
-                'Raise Invoice' as recommended_action,
-                so.owner as sales_rep,
-                COALESCE(u.full_name, so.owner) as sales_rep_name
+                'Raise Invoice' as recommended_action
             FROM `tabSales Order` so
-            LEFT JOIN `tabUser` u ON u.name = so.owner
             WHERE {dni_where}
             ORDER BY so.transaction_date ASC
             LIMIT 50
@@ -314,7 +316,7 @@ def get_sales_action_queue(filters=None):
 
         # d) Delayed deliveries
         dd_conditions = [
-            "so.docstatus = 1",
+            "so.docstatus IN (0, 1)",
             "so.per_delivered < 100",
             "so.delivery_date < %(today)s",
             "so.status NOT IN ('Cancelled', 'Closed', 'Completed')"
@@ -331,11 +333,8 @@ def get_sales_action_queue(filters=None):
                 so.name as docname,
                 DATEDIFF(%(today)s, so.delivery_date) as age_days,
                 so.status,
-                'Confirm Delivery' as recommended_action,
-                so.owner as sales_rep,
-                COALESCE(u.full_name, so.owner) as sales_rep_name
+                'Confirm Delivery' as recommended_action
             FROM `tabSales Order` so
-            LEFT JOIN `tabUser` u ON u.name = so.owner
             WHERE {dd_where}
             ORDER BY so.delivery_date ASC
             LIMIT 50
@@ -344,7 +343,7 @@ def get_sales_action_queue(filters=None):
 
         # e) Open quotations (not expiring soon)
         oq_conditions = [
-            "q.docstatus = 1",
+            "q.docstatus IN (0, 1)",
             "q.status = 'Open'",
             "q.valid_till > %(expiry_threshold)s"
         ]
@@ -360,11 +359,8 @@ def get_sales_action_queue(filters=None):
                 q.name as docname,
                 DATEDIFF(%(today)s, q.transaction_date) as age_days,
                 q.status,
-                'Follow Up' as recommended_action,
-                q.owner as sales_rep,
-                COALESCE(u.full_name, q.owner) as sales_rep_name
+                'Follow Up' as recommended_action
             FROM `tabQuotation` q
-            LEFT JOIN `tabUser` u ON u.name = q.owner
             WHERE {oq_where}
             ORDER BY q.valid_till ASC
             LIMIT 50
@@ -374,8 +370,10 @@ def get_sales_action_queue(filters=None):
         # Trim to 50 total (priority order is maintained by append order)
         actions = actions[:50]
 
-        # N/A-safe all fields
+        # Enrich with sales rep from CSR Assignment and N/A-safe
         for row in actions:
+            row["sales_rep"] = csr_map.get(row.get("customer"), "")
+            row["sales_rep_name"] = row["sales_rep"]
             for key in row:
                 if row[key] is None:
                     row[key] = "" if isinstance(row.get(key), str) else 0
@@ -495,19 +493,29 @@ def get_collections_alerts(filters=None):
             filters = frappe.parse_json(filters)
 
         role_filter = get_role_filter()
+        csr_map = get_csr_map()
 
-        owner_condition = ""
+        # Build customer filter from CSR Assignment
+        customer_condition = ""
         extra_values = {}
-        if role_filter:
-            owner_condition = "AND si.owner = %(role_owner)s"
-            extra_values["role_owner"] = role_filter
-        elif filters and filters.get("my_records"):
-            owner_condition = "AND si.owner = %(my_user)s"
-            extra_values["my_user"] = frappe.session.user
 
+        target_rep = None
+        if role_filter:
+            target_rep = role_filter
+        elif filters and filters.get("my_records"):
+            target_rep = frappe.session.user
         if filters and filters.get("sales_rep"):
-            owner_condition += " AND si.owner = %(sales_rep_filter)s"
-            extra_values["sales_rep_filter"] = filters["sales_rep"]
+            target_rep = filters["sales_rep"]
+
+        if target_rep:
+            rep_customers = [c for c, r in csr_map.items() if r == target_rep]
+            if rep_customers:
+                ph = ", ".join([f"%(csr_c{i})s" for i in range(len(rep_customers))])
+                customer_condition = f"AND si.customer IN ({ph})"
+                for i, c in enumerate(rep_customers):
+                    extra_values[f"csr_c{i}"] = c
+            else:
+                customer_condition = "AND 1 = 0"
 
         territory_condition = ""
         if filters and filters.get("territory"):
@@ -528,21 +536,20 @@ def get_collections_alerts(filters=None):
                 SUM(CASE WHEN DATEDIFF(CURDATE(), si.due_date) BETWEEN 0 AND 30 THEN si.outstanding_amount ELSE 0 END) as days_0_30,
                 SUM(CASE WHEN DATEDIFF(CURDATE(), si.due_date) BETWEEN 31 AND 60 THEN si.outstanding_amount ELSE 0 END) as days_31_60,
                 SUM(CASE WHEN DATEDIFF(CURDATE(), si.due_date) > 60 THEN si.outstanding_amount ELSE 0 END) as days_60_plus,
-                MAX(DATEDIFF(CURDATE(), si.due_date)) as oldest_invoice_age_days,
-                si.owner
+                MAX(DATEDIFF(CURDATE(), si.due_date)) as oldest_invoice_age_days
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1
+            WHERE si.docstatus IN (0, 1)
               AND si.outstanding_amount > 0
-              {owner_condition}
+              {customer_condition}
               {territory_condition}
               {group_condition}
-            GROUP BY si.customer, si.customer_name, si.owner
+            GROUP BY si.customer, si.customer_name
             HAVING SUM(si.outstanding_amount) > 0
             ORDER BY overdue_amount DESC
             LIMIT 50
         """, extra_values, as_dict=True)
 
-        # Enrich with last payment date and sales rep name
+        # Enrich with last payment date and sales rep from CSR Assignment
         for row in customers:
             last_payment = frappe.db.sql("""
                 SELECT posting_date
@@ -562,9 +569,8 @@ def get_collections_alerts(filters=None):
             row["days_60_plus"] = flt(row.get("days_60_plus"))
             row["oldest_invoice_age_days"] = cint(row.get("oldest_invoice_age_days"))
 
-            # Sales rep name
-            rep_name = frappe.db.get_value("User", row.get("owner"), "full_name")
-            row["sales_rep_name"] = rep_name or row.get("owner", "")
+            # Sales rep from CSR Assignment
+            row["sales_rep_name"] = csr_map.get(row.get("customer"), "")
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
 
@@ -582,29 +588,35 @@ def search_customer_quick(query="", filters=None):
             filters = frappe.parse_json(filters)
 
         role_filter = get_role_filter()
+        csr_map = get_csr_map()
 
         if len(query) < 2:
-            # Return last 10 customers with outstanding balances
             result = get_collections_alerts(filters)
             if result.get("status") == "ok":
                 return {"status": "ok", "data": result["data"][:10]}
             return result
 
-        # Search customers
+        # Search customers — filter by CSR assignment for non-managers
         like_query = f"%{query}%"
-        owner_condition = ""
+        customer_condition = ""
         values = {"query": like_query}
 
         if role_filter:
-            owner_condition = "AND c.owner = %(role_owner)s"
-            values["role_owner"] = role_filter
+            rep_customers = [c for c, r in csr_map.items() if r == role_filter]
+            if rep_customers:
+                ph = ", ".join([f"%(rc{i})s" for i in range(len(rep_customers))])
+                customer_condition = f"AND c.name IN ({ph})"
+                for i, c in enumerate(rep_customers):
+                    values[f"rc{i}"] = c
+            else:
+                customer_condition = "AND 1 = 0"
 
         customers = frappe.db.sql(f"""
             SELECT c.name as customer, c.customer_name, c.territory,
-                   c.customer_group, c.owner
+                   c.customer_group
             FROM `tabCustomer` c
             WHERE (c.customer_name LIKE %(query)s OR c.name LIKE %(query)s)
-              {owner_condition}
+              {customer_condition}
             ORDER BY c.customer_name ASC
             LIMIT 10
         """, values, as_dict=True)
@@ -613,26 +625,23 @@ def search_customer_quick(query="", filters=None):
         for row in customers:
             cust = row["customer"]
 
-            # Outstanding
             outstanding = frappe.db.sql("""
                 SELECT COALESCE(SUM(outstanding_amount), 0) as total
                 FROM `tabSales Invoice`
-                WHERE customer = %(cust)s AND docstatus = 1
+                WHERE customer = %(cust)s AND docstatus IN (0, 1)
             """, {"cust": cust}, as_dict=True)
             row["outstanding_amount"] = flt(outstanding[0].total) if outstanding else 0
 
-            # Overdue
             overdue = frappe.db.sql("""
                 SELECT COALESCE(SUM(outstanding_amount), 0) as total,
                        MAX(DATEDIFF(CURDATE(), due_date)) as oldest
                 FROM `tabSales Invoice`
-                WHERE customer = %(cust)s AND docstatus = 1
+                WHERE customer = %(cust)s AND docstatus IN (0, 1)
                   AND outstanding_amount > 0 AND due_date < CURDATE()
             """, {"cust": cust}, as_dict=True)
             row["overdue_amount"] = flt(overdue[0].total) if overdue else 0
             row["oldest_invoice_age_days"] = cint(overdue[0].oldest) if overdue and overdue[0].oldest else 0
 
-            # Last payment
             last_payment = frappe.db.sql("""
                 SELECT posting_date FROM `tabPayment Entry`
                 WHERE party = %(cust)s AND payment_type = 'Receive' AND docstatus = 1
@@ -640,22 +649,19 @@ def search_customer_quick(query="", filters=None):
             """, {"cust": cust}, as_dict=True)
             row["last_payment_date"] = str(last_payment[0].posting_date) if last_payment else ""
 
-            # Open orders count
             open_orders = frappe.db.count("Sales Order", {
-                "customer": cust, "docstatus": 1,
+                "customer": cust, "docstatus": ["in", [0, 1]],
                 "status": ["not in", ["Cancelled", "Closed", "Completed"]]
             })
             row["open_orders_count"] = cint(open_orders)
 
-            # Open quotations count
             open_quotes = frappe.db.count("Quotation", {
-                "customer": cust, "docstatus": 1, "status": "Open"
+                "customer": cust, "docstatus": ["in", [0, 1]], "status": "Open"
             })
             row["open_quotations_count"] = cint(open_quotes)
 
-            # Sales rep name
-            rep_name = frappe.db.get_value("User", row.get("owner"), "full_name")
-            row["sales_rep_name"] = rep_name or row.get("owner", "")
+            # Sales rep from CSR Assignment
+            row["sales_rep_name"] = csr_map.get(cust, "")
 
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
@@ -680,25 +686,22 @@ def get_customer_snapshot(customer):
         if not frappe.db.exists("Customer", customer):
             return {"status": "error", "message": "Customer not found", "data": {}}
 
-        # Role-based permission check
+        # Role-based permission check via CSR Assignment
         role_filter = get_role_filter()
+        csr_map = get_csr_map()
         if role_filter:
-            owner = frappe.db.get_value("Customer", customer, "owner")
-            if owner != role_filter:
+            assigned_rep = csr_map.get(customer, "")
+            if assigned_rep != role_filter:
                 return {"status": "error", "message": "Not permitted", "data": {}}
 
         cust_doc = frappe.db.get_value(
             "Customer", customer,
-            ["name", "customer_name", "territory", "customer_group", "owner"],
+            ["name", "customer_name", "territory", "customer_group"],
             as_dict=True
         )
 
-        # Sales Person
-        sales_person = frappe.db.get_value(
-            "Sales Team",
-            {"parent": customer, "parenttype": "Customer"},
-            "sales_person"
-        )
+        # Sales Person from CSR Assignment
+        sales_person = csr_map.get(customer, "")
 
         # Outstanding
         outstanding = frappe.db.sql("""

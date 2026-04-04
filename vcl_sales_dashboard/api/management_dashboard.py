@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
+from vcl_sales_dashboard.api.sales_dashboard import get_csr_map
 
 
 def get_role_filter():
@@ -38,8 +39,10 @@ def get_rep_performance(filters=None):
             filters = frappe.parse_json(filters)
 
         get_role_filter()  # Permission check
+        csr_map = get_csr_map()
 
         month_start = get_first_day(today())
+        from collections import defaultdict
 
         territory_condition = ""
         extra_values = {"month_start": month_start, "today": today()}
@@ -48,73 +51,79 @@ def get_rep_performance(filters=None):
             territory_condition = "AND territory = %(territory)s"
             extra_values["territory"] = filters["territory"]
 
-        # Sales MTD by owner
+        # Sales MTD — aggregate by CSR rep
         sales_mtd = frappe.db.sql(f"""
-            SELECT owner,
-                   SUM(grand_total) as sales_mtd
+            SELECT customer, SUM(grand_total) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1
+            WHERE docstatus IN (0, 1)
               AND posting_date >= %(month_start)s
               {territory_condition}
-            GROUP BY owner
+            GROUP BY customer
         """, extra_values, as_dict=True)
-        sales_map = {r.owner: flt(r.sales_mtd) for r in sales_mtd}
+        sales_by_rep = defaultdict(float)
+        for r in sales_mtd:
+            rep = csr_map.get(r.customer, "Unassigned")
+            sales_by_rep[rep] += flt(r.total)
 
-        # Collections MTD by owner
+        # Collections MTD — aggregate by CSR rep (via party = customer)
         collections_mtd = frappe.db.sql(f"""
-            SELECT owner,
-                   SUM(paid_amount) as collections_mtd
+            SELECT party as customer, SUM(paid_amount) as total
             FROM `tabPayment Entry`
             WHERE docstatus = 1
               AND payment_type = 'Receive'
               AND posting_date >= %(month_start)s
-            GROUP BY owner
+            GROUP BY party
         """, extra_values, as_dict=True)
-        collections_map = {r.owner: flt(r.collections_mtd) for r in collections_mtd}
+        collections_by_rep = defaultdict(float)
+        for r in collections_mtd:
+            rep = csr_map.get(r.customer, "Unassigned")
+            collections_by_rep[rep] += flt(r.total)
 
-        # Open quotes value by owner
+        # Open quotes — aggregate by CSR rep
         open_quotes = frappe.db.sql(f"""
-            SELECT owner,
-                   SUM(grand_total) as open_quotes_value
+            SELECT customer, SUM(grand_total) as total
             FROM `tabQuotation`
-            WHERE docstatus = 1 AND status = 'Open'
+            WHERE docstatus IN (0, 1) AND status = 'Open'
               {territory_condition}
-            GROUP BY owner
+            GROUP BY customer
         """, extra_values, as_dict=True)
-        quotes_map = {r.owner: flt(r.open_quotes_value) for r in open_quotes}
+        quotes_by_rep = defaultdict(float)
+        for r in open_quotes:
+            rep = csr_map.get(r.customer, "Unassigned")
+            quotes_by_rep[rep] += flt(r.total)
 
-        # Overdue by owner
+        # Overdue — aggregate by CSR rep
         overdue = frappe.db.sql(f"""
-            SELECT owner,
-                   SUM(outstanding_amount) as overdue_value,
-                   COUNT(DISTINCT customer) as overdue_customers
+            SELECT customer, SUM(outstanding_amount) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1
+            WHERE docstatus IN (0, 1)
               AND outstanding_amount > 0
               AND due_date < %(today)s
               {territory_condition}
-            GROUP BY owner
+            GROUP BY customer
         """, extra_values, as_dict=True)
-        overdue_map = {r.owner: {"value": flt(r.overdue_value), "customers": cint(r.overdue_customers)} for r in overdue}
+        overdue_by_rep = defaultdict(lambda: {"value": 0, "customers": set()})
+        for r in overdue:
+            rep = csr_map.get(r.customer, "Unassigned")
+            overdue_by_rep[rep]["value"] += flt(r.total)
+            overdue_by_rep[rep]["customers"].add(r.customer)
 
-        # Combine all owners
-        all_owners = set(sales_map.keys()) | set(collections_map.keys()) | set(quotes_map.keys()) | set(overdue_map.keys())
+        # Combine all reps
+        all_reps = set(sales_by_rep.keys()) | set(collections_by_rep.keys()) | set(quotes_by_rep.keys()) | set(overdue_by_rep.keys())
 
         result = []
-        for owner in all_owners:
-            full_name = frappe.db.get_value("User", owner, "full_name") or owner
-            overdue_data = overdue_map.get(owner, {"value": 0, "customers": 0})
+        for rep in all_reps:
+            overdue_data = overdue_by_rep.get(rep, {"value": 0, "customers": set()})
             result.append({
-                "sales_rep": owner,
-                "sales_rep_name": full_name,
-                "sales_mtd": sales_map.get(owner, 0),
-                "collections_mtd": collections_map.get(owner, 0),
-                "open_quotes_value": quotes_map.get(owner, 0),
-                "overdue_customers": overdue_data["customers"],
+                "sales_rep": rep,
+                "sales_rep_name": rep,
+                "sales_mtd": sales_by_rep.get(rep, 0),
+                "collections_mtd": collections_by_rep.get(rep, 0),
+                "open_quotes_value": quotes_by_rep.get(rep, 0),
+                "overdue_customers": len(overdue_data["customers"]),
                 "overdue_value": overdue_data["value"],
             })
 
-        # Sort by overdue value descending
         result.sort(key=lambda x: x["overdue_value"], reverse=True)
 
         return {"status": "ok", "data": result}
@@ -194,6 +203,8 @@ def get_team_collection_risk(filters=None):
             filters = frappe.parse_json(filters)
 
         get_role_filter()  # Permission check
+        csr_map = get_csr_map()
+        from collections import defaultdict
 
         territory_condition = ""
         extra_values = {"today": today()}
@@ -201,50 +212,41 @@ def get_team_collection_risk(filters=None):
             territory_condition = "AND si.territory = %(territory)s"
             extra_values["territory"] = filters["territory"]
 
-        # Overdue by rep
-        overdue_by_rep = frappe.db.sql(f"""
-            SELECT
-                si.owner as sales_rep,
-                COALESCE(u.full_name, si.owner) as sales_rep_name,
-                SUM(si.outstanding_amount) as overdue_amount,
-                COUNT(DISTINCT si.customer) as customer_count
-            FROM `tabSales Invoice` si
-            LEFT JOIN `tabUser` u ON u.name = si.owner
-            WHERE si.docstatus = 1
-              AND si.outstanding_amount > 0
-              AND si.due_date < %(today)s
-              {territory_condition}
-            GROUP BY si.owner
-            ORDER BY overdue_amount DESC
-        """, extra_values, as_dict=True)
-
-        for row in overdue_by_rep:
-            row["overdue_amount"] = flt(row.get("overdue_amount"))
-            row["customer_count"] = cint(row.get("customer_count"))
-
-        # Top overdue customers
-        top_customers = frappe.db.sql(f"""
+        # Get overdue invoices grouped by customer
+        overdue_raw = frappe.db.sql(f"""
             SELECT
                 si.customer,
                 si.customer_name,
                 SUM(si.outstanding_amount) as overdue_amount,
-                MAX(DATEDIFF(%(today)s, si.due_date)) as oldest_age,
-                si.owner as sales_rep,
-                COALESCE(u.full_name, si.owner) as sales_rep_name
+                MAX(DATEDIFF(%(today)s, si.due_date)) as oldest_age
             FROM `tabSales Invoice` si
-            LEFT JOIN `tabUser` u ON u.name = si.owner
-            WHERE si.docstatus = 1
+            WHERE si.docstatus IN (0, 1)
               AND si.outstanding_amount > 0
               AND si.due_date < %(today)s
               {territory_condition}
-            GROUP BY si.customer, si.customer_name, si.owner
+            GROUP BY si.customer, si.customer_name
             ORDER BY overdue_amount DESC
-            LIMIT 10
         """, extra_values, as_dict=True)
 
+        # Aggregate by CSR rep
+        rep_agg = defaultdict(lambda: {"overdue_amount": 0, "customers": set()})
+        for row in overdue_raw:
+            rep = csr_map.get(row.customer, "Unassigned")
+            rep_agg[rep]["overdue_amount"] += flt(row.overdue_amount)
+            rep_agg[rep]["customers"].add(row.customer)
+
+        overdue_by_rep = sorted([
+            {"sales_rep": rep, "sales_rep_name": rep, "overdue_amount": flt(d["overdue_amount"]), "customer_count": len(d["customers"])}
+            for rep, d in rep_agg.items()
+        ], key=lambda x: -x["overdue_amount"])
+
+        # Top overdue customers with CSR rep
+        top_customers = overdue_raw[:10]
         for row in top_customers:
             row["overdue_amount"] = flt(row.get("overdue_amount"))
             row["oldest_age"] = cint(row.get("oldest_age"))
+            row["sales_rep"] = csr_map.get(row.get("customer"), "")
+            row["sales_rep_name"] = row["sales_rep"]
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
 
