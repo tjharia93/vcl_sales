@@ -329,3 +329,185 @@ def get_available_periods():
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+# ── Phase 4: Warning / Review Queues ────────────────────────────────
+
+@frappe.whitelist()
+def get_warning_queues(period_start=None, period_end=None):
+    """Return warning/review queue counts and rows for the selected period.
+
+    Queues:
+      - customer_not_matched: snapshots where customer could not be matched
+      - no_rep_assignment: matched customer but no valid rep for the period
+      - multiple_assignments: matched customer with multiple rep assignments
+      - promise_to_pay_due: promised payment date is today or past, status still Promise to Pay
+      - escalated: flagged for escalation
+      - in_dispute: currently in dispute
+      - no_comment_overdue: overdue > 0 and status is Not Contacted
+    """
+    try:
+        role_filter = get_collections_role_filter()
+
+        conditions = ["ci.status = 'Imported'"]
+        values = {}
+
+        if period_start:
+            conditions.append("cs.period_start = %(period_start)s")
+            values["period_start"] = period_start
+        if period_end:
+            conditions.append("cs.period_end = %(period_end)s")
+            values["period_end"] = period_end
+        if role_filter:
+            conditions.append("cs.sales_rep_user = %(role_filter)s")
+            values["role_filter"] = role_filter
+
+        where = "WHERE " + " AND ".join(conditions)
+
+        base_fields = """
+            cs.name, cs.excel_customer_name, cs.customer, cs.customer_name_display,
+            cs.assigned_sales_representative, cs.customer_match_status,
+            cs.assignment_match_status, cs.total_balance, cs.overdue_amount,
+            cs.latest_follow_up_status, cs.promised_payment_date,
+            cs.is_escalated, cs.is_priority
+        """
+
+        queues = {}
+
+        # 1. Customer Not Matched
+        queues["customer_not_matched"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where} AND cs.customer_match_status = 'Customer Not Matched'
+            ORDER BY cs.total_balance DESC
+        """, values, as_dict=True)
+
+        # 2. No Valid Rep Assignment
+        queues["no_rep_assignment"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where} AND cs.assignment_match_status = 'No Valid Assignment For Period'
+            ORDER BY cs.overdue_amount DESC
+        """, values, as_dict=True)
+
+        # 3. Multiple Assignments
+        queues["multiple_assignments"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where} AND cs.assignment_match_status = 'Multiple Assignments Found'
+            ORDER BY cs.overdue_amount DESC
+        """, values, as_dict=True)
+
+        # 4. Promise to Pay Due (promised date <= today, status still Promise to Pay)
+        queues["promise_to_pay_due"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where}
+              AND cs.latest_follow_up_status = 'Promise to Pay'
+              AND cs.promised_payment_date IS NOT NULL
+              AND cs.promised_payment_date <= CURDATE()
+            ORDER BY cs.promised_payment_date ASC
+        """, values, as_dict=True)
+
+        # 5. Escalated accounts
+        queues["escalated"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where} AND cs.is_escalated = 1
+            ORDER BY cs.overdue_amount DESC
+        """, values, as_dict=True)
+
+        # 6. In Dispute
+        queues["in_dispute"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where} AND cs.latest_follow_up_status = 'In Dispute'
+            ORDER BY cs.overdue_amount DESC
+        """, values, as_dict=True)
+
+        # 7. Overdue with No Contact
+        queues["no_comment_overdue"] = frappe.db.sql(f"""
+            SELECT {base_fields}
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where}
+              AND cs.latest_follow_up_status = 'Not Contacted'
+              AND cs.overdue_amount > 0
+            ORDER BY cs.overdue_amount DESC
+            LIMIT 50
+        """, values, as_dict=True)
+
+        # Build summary counts
+        summary = {k: len(v) for k, v in queues.items()}
+
+        return {"status": "ok", "summary": summary, "queues": queues}
+
+    except Exception as e:
+        frappe.log_error(f"Warning queues error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
+def get_customer_month_trend(customer=None, excel_customer_name=None):
+    """Return month-over-month trend data for a customer, including balance movement."""
+    try:
+        conditions = ["ci.status = 'Imported'"]
+        values = {}
+
+        if customer:
+            conditions.append("cs.customer = %(customer)s")
+            values["customer"] = customer
+        elif excel_customer_name:
+            conditions.append("cs.excel_customer_name = %(excel_name)s")
+            values["excel_name"] = excel_customer_name
+        else:
+            return {"status": "error", "message": "Provide customer or excel_customer_name."}
+
+        role_filter = get_collections_role_filter()
+        if role_filter:
+            conditions.append("cs.sales_rep_user = %(role_filter)s")
+            values["role_filter"] = role_filter
+
+        where = "WHERE " + " AND ".join(conditions)
+
+        result = frappe.db.sql(f"""
+            SELECT
+                cs.name, cs.period_start, cs.period_end,
+                cs.snapshot_label,
+                cs.total_balance, cs.overdue_amount, cs.overdue_30_amount,
+                cs.due_current_month, cs.due_next_month,
+                cs.bucket_current, cs.bucket_1_15, cs.bucket_16_30,
+                cs.bucket_31_45, cs.bucket_46_60, cs.bucket_61_75,
+                cs.bucket_76_90, cs.bucket_91_105, cs.bucket_106_120,
+                cs.bucket_121_135, cs.bucket_136_150, cs.bucket_151_165,
+                cs.bucket_166_180, cs.bucket_181_over,
+                cs.latest_follow_up_status, cs.pd_cheques_cm
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            {where}
+            ORDER BY cs.period_start ASC
+        """, values, as_dict=True)
+
+        # Compute month-over-month movement
+        trend = []
+        for i, row in enumerate(result):
+            entry = dict(row)
+            if i > 0:
+                prev = result[i - 1]
+                entry["balance_change"] = flt(row.total_balance) - flt(prev.total_balance)
+                entry["overdue_change"] = flt(row.overdue_amount) - flt(prev.overdue_amount)
+            else:
+                entry["balance_change"] = 0
+                entry["overdue_change"] = 0
+            trend.append(entry)
+
+        return {"status": "ok", "data": trend}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

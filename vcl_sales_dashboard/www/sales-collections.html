@@ -129,6 +129,33 @@
     .rep-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
     .rep-table .num { text-align: right; }
 
+    /* Warning queues */
+    .queue-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+    .queue-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); cursor: pointer; text-align: center; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+    .queue-card:hover { border-color: var(--vcl-primary); box-shadow: var(--shadow-card); }
+    .queue-card.active { border-color: var(--vcl-primary); border-width: 2px; }
+    .queue-card .qc-val { font-size: 22px; font-weight: 700; }
+    .queue-card .qc-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .queue-card.qc-danger .qc-val { color: var(--danger); }
+    .queue-card.qc-warning .qc-val { color: var(--warning); }
+    .queue-card.qc-info .qc-val { color: var(--info); }
+
+    .queue-table-wrap { max-height: 300px; overflow-y: auto; }
+    .queue-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .queue-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--border-color); font-size: 10px; text-transform: uppercase; color: var(--text-muted); position: sticky; top: 0; background: var(--bg-surface); }
+    .queue-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
+    .queue-table tr:hover { background: var(--bg-soft); cursor: pointer; }
+
+    /* Trend chart (simple bar) */
+    .trend-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .trend-table th { text-align: left; padding: 5px 8px; border-bottom: 2px solid var(--border-color); font-size: 10px; text-transform: uppercase; color: var(--text-muted); }
+    .trend-table td { padding: 5px 8px; border-bottom: 1px solid var(--border-color); }
+    .trend-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .trend-bar { display: inline-block; height: 14px; border-radius: 2px; vertical-align: middle; min-width: 2px; }
+    .trend-pos { color: var(--danger); }
+    .trend-neg { color: var(--success); }
+    .trend-zero { color: var(--text-muted); }
+
     .hidden { display: none; }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--vcl-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -207,6 +234,22 @@
   <div class="card" id="rep-summary-card">
     <h3 class="card__title">Rep Summary</h3>
     <div id="rep-summary-body"><span class="spinner"></span></div>
+  </div>
+  {% endif %}
+
+  <!-- Warning / Review Queues (managers only) -->
+  {% if is_manager %}
+  <div class="card" id="warning-queues-card">
+    <h3 class="card__title">Review Queues</h3>
+    <div class="queue-cards" id="queue-cards"></div>
+    <div id="queue-detail" class="hidden">
+      <div class="queue-table-wrap">
+        <table class="queue-table" id="queue-detail-table">
+          <thead id="queue-detail-head"></thead>
+          <tbody id="queue-detail-body"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   {% endif %}
 
@@ -321,7 +364,9 @@
   async function applyFilters() {
     currentPage = 0;
     currentFilters = getFilterValues();
-    await Promise.all([loadSummary(), loadCustomerList(), loadRepSummary()]);
+    const tasks = [loadSummary(), loadCustomerList()];
+    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); }
+    await Promise.all(tasks);
   }
 
   async function loadSummary() {
@@ -431,6 +476,9 @@
     const d = detailRes.data;
     const followUps = (fuRes.status === 'ok' ? fuRes.data : []) || [];
 
+    // Load trend async (non-blocking render)
+    const trendPromise = loadMonthTrend(d.customer, d.excel_customer_name);
+
     let html = `<h3>${d.customer_name_display || d.excel_customer_name}</h3>`;
 
     // Info grid
@@ -470,6 +518,9 @@
       <div class="dlbl">Due Next Month</div><div class="dval">${fmtC(d.due_next_month)}</div>
       <div class="dlbl">PD Cheques CM</div><div class="dval">${fmtC(d.pd_cheques_cm)}</div>
     </div></div>`;
+
+    // Month-on-month trend placeholder
+    html += `<div id="trend-section"></div>`;
 
     // Follow-up timeline
     html += `<div class="detail-section"><h4>Follow-Up History</h4>`;
@@ -535,6 +586,12 @@
     </div>`;
 
     document.getElementById('detail-content').innerHTML = html;
+
+    // Render trend when ready (non-blocking)
+    trendPromise.then(trendHtml => {
+      const trendEl = document.getElementById('trend-section');
+      if (trendEl && trendHtml) trendEl.innerHTML = trendHtml;
+    });
   }
 
   function closeDetail() {
@@ -569,6 +626,131 @@
     } else {
       alert('Error: ' + (res.message || 'Unknown error'));
     }
+  }
+
+  // ── Warning Queues ─────────────────────────────────────────────────
+
+  let warningData = {};
+  let activeQueue = null;
+
+  const QUEUE_META = {
+    customer_not_matched:  { label: 'Customer Not Matched', cls: 'qc-danger' },
+    no_rep_assignment:     { label: 'No Rep Assignment',    cls: 'qc-warning' },
+    multiple_assignments:  { label: 'Multiple Assignments', cls: 'qc-warning' },
+    promise_to_pay_due:    { label: 'Promise Due',          cls: 'qc-danger' },
+    escalated:             { label: 'Escalated',            cls: 'qc-danger' },
+    in_dispute:            { label: 'In Dispute',           cls: 'qc-warning' },
+    no_comment_overdue:    { label: 'Overdue No Contact',   cls: 'qc-info' },
+  };
+
+  async function loadWarningQueues() {
+    if (!isManager) return;
+    const f = currentFilters;
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_warning_queues', {
+      period_start: f.period_start, period_end: f.period_end
+    });
+    const container = document.getElementById('queue-cards');
+    if (res.status !== 'ok') { container.innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading queues.</p>'; return; }
+
+    warningData = res.queues || {};
+    const summary = res.summary || {};
+    let html = '';
+    for (const [key, meta] of Object.entries(QUEUE_META)) {
+      const count = summary[key] || 0;
+      html += `<div class="queue-card ${meta.cls}${activeQueue===key?' active':''}" onclick="showQueue('${key}')">
+        <div class="qc-val">${count}</div>
+        <div class="qc-lbl">${meta.label}</div>
+      </div>`;
+    }
+    container.innerHTML = html;
+
+    if (activeQueue && warningData[activeQueue]) {
+      renderQueueTable(activeQueue);
+    }
+  }
+
+  function showQueue(key) {
+    if (activeQueue === key) {
+      activeQueue = null;
+      document.getElementById('queue-detail').classList.add('hidden');
+      document.querySelectorAll('.queue-card').forEach(c => c.classList.remove('active'));
+      return;
+    }
+    activeQueue = key;
+    document.querySelectorAll('.queue-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    renderQueueTable(key);
+  }
+
+  function renderQueueTable(key) {
+    const rows = warningData[key] || [];
+    const detail = document.getElementById('queue-detail');
+    const head = document.getElementById('queue-detail-head');
+    const body = document.getElementById('queue-detail-body');
+
+    if (!rows.length) {
+      detail.classList.remove('hidden');
+      head.innerHTML = '';
+      body.innerHTML = '<tr><td style="text-align:center;color:var(--text-muted);padding:20px;">No records in this queue.</td></tr>';
+      return;
+    }
+
+    detail.classList.remove('hidden');
+    head.innerHTML = '<tr><th>Customer</th><th>Rep</th><th>Match Status</th><th class="num">Balance</th><th class="num">Overdue</th><th>Status</th><th>Promised Date</th></tr>';
+
+    let html = '';
+    rows.forEach(r => {
+      const sc = statusClass(r.latest_follow_up_status);
+      html += `<tr onclick="openDetail('${r.name}')">
+        <td>${r.customer_name_display || r.excel_customer_name}</td>
+        <td>${r.assigned_sales_representative || '--'}</td>
+        <td>${r.customer_match_status === 'Customer Not Matched' ? '<span style="color:var(--danger)">'+r.customer_match_status+'</span>' : r.assignment_match_status || '--'}</td>
+        <td class="num">${fmtC(r.total_balance)}</td>
+        <td class="num">${fmtC(r.overdue_amount)}</td>
+        <td><span class="status-badge ${sc}">${r.latest_follow_up_status || 'Not Contacted'}</span></td>
+        <td>${r.promised_payment_date || ''}</td>
+      </tr>`;
+    });
+    body.innerHTML = html;
+  }
+
+  // ── Month-on-Month Trend ──────────────────────────────────────────
+
+  async function loadMonthTrend(customer, excelName) {
+    const args = {};
+    if (customer) args.customer = customer;
+    else args.excel_customer_name = excelName;
+
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_customer_month_trend', args);
+    if (res.status !== 'ok' || !res.data || res.data.length < 1) return '';
+
+    const data = res.data;
+    const maxBal = Math.max(...data.map(d => Math.abs(parseFloat(d.total_balance || 0))), 1);
+
+    let html = '<div class="detail-section"><h4>Month-on-Month Trend</h4>';
+    html += '<table class="trend-table"><thead><tr><th>Period</th><th class="num">Balance</th><th class="num">Change</th><th>Trend</th><th class="num">Overdue</th><th>Status</th></tr></thead><tbody>';
+
+    data.forEach(d => {
+      const bal = parseFloat(d.total_balance || 0);
+      const chg = parseFloat(d.balance_change || 0);
+      const barW = Math.round((Math.abs(bal) / maxBal) * 120);
+      const chgCls = chg > 0 ? 'trend-pos' : (chg < 0 ? 'trend-neg' : 'trend-zero');
+      const chgIcon = chg > 0 ? '&#9650;' : (chg < 0 ? '&#9660;' : '&#8212;');
+      const label = d.snapshot_label || d.period_start;
+      const sc = statusClass(d.latest_follow_up_status);
+
+      html += `<tr>
+        <td>${label}</td>
+        <td class="num">${fmtC(bal)}</td>
+        <td class="num ${chgCls}">${chgIcon} ${fmtC(Math.abs(chg))}</td>
+        <td><span class="trend-bar" style="width:${barW}px;background:var(--vcl-primary);"></span></td>
+        <td class="num">${fmtC(d.overdue_amount)}</td>
+        <td><span class="status-badge ${sc}">${d.latest_follow_up_status || '--'}</span></td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    return html;
   }
 
   // ── Init ──────────────────────────────────────────────────────────
