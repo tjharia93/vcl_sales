@@ -1073,7 +1073,7 @@ def get_sales_rep_discrepancies(filters=None):
                     disc_type = "missing_on_doc"
                 elif not csr_rep and doc_sp:
                     disc_type = "no_csr_assignment"
-                elif csr_rep and doc_sp and csr_rep != doc_sp:
+                elif csr_rep and doc_sp and csr_rep.strip().lower() != doc_sp.strip().lower():
                     disc_type = "mismatch"
 
                 if disc_type:
