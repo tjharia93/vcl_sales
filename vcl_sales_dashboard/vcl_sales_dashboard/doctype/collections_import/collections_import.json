@@ -89,8 +89,7 @@
     {
       "fieldname": "upload_datetime",
       "fieldtype": "Datetime",
-      "label": "Upload Datetime",
-      "default": "__now"
+      "label": "Upload Datetime"
     },
     {
       "fieldname": "validation_summary_section",

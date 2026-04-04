@@ -1,8 +1,13 @@
 import frappe
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 
 class CollectionsImport(Document):
+    def before_insert(self):
+        if not self.upload_datetime:
+            self.upload_datetime = now_datetime()
+
     def validate(self):
         self.validate_period()
         self.validate_file_type()

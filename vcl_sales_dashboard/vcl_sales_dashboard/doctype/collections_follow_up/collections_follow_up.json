@@ -56,8 +56,7 @@
     {
       "fieldname": "comment_date",
       "fieldtype": "Datetime",
-      "label": "Comment Date",
-      "default": "__now"
+      "label": "Comment Date"
     },
     {
       "fieldname": "comment_by",

@@ -1,9 +1,13 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, now_datetime
 
 
 class CollectionsFollowUp(Document):
+    def before_insert(self):
+        if not self.comment_date:
+            self.comment_date = now_datetime()
+
     def validate(self):
         self.validate_comment_text()
         self.validate_expected_amount()
