@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCL Collections Import</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-soft: #f0f2f5;
+      --border-color: #d9dee7;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --container-max: 960px;
+      --transition-fast: 0.15s ease;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-dashboard); background: var(--bg-page); color: var(--text-primary); line-height: 1.45; }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar { background: var(--bg-surface); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 20; }
+    .topbar__inner { max-width: var(--container-max); margin: 0 auto; padding: 0 var(--space-6); min-height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar__title { font-size: 18px; font-weight: 700; color: var(--vcl-primary); }
+    .topbar__nav a { margin-left: var(--space-4); font-size: 14px; color: var(--text-secondary); }
+
+    .page-container { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6); }
+
+    .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-6); margin-bottom: var(--space-5); }
+    .card__title { font-size: 16px; font-weight: 600; margin: 0 0 var(--space-4); }
+
+    .form-group { margin-bottom: var(--space-4); }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .form-group input, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+
+    .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-4); }
+    .checkbox-group label { font-size: 13px; color: var(--text-secondary); margin: 0; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: background var(--transition-fast); }
+    .btn-primary { background: var(--vcl-primary); color: var(--text-on-dark); }
+    .btn-primary:hover { background: var(--vcl-primary-dark); }
+    .btn-success { background: var(--success); color: var(--text-on-dark); }
+    .btn-success:hover { background: #126b3a; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-row { display: flex; gap: var(--space-3); margin-top: var(--space-5); }
+
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-draft { background: var(--bg-soft); color: var(--text-muted); }
+    .status-validated { background: var(--info-bg); color: var(--info); }
+    .status-imported { background: var(--success-bg); color: var(--success); }
+    .status-failed { background: var(--danger-bg); color: var(--danger); }
+
+    .log-box { background: var(--bg-soft); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-4); font-size: 13px; font-family: "Courier New", monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; color: var(--text-secondary); }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
+    .summary-item { text-align: center; padding: var(--space-3); background: var(--bg-soft); border-radius: var(--radius-sm); }
+    .summary-item .val { font-size: 20px; font-weight: 700; color: var(--vcl-primary); }
+    .summary-item .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .import-list { margin-top: var(--space-5); }
+    .import-list table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .import-list th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; }
+    .import-list td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
+    .import-list tr:hover { background: var(--bg-soft); }
+
+    .hidden { display: none; }
+    .msg-info { padding: var(--space-3); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: var(--space-4); }
+    .msg-info.success { background: var(--success-bg); color: var(--success); }
+    .msg-info.error { background: var(--danger-bg); color: var(--danger); }
+    .msg-info.warning { background: var(--warning-bg); color: var(--warning); }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--text-on-dark); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__inner">
+    <div class="topbar__title">Collections Import</div>
+    <nav class="topbar__nav">
+      <a href="/sales-collections">Collections Dashboard</a>
+      <a href="/sales-dashboard">Sales Dashboard</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page-container">
+  <!-- Message area -->
+  <div id="msg-area" class="hidden"></div>
+
+  <!-- New Import Form -->
+  <div class="card" id="import-form-card">
+    <h3 class="card__title">New Collections Import</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Import Label</label>
+        <input type="text" id="import_label" placeholder="e.g. Jan 2025" />
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <span id="current_status" class="status-badge status-draft">Draft</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Period Start *</label>
+        <input type="date" id="period_start" required />
+      </div>
+      <div class="form-group">
+        <label>Period End *</label>
+        <input type="date" id="period_end" required />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Source File (.xlsx) *</label>
+      <input type="file" id="source_file" accept=".xlsx,.xls" />
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="replace_existing_month" />
+      <label for="replace_existing_month">Replace existing month (if data already imported for this period)</label>
+    </div>
+    <div class="form-group">
+      <label>Import Notes</label>
+      <input type="text" id="import_notes" placeholder="Optional notes" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-create" onclick="createImport()">Create Import Record</button>
+      <button class="btn btn-primary" id="btn-validate" onclick="validateImport()" disabled>Validate File</button>
+      <button class="btn btn-success" id="btn-import" onclick="runImport()" disabled>Import Snapshots</button>
+    </div>
+  </div>
+
+  <!-- Validation / Import Results -->
+  <div class="card hidden" id="results-card">
+    <h3 class="card__title">Import Summary</h3>
+    <div class="summary-grid" id="summary-grid"></div>
+    <div style="margin-top: var(--space-4);">
+      <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary);">Validation Log</label>
+      <div class="log-box" id="validation-log">No log yet.</div>
+    </div>
+  </div>
+
+  <!-- Past Imports -->
+  <div class="card">
+    <h3 class="card__title">Past Imports</h3>
+    <div class="import-list" id="past-imports">
+      <p style="color: var(--text-muted); font-size: 13px;">Loading...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentImportName = null;
+
+  function showMsg(text, type) {
+    const el = document.getElementById('msg-area');
+    el.className = 'msg-info ' + (type || 'info');
+    el.textContent = text;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 8000);
+  }
+
+  function setStatus(status) {
+    const el = document.getElementById('current_status');
+    el.textContent = status;
+    el.className = 'status-badge status-' + status.toLowerCase();
+  }
+
+  function api(method, args) {
+    return fetch('/api/method/' + method, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': frappe.csrf_token
+      },
+      body: JSON.stringify(args)
+    }).then(r => r.json()).then(r => r.message || r);
+  }
+
+  async function createImport() {
+    const period_start = document.getElementById('period_start').value;
+    const period_end = document.getElementById('period_end').value;
+    const fileInput = document.getElementById('source_file');
+
+    if (!period_start || !period_end) { showMsg('Period start and end are required.', 'error'); return; }
+    if (!fileInput.files.length) { showMsg('Please select an Excel file.', 'error'); return; }
+
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Creating...';
+
+    try {
+      // Upload file first
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('is_private', 1);
+      formData.append('doctype', 'Collections Import');
+      formData.append('fieldname', 'source_file');
+
+      const uploadRes = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+        body: formData
+      }).then(r => r.json());
+
+      if (!uploadRes.message || !uploadRes.message.file_url) {
+        throw new Error('File upload failed.');
+      }
+
+      const fileUrl = uploadRes.message.file_url;
+
+      // Create import doc
+      const doc = await fetch('/api/resource/Collections Import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': frappe.csrf_token
+        },
+        body: JSON.stringify({
+          import_label: document.getElementById('import_label').value,
+          period_start: period_start,
+          period_end: period_end,
+          source_file: fileUrl,
+          replace_existing_month: document.getElementById('replace_existing_month').checked ? 1 : 0,
+          import_notes: document.getElementById('import_notes').value,
+          status: 'Draft'
+        })
+      }).then(r => r.json());
+
+      if (doc.data && doc.data.name) {
+        currentImportName = doc.data.name;
+        setStatus('Draft');
+        document.getElementById('btn-validate').disabled = false;
+        showMsg('Import record created: ' + currentImportName, 'success');
+      } else {
+        throw new Error(JSON.stringify(doc.exc || doc));
+      }
+    } catch (e) {
+      showMsg('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Import Record';
+    }
+  }
+
+  async function validateImport() {
+    if (!currentImportName) return;
+    const btn = document.getElementById('btn-validate');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Validating...';
+
+    try {
+      const res = await api('vcl_sales_dashboard.api.collections_import.validate_collections_file', {
+        import_name: currentImportName
+      });
+
+      document.getElementById('results-card').classList.remove('hidden');
+
+      if (res.status === 'ok') {
+        setStatus('Validated');
+        document.getElementById('btn-import').disabled = false;
+        document.getElementById('validation-log').textContent =
+          'Rows found: ' + res.rows_found + '\nColumns mapped: ' + res.columns_mapped + '\nSheet: ' + res.sheet_name;
+        showMsg('Validation passed. Ready to import.', 'success');
+      } else {
+        setStatus('Failed');
+        document.getElementById('validation-log').textContent = res.message || 'Validation failed.';
+        showMsg('Validation failed: ' + res.message, 'error');
+      }
+    } catch (e) {
+      showMsg('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Validate File';
+    }
+  }
+
+  async function runImport() {
+    if (!currentImportName) return;
+    const btn = document.getElementById('btn-import');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Importing...';
+
+    try {
+      const res = await api('vcl_sales_dashboard.api.collections_import.import_collections_snapshot', {
+        import_name: currentImportName
+      });
+
+      document.getElementById('results-card').classList.remove('hidden');
+
+      if (res.status === 'ok') {
+        setStatus('Imported');
+        showMsg(res.message, 'success');
+        await loadImportLog();
+        loadPastImports();
+      } else {
+        setStatus('Failed');
+        showMsg('Import failed: ' + res.message, 'error');
+      }
+    } catch (e) {
+      showMsg('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Import Snapshots';
+    }
+  }
+
+  async function loadImportLog() {
+    if (!currentImportName) return;
+    const res = await api('vcl_sales_dashboard.api.collections_import.get_import_log', {
+      import_name: currentImportName
+    });
+    if (res.status === 'ok' && res.data) {
+      const d = res.data;
+      const grid = document.getElementById('summary-grid');
+      grid.innerHTML = [
+        ['Rows Found', d.rows_found],
+        ['Imported', d.rows_imported],
+        ['Skipped', d.rows_skipped],
+        ['Cust Matched', d.customers_matched],
+        ['Cust Unmatched', d.customers_unmatched],
+        ['Rep Matched', d.assignment_matched],
+        ['Rep Unmatched', d.assignment_unmatched],
+        ['Multiple Reps', d.multiple_assignments_found],
+      ].map(([lbl, val]) => `<div class="summary-item"><div class="val">${val||0}</div><div class="lbl">${lbl}</div></div>`).join('');
+      document.getElementById('validation-log').textContent = d.validation_log || 'No log.';
+    }
+  }
+
+  function fmtCurrency(v) {
+    return parseFloat(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  async function loadPastImports() {
+    try {
+      const res = await fetch('/api/resource/Collections Import?filters=[["status","in",["Validated","Imported","Failed","Draft"]]]&fields=["name","import_label","period_start","period_end","status","rows_imported","total_balance","total_overdue","upload_datetime"]&order_by=period_start desc&limit_page_length=20', {
+        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+      }).then(r => r.json());
+
+      const container = document.getElementById('past-imports');
+      if (!res.data || !res.data.length) {
+        container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No imports found.</p>';
+        return;
+      }
+
+      let html = '<table><thead><tr><th>Name</th><th>Label</th><th>Period</th><th>Status</th><th>Rows</th><th>Total Balance</th><th>Total Overdue</th></tr></thead><tbody>';
+      res.data.forEach(r => {
+        const cls = 'status-' + (r.status || 'draft').toLowerCase();
+        html += `<tr>
+          <td><a href="/app/collections-import/${r.name}">${r.name}</a></td>
+          <td>${r.import_label || ''}</td>
+          <td>${r.period_start || ''} to ${r.period_end || ''}</td>
+          <td><span class="status-badge ${cls}">${r.status}</span></td>
+          <td>${r.rows_imported || 0}</td>
+          <td style="text-align:right">${fmtCurrency(r.total_balance)}</td>
+          <td style="text-align:right">${fmtCurrency(r.total_overdue)}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    } catch (e) {
+      document.getElementById('past-imports').innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading imports.</p>';
+    }
+  }
+
+  // Load past imports on page ready
+  document.addEventListener('DOMContentLoaded', loadPastImports);
+</script>
+
+</body>
+</html>

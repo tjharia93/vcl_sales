@@ -1,0 +1,393 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-04-04 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "snapshot_identity_section",
+    "collections_import",
+    "period_start",
+    "period_end",
+    "snapshot_label",
+    "customer_matching_section",
+    "excel_customer_name",
+    "customer",
+    "customer_name_display",
+    "customer_match_status",
+    "sales_rep_resolution_section",
+    "excel_sales_representative",
+    "assigned_sales_representative",
+    "column_break_rep",
+    "sales_rep_user",
+    "customer_sales_rep_assignment",
+    "assignment_match_status",
+    "terms_section",
+    "terms",
+    "ageing_buckets_section",
+    "bucket_current",
+    "bucket_1_15",
+    "bucket_16_30",
+    "bucket_31_45",
+    "bucket_46_60",
+    "bucket_61_75",
+    "bucket_76_90",
+    "column_break_buckets",
+    "bucket_91_105",
+    "bucket_106_120",
+    "bucket_121_135",
+    "bucket_136_150",
+    "bucket_151_165",
+    "bucket_166_180",
+    "bucket_181_over",
+    "totals_derived_section",
+    "total_balance",
+    "overdue_amount",
+    "overdue_30_amount",
+    "column_break_totals",
+    "due_current_month",
+    "due_next_month",
+    "pd_cheques_cm",
+    "check_value",
+    "dashboard_state_section",
+    "latest_follow_up_status",
+    "latest_comment_date",
+    "latest_comment_by",
+    "column_break_dashboard",
+    "promised_payment_date",
+    "expected_collection_amount",
+    "next_action_date",
+    "is_priority",
+    "is_escalated"
+  ],
+  "fields": [
+    {
+      "fieldname": "snapshot_identity_section",
+      "fieldtype": "Section Break",
+      "label": "Snapshot Identity"
+    },
+    {
+      "fieldname": "collections_import",
+      "fieldtype": "Link",
+      "label": "Collections Import",
+      "options": "Collections Import",
+      "reqd": 1
+    },
+    {
+      "fieldname": "period_start",
+      "fieldtype": "Date",
+      "label": "Period Start"
+    },
+    {
+      "fieldname": "period_end",
+      "fieldtype": "Date",
+      "label": "Period End"
+    },
+    {
+      "fieldname": "snapshot_label",
+      "fieldtype": "Data",
+      "label": "Snapshot Label"
+    },
+    {
+      "fieldname": "customer_matching_section",
+      "fieldtype": "Section Break",
+      "label": "Customer Matching"
+    },
+    {
+      "fieldname": "excel_customer_name",
+      "fieldtype": "Data",
+      "label": "Excel Customer Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer"
+    },
+    {
+      "fieldname": "customer_name_display",
+      "fieldtype": "Data",
+      "label": "Customer Name Display",
+      "read_only": 1
+    },
+    {
+      "fieldname": "customer_match_status",
+      "fieldtype": "Select",
+      "label": "Customer Match Status",
+      "options": "Matched\nCustomer Not Matched"
+    },
+    {
+      "fieldname": "sales_rep_resolution_section",
+      "fieldtype": "Section Break",
+      "label": "Sales Rep Resolution"
+    },
+    {
+      "fieldname": "excel_sales_representative",
+      "fieldtype": "Data",
+      "label": "Excel Sales Representative"
+    },
+    {
+      "fieldname": "assigned_sales_representative",
+      "fieldtype": "Data",
+      "label": "Assigned Sales Representative"
+    },
+    {
+      "fieldname": "column_break_rep",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "sales_rep_user",
+      "fieldtype": "Link",
+      "label": "Sales Rep User",
+      "options": "User"
+    },
+    {
+      "fieldname": "customer_sales_rep_assignment",
+      "fieldtype": "Link",
+      "label": "Customer Sales Rep Assignment",
+      "options": "Customer Sales Rep Assignment"
+    },
+    {
+      "fieldname": "assignment_match_status",
+      "fieldtype": "Select",
+      "label": "Assignment Match Status",
+      "options": "Matched\nNo Valid Assignment For Period\nMultiple Assignments Found\nImported With Warning"
+    },
+    {
+      "fieldname": "terms_section",
+      "fieldtype": "Section Break",
+      "label": "Terms"
+    },
+    {
+      "fieldname": "terms",
+      "fieldtype": "Data",
+      "label": "Terms"
+    },
+    {
+      "fieldname": "ageing_buckets_section",
+      "fieldtype": "Section Break",
+      "label": "Ageing Buckets",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "bucket_current",
+      "fieldtype": "Currency",
+      "label": "Current"
+    },
+    {
+      "fieldname": "bucket_1_15",
+      "fieldtype": "Currency",
+      "label": "1 to 15"
+    },
+    {
+      "fieldname": "bucket_16_30",
+      "fieldtype": "Currency",
+      "label": "16 to 30"
+    },
+    {
+      "fieldname": "bucket_31_45",
+      "fieldtype": "Currency",
+      "label": "31 to 45"
+    },
+    {
+      "fieldname": "bucket_46_60",
+      "fieldtype": "Currency",
+      "label": "46 to 60"
+    },
+    {
+      "fieldname": "bucket_61_75",
+      "fieldtype": "Currency",
+      "label": "61 to 75"
+    },
+    {
+      "fieldname": "bucket_76_90",
+      "fieldtype": "Currency",
+      "label": "76 to 90"
+    },
+    {
+      "fieldname": "column_break_buckets",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "bucket_91_105",
+      "fieldtype": "Currency",
+      "label": "91 to 105"
+    },
+    {
+      "fieldname": "bucket_106_120",
+      "fieldtype": "Currency",
+      "label": "106 to 120"
+    },
+    {
+      "fieldname": "bucket_121_135",
+      "fieldtype": "Currency",
+      "label": "121 to 135"
+    },
+    {
+      "fieldname": "bucket_136_150",
+      "fieldtype": "Currency",
+      "label": "136 to 150"
+    },
+    {
+      "fieldname": "bucket_151_165",
+      "fieldtype": "Currency",
+      "label": "151 to 165"
+    },
+    {
+      "fieldname": "bucket_166_180",
+      "fieldtype": "Currency",
+      "label": "166 to 180"
+    },
+    {
+      "fieldname": "bucket_181_over",
+      "fieldtype": "Currency",
+      "label": "181 and Over"
+    },
+    {
+      "fieldname": "totals_derived_section",
+      "fieldtype": "Section Break",
+      "label": "Totals / Derived"
+    },
+    {
+      "fieldname": "total_balance",
+      "fieldtype": "Currency",
+      "label": "Total Balance"
+    },
+    {
+      "fieldname": "overdue_amount",
+      "fieldtype": "Currency",
+      "label": "Overdue Amount"
+    },
+    {
+      "fieldname": "overdue_30_amount",
+      "fieldtype": "Currency",
+      "label": "Overdue 30+ Amount"
+    },
+    {
+      "fieldname": "column_break_totals",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "due_current_month",
+      "fieldtype": "Currency",
+      "label": "Due Current Month"
+    },
+    {
+      "fieldname": "due_next_month",
+      "fieldtype": "Currency",
+      "label": "Due Next Month"
+    },
+    {
+      "fieldname": "pd_cheques_cm",
+      "fieldtype": "Currency",
+      "label": "PD Cheques CM"
+    },
+    {
+      "fieldname": "check_value",
+      "fieldtype": "Currency",
+      "label": "Check Value"
+    },
+    {
+      "fieldname": "dashboard_state_section",
+      "fieldtype": "Section Break",
+      "label": "Dashboard State"
+    },
+    {
+      "fieldname": "latest_follow_up_status",
+      "fieldtype": "Select",
+      "label": "Latest Follow Up Status",
+      "options": "Not Contacted\nContacted\nPromise to Pay\nPart Payment Expected\nIn Dispute\nWaiting for Statement\nWaiting for Credit Note\nEscalated\nCleared",
+      "default": "Not Contacted"
+    },
+    {
+      "fieldname": "latest_comment_date",
+      "fieldtype": "Datetime",
+      "label": "Latest Comment Date"
+    },
+    {
+      "fieldname": "latest_comment_by",
+      "fieldtype": "Link",
+      "label": "Latest Comment By",
+      "options": "User"
+    },
+    {
+      "fieldname": "column_break_dashboard",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "promised_payment_date",
+      "fieldtype": "Date",
+      "label": "Promised Payment Date"
+    },
+    {
+      "fieldname": "expected_collection_amount",
+      "fieldtype": "Currency",
+      "label": "Expected Collection Amount"
+    },
+    {
+      "fieldname": "next_action_date",
+      "fieldtype": "Date",
+      "label": "Next Action Date"
+    },
+    {
+      "fieldname": "is_priority",
+      "fieldtype": "Check",
+      "label": "Is Priority"
+    },
+    {
+      "fieldname": "is_escalated",
+      "fieldtype": "Check",
+      "label": "Is Escalated"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-04 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "Collections Customer Snapshot",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Finance Manager",
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "write": 1
+    },
+    {
+      "read": 1,
+      "role": "Sales User",
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
