@@ -288,6 +288,10 @@
 </div>
 
 <script>
+  function getCsrfToken() {
+    return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+  }
+
   const isManager = {{ is_manager|tojson }};
   let currentFilters = {};
   let currentPage = 0;
@@ -299,7 +303,7 @@
   function api(method, args) {
     return fetch('/api/method/' + method, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': frappe.csrf_token },
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
       body: JSON.stringify(args)
     }).then(r => r.json()).then(r => r.message || r);
   }
@@ -326,7 +330,7 @@
     if (!isManager) return;
     try {
       const res = await fetch('/api/resource/Customer Sales Rep Assignment?filters=[["status","=","Active"]]&fields=["distinct sales_representative as name"]&limit_page_length=100&order_by=sales_representative asc', {
-        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }
       }).then(r => r.json());
       const sel = document.getElementById('f-rep');
       if (res.data) {

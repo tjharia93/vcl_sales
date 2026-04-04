@@ -176,6 +176,10 @@
 </div>
 
 <script>
+  function getCsrfToken() {
+    return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+  }
+
   let currentImportName = null;
 
   function showMsg(text, type) {
@@ -197,7 +201,7 @@
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': frappe.csrf_token
+        'X-Frappe-CSRF-Token': getCsrfToken()
       },
       body: JSON.stringify(args)
     }).then(r => r.json()).then(r => r.message || r);
@@ -225,7 +229,7 @@
 
       const uploadRes = await fetch('/api/method/upload_file', {
         method: 'POST',
-        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token },
+        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() },
         body: formData
       }).then(r => r.json());
 
@@ -240,7 +244,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Frappe-CSRF-Token': frappe.csrf_token
+          'X-Frappe-CSRF-Token': getCsrfToken()
         },
         body: JSON.stringify({
           import_label: document.getElementById('import_label').value,
@@ -360,7 +364,7 @@
   async function loadPastImports() {
     try {
       const res = await fetch('/api/resource/Collections Import?filters=[["status","in",["Validated","Imported","Failed","Draft"]]]&fields=["name","import_label","period_start","period_end","status","rows_imported","total_balance","total_overdue","upload_datetime"]&order_by=period_start desc&limit_page_length=20', {
-        headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }
+        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }
       }).then(r => r.json());
 
       const container = document.getElementById('past-imports');
