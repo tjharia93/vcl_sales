@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCL Sales Rep Discrepancy Report</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-surface-alt: #fafbfc;
+      --bg-soft: #f0f2f5;
+      --border-color: #d9dee7;
+      --border-strong: #c9d0db;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --container-max: 1440px;
+      --transition-fast: 0.15s ease;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-dashboard); background: var(--bg-page); color: var(--text-primary); line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .page-shell { min-height: 100vh; }
+    .topbar { background: var(--bg-surface); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 20; }
+    .topbar__inner, .page-container { width: 100%; max-width: var(--container-max); margin: 0 auto; padding-left: var(--space-6); padding-right: var(--space-6); }
+    .topbar__inner { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+    .brand { display: flex; align-items: center; gap: var(--space-3); font-weight: 700; }
+    .brand__mark { width: 38px; height: 38px; border-radius: 10px; background: var(--vcl-primary); color: var(--text-on-dark); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+    .brand__text { display: flex; flex-direction: column; line-height: 1.1; }
+    .brand__name { font-size: 15px; }
+    .brand__sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+    .nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .nav__link { display: inline-flex; align-items: center; padding: 10px 14px; border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 14px; font-weight: 600; transition: background var(--transition-fast), color var(--transition-fast); }
+    .nav__link:hover { text-decoration: none; background: var(--bg-soft); color: var(--text-primary); }
+    .nav__link.is-active { background: rgba(43, 57, 144, 0.08); color: var(--vcl-primary); }
+    .page-container { padding-top: var(--space-7); padding-bottom: 32px; }
+    h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+    h1 { font-size: 30px; line-height: 1.2; }
+    h3 { font-size: 18px; }
+    .type-body { font-size: 14px; line-height: 1.6; }
+    .type-small { font-size: 12px; color: var(--text-muted); }
+    .type-label { font-family: var(--font-data); font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    .text-secondary { color: var(--text-secondary); }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .mb-0 { margin-bottom: 0; }
+    .mb-5 { margin-bottom: 20px; }
+    .eyebrow { color: var(--vcl-primary); text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; font-weight: 700; }
+    .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap; }
+    .page-header__meta { display: flex; flex-direction: column; gap: 8px; }
+    .btn-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: var(--radius-sm); border: 1px solid transparent; font-size: 14px; font-weight: 700; font-family: var(--font-data); cursor: pointer; background: var(--bg-soft); color: var(--text-primary); transition: background var(--transition-fast); }
+    .btn--primary { background: var(--vcl-primary); color: var(--text-on-dark); border-color: var(--vcl-primary); }
+    .btn--outline { background: var(--bg-surface); color: var(--vcl-primary); border-color: var(--border-strong); }
+    .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); }
+    .card__body { padding: var(--space-5); }
+    .inline-filters { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+    label { font-family: var(--font-data); font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; }
+    select { width: 100%; min-height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); padding: 10px 12px; font-family: var(--font-data); font-size: 14px; color: var(--text-primary); background: var(--bg-surface); outline: none; }
+    select:focus { border-color: var(--vcl-primary); box-shadow: 0 0 0 3px rgba(43, 57, 144, 0.10); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6); }
+    .kpi-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); box-shadow: var(--shadow-card); }
+    .kpi-card__label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; margin-bottom: 10px; }
+    .kpi-card__value { font-size: 28px; line-height: 1.15; font-weight: 700; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+    .kpi-card__meta { font-size: 12px; color: var(--text-muted); }
+
+    .table-wrap { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card); }
+    table { width: 100%; border-collapse: collapse; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+    thead th { background: #f7f8fa; color: var(--text-secondary); text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; padding: 14px 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+    tbody td { font-size: 13px; color: var(--text-primary); padding: 12px 16px; border-bottom: 1px solid #eef1f5; vertical-align: middle; }
+    tbody tr:nth-child(even) { background: #fcfcfd; }
+    tbody tr:hover { background: #f7faff; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .table-note { padding: 12px 16px; border-top: 1px solid var(--border-color); background: #fafbfc; color: var(--text-secondary); font-size: 12px; font-family: var(--font-data); }
+
+    .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid transparent; white-space: nowrap; font-family: var(--font-data); }
+    .pill--mismatch { background: var(--danger-bg); color: var(--danger); border-color: #f6c7c2; }
+    .pill--missing { background: var(--warning-bg); color: var(--warning); border-color: #f5dfaa; }
+    .pill--unassigned { background: var(--info-bg); color: var(--info); border-color: #cfe0ff; }
+    .pill--match { background: var(--success-bg); color: var(--success); border-color: #bfe3cb; }
+
+    .section-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+
+    .disc-highlight { background: #fef3f2; }
+
+    @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 900px) {
+      .topbar__inner, .page-container { padding-left: var(--space-4); padding-right: var(--space-4); }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .nav { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand">
+          <div class="brand__mark">VCL</div>
+          <div class="brand__text">
+            <span class="brand__name">Vimit Converters Limited</span>
+            <span class="brand__sub">Sales Rep Discrepancy Report</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="nav__link" href="/sales-dashboard">Sales Invoice</a>
+          <a class="nav__link is-active" href="/sales-discrepancy">Discrepancy Report</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-container">
+      <section class="page-header">
+        <div class="page-header__meta">
+          <span class="eyebrow">Data Quality</span>
+          <h1>Sales Rep Discrepancy Report</h1>
+          <p class="type-body text-secondary mb-0">
+            Compares the Sales Person on each document (Sales Invoice, Sales Order, Quotation) against the
+            Customer Sales Rep Assignment. Flags mismatches, missing assignments, and unassigned documents.
+          </p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn--outline" id="refresh-btn">Refresh</button>
+        </div>
+      </section>
+
+      <section class="card mb-5">
+        <div class="card__body">
+          <div class="inline-filters">
+            <div class="filter-group">
+              <label>DocType</label>
+              <select id="filter-doctype">
+                <option value="">All DocTypes</option>
+                <option value="Sales Invoice" selected>Sales Invoice</option>
+                <option value="Sales Order">Sales Order</option>
+                <option value="Quotation">Quotation</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Discrepancy Type</label>
+              <select id="filter-type">
+                <option value="">All Types</option>
+                <option value="mismatch">Mismatch (different rep)</option>
+                <option value="missing_on_doc">Missing on document</option>
+                <option value="no_csr_assignment">No CSR assignment</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>CSR Assigned Rep</label>
+              <select id="filter-csr-rep"><option value="">All Reps</option></select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-card__label">Total Documents Checked</div>
+          <div class="kpi-card__value" id="kpi-total">--</div>
+          <div class="kpi-card__meta">Draft + submitted, excl cancelled</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__label" style="color:var(--danger)">Mismatches</div>
+          <div class="kpi-card__value" id="kpi-mismatch" style="color:var(--danger)">--</div>
+          <div class="kpi-card__meta">Doc has different rep than CSR</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__label" style="color:var(--warning)">Missing on Doc</div>
+          <div class="kpi-card__value" id="kpi-missing">--</div>
+          <div class="kpi-card__meta">CSR assigned but doc has no rep</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-card__label" style="color:var(--info)">No CSR Assignment</div>
+          <div class="kpi-card__value" id="kpi-unassigned">--</div>
+          <div class="kpi-card__meta">Customer not in CSR mapping</div>
+        </div>
+      </section>
+
+      <section class="table-wrap mb-5">
+        <div class="card__body" style="padding-bottom:0;">
+          <div class="section-title">
+            <div>
+              <div class="type-label">Discrepancies</div>
+              <h3>Documents with sales rep issues</h3>
+            </div>
+            <div class="type-small" id="table-count"></div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>DocType</th>
+              <th>Document</th>
+              <th>Customer</th>
+              <th>Rep on Document</th>
+              <th>CSR Assignment</th>
+              <th>Issue</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="disc-table-body">
+            <tr><td colspan="7" class="text-secondary" style="text-align:center;padding:24px;">Loading...</td></tr>
+          </tbody>
+        </table>
+        <div class="table-note">
+          Compares Sales Team child table on each document against the Customer Sales Rep Assignment DocType.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var API_BASE = "/api/method/vcl_sales_dashboard.api.sales_dashboard";
+
+      function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = (val !== null && val !== undefined) ? val : "--";
+      }
+
+      async function apiFetch(endpoint, params) {
+        var url = new URL(API_BASE + "." + endpoint, window.location.origin);
+        if (params) {
+          Object.keys(params).forEach(function (k) {
+            if (params[k] !== "" && params[k] !== null && params[k] !== undefined) {
+              url.searchParams.set(k, typeof params[k] === "object" ? JSON.stringify(params[k]) : params[k]);
+            }
+          });
+        }
+        try {
+          var resp = await fetch(url, { method: "GET", headers: { "Accept": "application/json", "X-Frappe-CSRF-Token": (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || "" }, credentials: "same-origin" });
+          if (!resp.ok) return null;
+          var json = await resp.json();
+          var msg = json.message || json;
+          if (msg.status === "error") return null;
+          return msg.data || msg;
+        } catch (err) { return null; }
+      }
+
+      function getFilters() {
+        return {
+          doctype_filter: (document.getElementById("filter-doctype") || {}).value || "",
+          type_filter: (document.getElementById("filter-type") || {}).value || "",
+          csr_rep: (document.getElementById("filter-csr-rep") || {}).value || ""
+        };
+      }
+
+      async function loadRepOptions() {
+        var data = await apiFetch("get_filter_options", {});
+        if (!data || !data.sales_reps) return;
+        var sel = document.getElementById("filter-csr-rep");
+        if (!sel) return;
+        data.sales_reps.forEach(function (sp) {
+          var opt = document.createElement("option");
+          opt.value = sp.name;
+          opt.textContent = sp.full_name || sp.name;
+          sel.appendChild(opt);
+        });
+      }
+
+      function pillForType(type) {
+        if (type === "mismatch") return '<span class="pill pill--mismatch">Mismatch</span>';
+        if (type === "missing_on_doc") return '<span class="pill pill--missing">Missing on Doc</span>';
+        if (type === "no_csr_assignment") return '<span class="pill pill--unassigned">No CSR</span>';
+        return '<span class="pill pill--match">OK</span>';
+      }
+
+      async function loadDiscrepancies() {
+        var filters = getFilters();
+        var data = await apiFetch("get_sales_rep_discrepancies", { filters: filters });
+
+        if (!data) {
+          document.getElementById("disc-table-body").innerHTML = '<tr><td colspan="7" class="text-secondary" style="text-align:center;padding:24px;">Failed to load. Check permissions.</td></tr>';
+          return;
+        }
+
+        var rows = data.discrepancies || [];
+        var summary = data.summary || {};
+
+        setText("kpi-total", summary.total_checked || 0);
+        setText("kpi-mismatch", summary.mismatch_count || 0);
+        setText("kpi-missing", summary.missing_on_doc_count || 0);
+        setText("kpi-unassigned", summary.no_csr_count || 0);
+        setText("table-count", rows.length + " discrepancies found");
+
+        var tbody = document.getElementById("disc-table-body");
+        if (!tbody) return;
+
+        if (rows.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-secondary" style="text-align:center;padding:24px;">No discrepancies found. All documents match their CSR assignments.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = "";
+        rows.forEach(function (r) {
+          var tr = document.createElement("tr");
+          if (r.disc_type === "mismatch") tr.className = "disc-highlight";
+          tr.innerHTML = [
+            '<td>' + (r.doctype || '-') + '</td>',
+            '<td class="font-semibold"><a href="/app/' + (r.doctype || '').toLowerCase().replace(/ /g, '-') + '/' + (r.docname || '') + '">' + (r.docname || '-') + '</a></td>',
+            '<td>' + (r.customer_name || r.customer || '-') + '</td>',
+            '<td>' + (r.doc_sales_person || '<span class="text-muted">-- none --</span>') + '</td>',
+            '<td class="font-bold">' + (r.csr_sales_person || '<span class="text-muted">-- none --</span>') + '</td>',
+            '<td>' + pillForType(r.disc_type) + '</td>',
+            '<td>' + (r.posting_date || r.transaction_date || '-') + '</td>'
+          ].join("");
+          tbody.appendChild(tr);
+        });
+      }
+
+      function bindFilters() {
+        ["filter-doctype", "filter-type", "filter-csr-rep"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener("change", function () { loadDiscrepancies(); });
+        });
+      }
+
+      async function boot() {
+        await loadRepOptions();
+        await loadDiscrepancies();
+        bindFilters();
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        var btn = document.getElementById("refresh-btn");
+        if (btn) btn.addEventListener("click", function () { boot(); });
+        boot();
+      });
+    })();
+  </script>
+</body>
+</html>

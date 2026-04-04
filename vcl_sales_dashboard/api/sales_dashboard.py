@@ -1014,3 +1014,109 @@ def get_sales_targets(month=None):
     except Exception as e:
         frappe.log_error(f"get_sales_targets error: {str(e)}")
         return {"status": "error", "message": str(e), "data": {}}
+
+
+@frappe.whitelist()
+def get_sales_rep_discrepancies(filters=None):
+    """Compare Sales Person on documents against Customer Sales Rep Assignment. Return mismatches."""
+    try:
+        if isinstance(filters, str):
+            filters = frappe.parse_json(filters)
+
+        csr_map = get_csr_map()
+
+        doctype_filter = filters.get("doctype_filter", "") if filters else ""
+        type_filter = filters.get("type_filter", "") if filters else ""
+        csr_rep_filter = filters.get("csr_rep", "") if filters else ""
+
+        doctypes_to_check = []
+        if doctype_filter:
+            doctypes_to_check = [doctype_filter]
+        else:
+            doctypes_to_check = ["Sales Invoice", "Sales Order", "Quotation"]
+
+        discrepancies = []
+        total_checked = 0
+
+        for dt in doctypes_to_check:
+            date_field = "posting_date" if dt == "Sales Invoice" else "transaction_date"
+
+            docs = frappe.db.sql(f"""
+                SELECT name, customer, customer_name, {date_field} as doc_date
+                FROM `tab{dt}`
+                WHERE docstatus IN (0, 1)
+                ORDER BY {date_field} DESC
+                LIMIT 500
+            """, as_dict=True)
+
+            for doc in docs:
+                total_checked += 1
+                customer = doc.get("customer", "")
+                csr_rep = csr_map.get(customer, "")
+
+                # Get sales person from Sales Team child on this document
+                doc_sp = frappe.db.get_value(
+                    "Sales Team",
+                    {"parent": doc["name"], "parenttype": dt},
+                    "sales_person"
+                ) or ""
+
+                # Filter by CSR rep if specified
+                if csr_rep_filter and csr_rep != csr_rep_filter:
+                    continue
+
+                disc_type = None
+
+                if not csr_rep and not doc_sp:
+                    disc_type = "no_csr_assignment"
+                elif csr_rep and not doc_sp:
+                    disc_type = "missing_on_doc"
+                elif not csr_rep and doc_sp:
+                    disc_type = "no_csr_assignment"
+                elif csr_rep and doc_sp and csr_rep != doc_sp:
+                    disc_type = "mismatch"
+
+                if disc_type:
+                    if type_filter and disc_type != type_filter:
+                        continue
+
+                    row = {
+                        "doctype": dt,
+                        "docname": doc["name"],
+                        "customer": customer,
+                        "customer_name": doc.get("customer_name") or customer,
+                        "doc_sales_person": doc_sp,
+                        "csr_sales_person": csr_rep,
+                        "disc_type": disc_type,
+                    }
+                    if dt == "Sales Invoice":
+                        row["posting_date"] = str(doc.get("doc_date", ""))
+                    else:
+                        row["transaction_date"] = str(doc.get("doc_date", ""))
+
+                    discrepancies.append(row)
+
+        # Sort: mismatches first, then missing, then unassigned
+        order = {"mismatch": 0, "missing_on_doc": 1, "no_csr_assignment": 2}
+        discrepancies.sort(key=lambda x: order.get(x.get("disc_type"), 3))
+
+        # Summary
+        mismatch_count = sum(1 for d in discrepancies if d["disc_type"] == "mismatch")
+        missing_count = sum(1 for d in discrepancies if d["disc_type"] == "missing_on_doc")
+        no_csr_count = sum(1 for d in discrepancies if d["disc_type"] == "no_csr_assignment")
+
+        return {
+            "status": "ok",
+            "data": {
+                "discrepancies": discrepancies[:200],
+                "summary": {
+                    "total_checked": total_checked,
+                    "mismatch_count": mismatch_count,
+                    "missing_on_doc_count": missing_count,
+                    "no_csr_count": no_csr_count,
+                }
+            }
+        }
+    except Exception as e:
+        frappe.log_error(f"get_sales_rep_discrepancies error: {str(e)}")
+        return {"status": "error", "message": str(e), "data": {"discrepancies": [], "summary": {}}}
