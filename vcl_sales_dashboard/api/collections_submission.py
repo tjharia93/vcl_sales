@@ -4,8 +4,9 @@ from frappe.utils import flt, cint, now_datetime
 from vcl_sales_dashboard.api.collections_utils import (
     normalise_header, map_headers, validate_required_columns,
     match_customer, resolve_sales_rep_assignment, safe_flt,
-    CURRENCY_FIELDS, get_rep_label_map, resolve_rep_user_from_label,
-    resolve_sales_rep_user,
+    CURRENCY_FIELDS, BUCKET_ORDER, get_rep_label_map,
+    resolve_rep_user_from_label, resolve_sales_rep_user,
+    resolve_terms, calculate_ageing_summary_from_buckets,
 )
 import json
 
@@ -135,10 +136,27 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
     snapshot.customer_sales_rep_assignment = rep_info["customer_sales_rep_assignment"]
     snapshot.assignment_match_status = rep_info["assignment_match_status"]
 
-    snapshot.terms = (mapped.get("terms") or "").strip() if mapped.get("terms") else ""
+    # Terms resolution
+    file_terms = (mapped.get("terms") or "").strip() if mapped.get("terms") else ""
+    snapshot.terms = file_terms  # legacy
+    terms_info = resolve_terms(customer, file_terms)
+    snapshot.terms_from_file = terms_info["terms_from_file"]
+    snapshot.credit_terms_from_customer = terms_info["credit_terms_from_customer"]
+    snapshot.terms_used_for_calculation = terms_info["terms_used_for_calculation"]
+    snapshot.credit_days = terms_info["credit_days"]
+    snapshot.terms_match_status = terms_info["terms_match_status"]
 
+    # Import raw bucket values
     for field in CURRENCY_FIELDS:
         setattr(snapshot, field, safe_flt(mapped.get(field)))
+
+    # Calculate due/overdue from buckets + terms (overwrite file values)
+    bucket_values = {b: safe_flt(mapped.get(b)) for b in BUCKET_ORDER}
+    ageing = calculate_ageing_summary_from_buckets(bucket_values, terms_info["credit_days"])
+    snapshot.due_current_month = ageing["due_current_month"]
+    snapshot.due_next_month = ageing["due_next_month"]
+    snapshot.overdue_amount = ageing["overdue_amount"]
+    snapshot.overdue_30_amount = ageing["overdue_30_amount"]
 
     snapshot.latest_follow_up_status = "Not Contacted"
     snapshot.insert(ignore_permissions=True)
@@ -152,6 +170,10 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
         warnings.append(f"rep user unresolved: '{excel_rep_label}'")
     elif snapshot.assigned_sales_representative and not snapshot.sales_rep_user:
         warnings.append(f"rep user unresolved from assignment: '{snapshot.assigned_sales_representative}'")
+    if terms_info["terms_match_status"] == "Missing Both":
+        warnings.append("terms: missing from both file and ERPNext")
+    elif terms_info["terms_match_status"] == "Mismatch":
+        warnings.append(f"terms: mismatch (file='{file_terms}', erp='{terms_info['credit_terms_from_customer']}')")
 
     if warnings:
         log_lines.append(f"  [{excel_name}] {', '.join(warnings)}")

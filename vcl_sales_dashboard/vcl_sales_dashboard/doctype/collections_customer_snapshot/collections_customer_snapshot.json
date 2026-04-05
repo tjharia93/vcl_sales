@@ -23,6 +23,12 @@
     "assignment_match_status",
     "terms_section",
     "terms",
+    "terms_from_file",
+    "credit_terms_from_customer",
+    "column_break_terms",
+    "terms_used_for_calculation",
+    "credit_days",
+    "terms_match_status",
     "ageing_buckets_section",
     "bucket_current",
     "bucket_1_15",
@@ -156,7 +162,42 @@
     {
       "fieldname": "terms",
       "fieldtype": "Data",
-      "label": "Terms"
+      "label": "Terms (Legacy)",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "terms_from_file",
+      "fieldtype": "Data",
+      "label": "Terms From File"
+    },
+    {
+      "fieldname": "credit_terms_from_customer",
+      "fieldtype": "Data",
+      "label": "Credit Terms From Customer"
+    },
+    {
+      "fieldname": "column_break_terms",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "terms_used_for_calculation",
+      "fieldtype": "Data",
+      "label": "Terms Used For Calculation",
+      "read_only": 1
+    },
+    {
+      "fieldname": "credit_days",
+      "fieldtype": "Int",
+      "label": "Credit Days",
+      "read_only": 1
+    },
+    {
+      "fieldname": "terms_match_status",
+      "fieldtype": "Select",
+      "label": "Terms Match Status",
+      "options": "Matched\nMismatch\nFile Only\nERPNext Only\nMissing Both",
+      "read_only": 1
     },
     {
       "fieldname": "ageing_buckets_section",

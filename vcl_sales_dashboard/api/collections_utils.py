@@ -13,6 +13,164 @@ def get_csrf_token():
     return frappe.sessions.get_csrf_token()
 
 
+# ── Ageing bucket calculation ────────────────────────────────────────
+
+BUCKET_ORDER = [
+    "bucket_current",
+    "bucket_1_15",
+    "bucket_16_30",
+    "bucket_31_45",
+    "bucket_46_60",
+    "bucket_61_75",
+    "bucket_76_90",
+    "bucket_91_105",
+    "bucket_106_120",
+    "bucket_121_135",
+    "bucket_136_150",
+    "bucket_151_165",
+    "bucket_166_180",
+    "bucket_181_over",
+]
+
+TERM_BUCKET_RULES = {
+    15: {
+        "due_current": "bucket_1_15",
+        "due_next": "bucket_current",
+        "overdue_from": "bucket_16_30",
+        "overdue_30_from": "bucket_46_60",
+    },
+    30: {
+        "due_current": "bucket_16_30",
+        "due_next": "bucket_1_15",
+        "overdue_from": "bucket_31_45",
+        "overdue_30_from": "bucket_61_75",
+    },
+    45: {
+        "due_current": "bucket_31_45",
+        "due_next": "bucket_16_30",
+        "overdue_from": "bucket_46_60",
+        "overdue_30_from": "bucket_76_90",
+    },
+    60: {
+        "due_current": "bucket_46_60",
+        "due_next": "bucket_31_45",
+        "overdue_from": "bucket_61_75",
+        "overdue_30_from": "bucket_91_105",
+    },
+    75: {
+        "due_current": "bucket_61_75",
+        "due_next": "bucket_46_60",
+        "overdue_from": "bucket_76_90",
+        "overdue_30_from": "bucket_106_120",
+    },
+    90: {
+        "due_current": "bucket_76_90",
+        "due_next": "bucket_61_75",
+        "overdue_from": "bucket_91_105",
+        "overdue_30_from": "bucket_121_135",
+    },
+}
+
+
+def parse_credit_days(term_value):
+    """Parse a terms string into an integer day count.
+    Returns one of 15, 30, 45, 60, 75, 90 or None."""
+    if not term_value:
+        return None
+    s = str(term_value).strip().lower()
+    # Extract first number from the string
+    match = re.search(r"(\d+)", s)
+    if not match:
+        return None
+    days = int(match.group(1))
+    # Snap to nearest supported bucket threshold
+    supported = sorted(TERM_BUCKET_RULES.keys())
+    for t in supported:
+        if days <= t:
+            return t
+    return supported[-1]  # cap at 90
+
+
+def calculate_ageing_summary_from_buckets(bucket_values, credit_days):
+    """Calculate due/overdue from raw bucket values and credit days.
+
+    Args:
+        bucket_values: dict of bucket fieldname -> float amount
+        credit_days: int (15, 30, 45, 60, 75, 90) or None
+
+    Returns dict with due_current_month, due_next_month, overdue_amount, overdue_30_amount
+    """
+    if not credit_days or credit_days not in TERM_BUCKET_RULES:
+        return {
+            "due_current_month": 0,
+            "due_next_month": 0,
+            "overdue_amount": 0,
+            "overdue_30_amount": 0,
+        }
+
+    rules = TERM_BUCKET_RULES[credit_days]
+
+    def bucket_sum_from(start_bucket):
+        start_index = BUCKET_ORDER.index(start_bucket)
+        return sum(flt(bucket_values.get(b, 0)) for b in BUCKET_ORDER[start_index:])
+
+    return {
+        "due_current_month": flt(bucket_values.get(rules["due_current"], 0)),
+        "due_next_month": flt(bucket_values.get(rules["due_next"], 0)),
+        "overdue_amount": bucket_sum_from(rules["overdue_from"]),
+        "overdue_30_amount": bucket_sum_from(rules["overdue_30_from"]),
+    }
+
+
+def resolve_terms(customer, terms_from_file):
+    """Resolve terms from file and ERPNext Customer, determine which to use.
+
+    Returns dict with:
+        terms_from_file, credit_terms_from_customer,
+        terms_used_for_calculation, credit_days, terms_match_status
+    """
+    result = {
+        "terms_from_file": terms_from_file or None,
+        "credit_terms_from_customer": None,
+        "terms_used_for_calculation": None,
+        "credit_days": None,
+        "terms_match_status": "Missing Both",
+    }
+
+    # Get ERPNext customer terms if customer matched
+    if customer:
+        erp_terms = frappe.db.get_value("Customer", customer, "payment_terms") or None
+        result["credit_terms_from_customer"] = erp_terms
+    else:
+        erp_terms = None
+
+    file_days = parse_credit_days(terms_from_file) if terms_from_file else None
+    erp_days = parse_credit_days(erp_terms) if erp_terms else None
+
+    # Determine terms_match_status
+    if terms_from_file and erp_terms:
+        if file_days == erp_days:
+            result["terms_match_status"] = "Matched"
+        else:
+            result["terms_match_status"] = "Mismatch"
+    elif terms_from_file and not erp_terms:
+        result["terms_match_status"] = "File Only"
+    elif not terms_from_file and erp_terms:
+        result["terms_match_status"] = "ERPNext Only"
+    else:
+        result["terms_match_status"] = "Missing Both"
+
+    # Priority: file terms first, then ERPNext
+    if file_days:
+        result["terms_used_for_calculation"] = terms_from_file
+        result["credit_days"] = file_days
+    elif erp_days:
+        result["terms_used_for_calculation"] = erp_terms
+        result["credit_days"] = erp_days
+
+    return result
+
+
 # ── Header normalization ─────────────────────────────────────────────
 
 # Maps normalized key → doctype field name

@@ -5,12 +5,10 @@ from vcl_sales_dashboard.api.collections_utils import get_collections_role_filte
 
 
 @frappe.whitelist()
-def get_collections_summary(period_end=None, sales_rep_user=None):
+def get_collections_summary(period_end=None, sales_rep=None):
     """Return KPI summary for the collections dashboard."""
     try:
         role_filter = get_collections_role_filter()
-        if role_filter:
-            sales_rep_user = role_filter
 
         conditions = []
         values = {}
@@ -18,9 +16,12 @@ def get_collections_summary(period_end=None, sales_rep_user=None):
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
-        if sales_rep_user:
-            conditions.append("cs.sales_rep_user = %(sales_rep_user)s")
-            values["sales_rep_user"] = sales_rep_user
+        if role_filter:
+            conditions.append("cs.sales_rep_user = %(role_filter)s")
+            values["role_filter"] = role_filter
+        elif sales_rep:
+            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
+            values["sales_rep"] = sales_rep
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -102,8 +103,6 @@ def get_collections_customer_list(filters=None):
         filters = filters or {}
 
         role_filter = get_collections_role_filter()
-        if role_filter:
-            filters["sales_rep_user"] = role_filter
 
         conditions = ["sub.status = 'Processed'"]
         values = {}
@@ -111,9 +110,12 @@ def get_collections_customer_list(filters=None):
         if filters.get("period_end"):
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = filters["period_end"]
-        if filters.get("sales_rep_user"):
-            conditions.append("cs.sales_rep_user = %(sales_rep_user)s")
-            values["sales_rep_user"] = filters["sales_rep_user"]
+        if role_filter:
+            conditions.append("cs.sales_rep_user = %(role_filter)s")
+            values["role_filter"] = role_filter
+        elif filters.get("sales_rep"):
+            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
+            values["sales_rep"] = filters["sales_rep"]
         if filters.get("status"):
             conditions.append("cs.latest_follow_up_status = %(status)s")
             values["status"] = filters["status"]
@@ -318,10 +320,36 @@ def get_available_periods():
         return {"status": "error", "message": str(e)}
 
 
+@frappe.whitelist()
+def get_sales_rep_options(period_end=None):
+    """Return distinct assigned_sales_representative values from snapshot data."""
+    try:
+        conditions = ["sub.status = 'Processed'"]
+        values = {}
+        if period_end:
+            conditions.append("cs.period_end = %(period_end)s")
+            values["period_end"] = period_end
+        where = "WHERE " + " AND ".join(conditions)
+
+        result = frappe.db.sql(f"""
+            SELECT DISTINCT cs.assigned_sales_representative as name
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
+            {where}
+              AND cs.assigned_sales_representative IS NOT NULL
+              AND cs.assigned_sales_representative != ''
+            ORDER BY cs.assigned_sales_representative ASC
+        """, values, as_dict=True)
+
+        return {"status": "ok", "data": result}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 # ── Warning / Review Queues ──────────────────────────────────────────
 
 @frappe.whitelist()
-def get_warning_queues(period_end=None):
+def get_warning_queues(period_end=None, sales_rep=None):
     """Return warning/review queue counts and rows for the selected period."""
     try:
         role_filter = get_collections_role_filter()
@@ -335,6 +363,9 @@ def get_warning_queues(period_end=None):
         if role_filter:
             conditions.append("cs.sales_rep_user = %(role_filter)s")
             values["role_filter"] = role_filter
+        elif sales_rep:
+            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
+            values["sales_rep"] = sales_rep
 
         where = "WHERE " + " AND ".join(conditions)
 

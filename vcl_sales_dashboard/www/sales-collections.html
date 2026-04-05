@@ -345,11 +345,12 @@
   async function loadRepOptions() {
     if (!isManager) return;
     try {
-      const res = await fetch('/api/resource/Customer Sales Rep Assignment?filters=[["status","=","Active"]]&fields=["distinct sales_representative as name"]&limit_page_length=100&order_by=sales_representative asc', {
-        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }
-      }).then(r => r.json());
+      const periodVal = document.getElementById('f-period').value;
+      const args = periodVal ? { period_end: periodVal } : {};
+      const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_sales_rep_options', args);
       const sel = document.getElementById('f-rep');
-      if (res.data) {
+      sel.innerHTML = '<option value="">All Reps</option>';
+      if (res.status === 'ok' && res.data) {
         res.data.forEach(r => {
           if (r.name) {
             const opt = document.createElement('option');
@@ -369,7 +370,7 @@
       filters.period_end = periodVal;
     }
     const rep = document.getElementById('f-rep').value;
-    if (rep) filters.sales_rep_user = rep;
+    if (rep) filters.sales_rep = rep;
     const status = document.getElementById('f-status').value;
     if (status) filters.status = status;
     const search = document.getElementById('f-search').value.trim();
@@ -383,14 +384,14 @@
     currentPage = 0;
     currentFilters = getFilterValues();
     const tasks = [loadSummary(), loadCustomerList()];
-    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); }
+    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); tasks.push(loadRepOptions()); }
     await Promise.all(tasks);
   }
 
   async function loadSummary() {
     const f = currentFilters;
     const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_summary', {
-      period_end: f.period_end, sales_rep_user: f.sales_rep_user
+      period_end: f.period_end, sales_rep: f.sales_rep
     });
     if (res.status === 'ok' && res.data) {
       const d = res.data;
@@ -665,7 +666,7 @@
     if (!isManager) return;
     const f = currentFilters;
     const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_warning_queues', {
-      period_end: f.period_end
+      period_end: f.period_end, sales_rep: f.sales_rep
     });
     const container = document.getElementById('queue-cards');
     if (res.status !== 'ok') { container.innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading queues.</p>'; return; }
