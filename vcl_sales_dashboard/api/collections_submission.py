@@ -215,7 +215,7 @@ def validate_submission_file():
         }
 
     except Exception as e:
-        frappe.log_error(f"Collections validation error: {e}")
+        frappe.log_error(frappe.get_traceback(), "Collections validation error")
         return {"status": "error", "message": str(e)}
 
 
@@ -326,7 +326,7 @@ def process_collections_submission():
 
     except Exception as e:
         frappe.db.rollback()
-        frappe.log_error(f"Collections submission error: {e}")
+        frappe.log_error(frappe.get_traceback(), "Collections submission error")
         return {"status": "error", "message": str(e)}
 
 

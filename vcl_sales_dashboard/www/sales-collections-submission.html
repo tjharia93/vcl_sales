@@ -95,6 +95,18 @@
 
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--text-on-dark); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Debug panel */
+    .debug-panel { background: #1e1e2e; border: 2px solid #f38ba8; border-radius: var(--radius-md); padding: var(--space-5); margin-bottom: var(--space-5); }
+    .debug-panel__title { font-size: 14px; font-weight: 700; color: #f38ba8; margin: 0 0 var(--space-3); font-family: "Courier New", monospace; }
+    .debug-log { background: #11111b; border: 1px solid #313244; border-radius: var(--radius-sm); padding: var(--space-4); font-size: 12px; font-family: "Courier New", monospace; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; color: #cdd6f4; line-height: 1.5; }
+    .debug-entry { border-bottom: 1px solid #313244; padding-bottom: 8px; margin-bottom: 8px; }
+    .debug-entry:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .debug-ts { color: #7f849c; }
+    .debug-label { color: #89b4fa; font-weight: 700; }
+    .debug-ok { color: #a6e3a1; }
+    .debug-err { color: #f38ba8; }
+    .debug-warn { color: #fab387; }
   </style>
 </head>
 <body>
@@ -170,6 +182,12 @@
       <p style="color: var(--text-muted); font-size: 13px;">Loading...</p>
     </div>
   </div>
+
+  <!-- Debug Panel -->
+  <div class="debug-panel" id="debug-panel">
+    <div class="debug-panel__title">DEBUG OUTPUT (Testing Mode)</div>
+    <div class="debug-log" id="debug-log">Waiting for activity...</div>
+  </div>
 </div>
 
 <script>
@@ -177,12 +195,151 @@
     return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
   }
 
+  // ── Debug logger ──────────────────────────────────────────────────
+
+  function debugLog(label, data, level) {
+    const el = document.getElementById('debug-log');
+    const ts = new Date().toLocaleTimeString();
+    const cls = level === 'error' ? 'debug-err' : (level === 'warn' ? 'debug-warn' : (level === 'ok' ? 'debug-ok' : ''));
+
+    let text;
+    if (typeof data === 'string') {
+      text = data;
+    } else {
+      try { text = JSON.stringify(data, null, 2); } catch(e) { text = String(data); }
+    }
+
+    const entry = document.createElement('div');
+    entry.className = 'debug-entry';
+    entry.innerHTML = `<span class="debug-ts">[${ts}]</span> <span class="debug-label">${label}</span>\n<span class="${cls}">${escapeHtml(text)}</span>`;
+
+    // Prepend (newest first)
+    el.insertBefore(entry, el.firstChild);
+
+    // Also log to browser console
+    console.log(`[Collections Debug] ${label}:`, data);
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  // ── Frappe error extraction ───────────────────────────────────────
+
+  function extractFrappeError(rawJson) {
+    /**
+     * Frappe error responses can contain errors in many places:
+     *   - rawJson._server_messages (JSON-encoded array of JSON strings)
+     *   - rawJson.exc (JSON-encoded traceback array)
+     *   - rawJson.exc_type (exception class name)
+     *   - rawJson.exception (exception string)
+     *   - rawJson.message (sometimes a dict with status/message)
+     *   - rawJson._error_message (plain string)
+     *
+     * This function tries all of them and returns a useful error string.
+     */
+    if (!rawJson) return 'Empty response from server';
+
+    const parts = [];
+
+    // 1. _server_messages: JSON array of JSON strings
+    if (rawJson._server_messages) {
+      try {
+        const msgs = JSON.parse(rawJson._server_messages);
+        for (const m of msgs) {
+          try {
+            const parsed = JSON.parse(m);
+            parts.push(parsed.message || parsed.title || m);
+          } catch { parts.push(m); }
+        }
+      } catch { parts.push(String(rawJson._server_messages)); }
+    }
+
+    // 2. exception string
+    if (rawJson.exception) {
+      parts.push(rawJson.exception);
+    }
+
+    // 3. exc_type
+    if (rawJson.exc_type && !parts.length) {
+      parts.push('Exception type: ' + rawJson.exc_type);
+    }
+
+    // 4. exc (traceback array)
+    if (rawJson.exc) {
+      try {
+        const excArr = JSON.parse(rawJson.exc);
+        if (Array.isArray(excArr) && excArr.length) {
+          parts.push('--- Traceback ---\n' + excArr[excArr.length - 1]);
+        }
+      } catch { parts.push(String(rawJson.exc)); }
+    }
+
+    // 5. _error_message
+    if (rawJson._error_message) {
+      parts.push(rawJson._error_message);
+    }
+
+    // 6. message field (could be our API response dict or a string)
+    if (rawJson.message) {
+      if (typeof rawJson.message === 'object' && rawJson.message.message) {
+        parts.push(rawJson.message.message);
+      } else if (typeof rawJson.message === 'string') {
+        parts.push(rawJson.message);
+      }
+    }
+
+    if (parts.length === 0) {
+      return 'Unknown server error. Full response logged to debug panel.';
+    }
+
+    return parts.join('\n\n');
+  }
+
+  // ── API call wrapper ──────────────────────────────────────────────
+
+  async function apiCall(url, options, label) {
+    debugLog(label + ' REQUEST', { url: url, method: options.method || 'GET' });
+
+    let response, rawJson;
+    try {
+      response = await fetch(url, options);
+      rawJson = await response.json();
+    } catch (networkErr) {
+      debugLog(label + ' NETWORK ERROR', networkErr.message, 'error');
+      throw new Error('Network error: ' + networkErr.message);
+    }
+
+    // Log full response
+    debugLog(label + ' HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+
+    // Check if HTTP-level error
+    if (!response.ok) {
+      const errMsg = extractFrappeError(rawJson);
+      debugLog(label + ' EXTRACTED ERROR', errMsg, 'error');
+      throw new Error(errMsg);
+    }
+
+    // Check if the API returned our status:error format
+    const result = rawJson.message || rawJson;
+    if (result && result.status === 'error') {
+      debugLog(label + ' API ERROR', result.message || 'Unknown API error', 'error');
+      throw new Error(result.message || 'Unknown API error');
+    }
+
+    return result;
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────
+
   function showMsg(text, type) {
     const el = document.getElementById('msg-area');
     el.className = 'msg-info ' + (type || 'info');
     el.textContent = text;
     el.classList.remove('hidden');
-    setTimeout(() => el.classList.add('hidden'), 8000);
+    setTimeout(() => el.classList.add('hidden'), 15000);
   }
 
   function setStatus(status) {
@@ -199,8 +356,11 @@
     if (!period_start || !period_end) { showMsg('Period start and end are required.', 'error'); return null; }
     if (!fileInput.files.length) { showMsg('Please select an Excel file.', 'error'); return null; }
 
+    const f = fileInput.files[0];
+    debugLog('FILE SELECTED', { name: f.name, size: (f.size / 1024 / 1024).toFixed(2) + ' MB', type: f.type });
+
     const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+    formData.append('file', f);
     formData.append('period_start', period_start);
     formData.append('period_end', period_end);
     formData.append('submission_label', document.getElementById('submission_label').value);
@@ -208,6 +368,8 @@
     formData.append('submission_notes', document.getElementById('submission_notes').value);
     return formData;
   }
+
+  // ── Validate ──────────────────────────────────────────────────────
 
   async function validateFile() {
     const formData = getFormData();
@@ -218,34 +380,41 @@
     btn.innerHTML = '<span class="spinner"></span> Validating...';
 
     try {
-      const res = await fetch('/api/method/vcl_sales_dashboard.api.collections_submission.validate_submission_file', {
-        method: 'POST',
-        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() },
-        body: formData
-      }).then(r => r.json()).then(r => r.message || r);
+      const res = await apiCall(
+        '/api/method/vcl_sales_dashboard.api.collections_submission.validate_submission_file',
+        { method: 'POST', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }, body: formData },
+        'VALIDATE'
+      );
 
       document.getElementById('results-card').classList.remove('hidden');
+      setStatus('Validated');
+      document.getElementById('btn-process').disabled = false;
 
-      if (res.status === 'ok') {
-        setStatus('Validated');
-        document.getElementById('btn-process').disabled = false;
-        document.getElementById('validation-log').textContent =
-          'File: ' + (res.filename || '') + '\nSheet: ' + res.sheet_name +
-          '\nRows found: ' + res.rows_found + '\nColumns mapped: ' + res.columns_mapped +
-          '\nMapped fields: ' + (res.mapped_fields || []).join(', ');
-        showMsg('Validation passed. Ready to process.', 'success');
-      } else {
-        setStatus('Failed');
-        document.getElementById('validation-log').textContent = res.message || 'Validation failed.';
-        showMsg('Validation failed: ' + res.message, 'error');
-      }
+      const logText = [
+        'File: ' + (res.filename || ''),
+        'Sheet: ' + (res.sheet_name || ''),
+        'Rows found: ' + (res.rows_found || 0),
+        'Columns mapped: ' + (res.columns_mapped || 0),
+        'Mapped fields: ' + (res.mapped_fields || []).join(', '),
+      ].join('\n');
+      document.getElementById('validation-log').textContent = logText;
+      showMsg('Validation passed. Ready to process.', 'success');
+
+      debugLog('VALIDATION OK', res, 'ok');
+
     } catch (e) {
-      showMsg('Error: ' + e.message, 'error');
+      setStatus('Failed');
+      document.getElementById('results-card').classList.remove('hidden');
+      document.getElementById('validation-log').textContent = e.message;
+      showMsg('Validation failed: ' + e.message, 'error');
+      debugLog('VALIDATION FAILED', e.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Validate File';
     }
   }
+
+  // ── Process ───────────────────────────────────────────────────────
 
   async function processSubmission() {
     const formData = getFormData();
@@ -256,26 +425,30 @@
     btn.innerHTML = '<span class="spinner"></span> Processing...';
 
     try {
-      const res = await fetch('/api/method/vcl_sales_dashboard.api.collections_submission.process_collections_submission', {
-        method: 'POST',
-        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() },
-        body: formData
-      }).then(r => r.json()).then(r => r.message || r);
+      const res = await apiCall(
+        '/api/method/vcl_sales_dashboard.api.collections_submission.process_collections_submission',
+        { method: 'POST', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }, body: formData },
+        'PROCESS'
+      );
 
       document.getElementById('results-card').classList.remove('hidden');
+      setStatus('Processed');
+      showMsg(res.message || 'Processing complete.', 'success');
+      debugLog('PROCESS OK', res, 'ok');
 
-      if (res.status === 'ok') {
-        setStatus('Processed');
-        showMsg(res.message, 'success');
+      // Load the submission log
+      try {
+        const logRes = await apiCall(
+          '/api/method/vcl_sales_dashboard.api.collections_submission.get_submission_log',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
+            body: JSON.stringify({ submission_name: res.submission_name })
+          },
+          'LOAD LOG'
+        );
 
-        // Load the submission log
-        const logRes = await fetch('/api/method/vcl_sales_dashboard.api.collections_submission.get_submission_log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
-          body: JSON.stringify({ submission_name: res.submission_name })
-        }).then(r => r.json()).then(r => r.message || r);
-
-        if (logRes.status === 'ok' && logRes.data) {
+        if (logRes.data) {
           const d = logRes.data;
           document.getElementById('summary-grid').innerHTML = [
             ['Rows Found', d.rows_found],
@@ -289,20 +462,25 @@
           ].map(([lbl, val]) => `<div class="summary-item"><div class="val">${val||0}</div><div class="lbl">${lbl}</div></div>`).join('');
           document.getElementById('validation-log').textContent = d.validation_log || 'No log.';
         }
-
-        loadPastSubmissions();
-      } else {
-        setStatus('Failed');
-        document.getElementById('validation-log').textContent = res.message || 'Processing failed.';
-        showMsg('Processing failed: ' + res.message, 'error');
+      } catch (logErr) {
+        debugLog('LOG LOAD ERROR', logErr.message, 'warn');
       }
+
+      loadPastSubmissions();
+
     } catch (e) {
-      showMsg('Error: ' + e.message, 'error');
+      setStatus('Failed');
+      document.getElementById('results-card').classList.remove('hidden');
+      document.getElementById('validation-log').textContent = e.message;
+      showMsg('Processing failed: ' + e.message, 'error');
+      debugLog('PROCESS FAILED', e.message, 'error');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Process Submission';
     }
   }
+
+  // ── Past submissions ──────────────────────────────────────────────
 
   function fmtCurrency(v) {
     return parseFloat(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -310,18 +488,22 @@
 
   async function loadPastSubmissions() {
     try {
-      const res = await fetch('/api/resource/Collections Submission?filters=[["status","in",["Validated","Processed","Failed","Draft"]]]&fields=["name","submission_label","period_start","period_end","status","rows_imported","total_balance","total_overdue","submitted_on"]&order_by=period_start desc&limit_page_length=20', {
-        headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }
-      }).then(r => r.json());
+      const res = await apiCall(
+        '/api/resource/Collections Submission?filters=[["status","in",["Validated","Processed","Failed","Draft"]]]&fields=["name","submission_label","period_start","period_end","status","rows_imported","total_balance","total_overdue","submitted_on"]&order_by=period_start desc&limit_page_length=20',
+        { method: 'GET', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() } },
+        'LOAD PAST'
+      );
 
       const container = document.getElementById('past-submissions');
-      if (!res.data || !res.data.length) {
+      const rows = res.data || res || [];
+
+      if (!Array.isArray(rows) || !rows.length) {
         container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No submissions found.</p>';
         return;
       }
 
       let html = '<table><thead><tr><th>Name</th><th>Label</th><th>Period</th><th>Status</th><th>Rows</th><th>Total Balance</th><th>Total Overdue</th></tr></thead><tbody>';
-      res.data.forEach(r => {
+      rows.forEach(r => {
         const cls = 'status-' + (r.status || 'draft').toLowerCase();
         html += `<tr>
           <td><a href="/app/collections-submission/${r.name}">${r.name}</a></td>
@@ -336,11 +518,15 @@
       html += '</tbody></table>';
       container.innerHTML = html;
     } catch (e) {
-      document.getElementById('past-submissions').innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading submissions.</p>';
+      debugLog('PAST SUBMISSIONS ERROR', e.message, 'warn');
+      document.getElementById('past-submissions').innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading submissions: ' + escapeHtml(e.message) + '</p>';
     }
   }
 
-  document.addEventListener('DOMContentLoaded', loadPastSubmissions);
+  document.addEventListener('DOMContentLoaded', function() {
+    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (getCsrfToken() ? 'present' : 'MISSING!'), getCsrfToken() ? 'ok' : 'error');
+    loadPastSubmissions();
+  });
 </script>
 
 </body>
