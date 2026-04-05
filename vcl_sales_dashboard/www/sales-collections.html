@@ -292,7 +292,7 @@
     return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
   }
 
-  const isManager = {{ is_manager|tojson }};
+  const isManager = {% if is_manager %}true{% else %}false{% endif %};
   let currentFilters = {};
   let currentPage = 0;
   const PAGE_SIZE = 50;
