@@ -11,7 +11,7 @@ def get_context(context):
     roles = frappe.get_roles(frappe.session.user)
     allowed_roles = ["Finance Manager", "System Manager"]
     if not any(r in roles for r in allowed_roles):
-        frappe.throw("Not permitted. Only Finance Manager or System Manager can import collections.", frappe.PermissionError)
+        frappe.throw("Not permitted. Only Finance Manager or System Manager can submit collections.", frappe.PermissionError)
 
     context.user_name = frappe.utils.get_fullname(frappe.session.user)
     context.user_role = next(

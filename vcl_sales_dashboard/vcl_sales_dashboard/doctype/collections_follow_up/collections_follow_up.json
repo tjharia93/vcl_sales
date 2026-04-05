@@ -1,13 +1,13 @@
 {
   "actions": [],
   "autoname": "hash",
-  "creation": "2026-04-04 00:00:00.000000",
+  "creation": "2026-04-05 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
   "field_order": [
     "linkage_section",
     "collections_customer_snapshot",
-    "collections_import",
+    "collections_submission",
     "customer",
     "follow_up_section",
     "comment_date",
@@ -37,10 +37,10 @@
       "reqd": 1
     },
     {
-      "fieldname": "collections_import",
+      "fieldname": "collections_submission",
       "fieldtype": "Link",
-      "label": "Collections Import",
-      "options": "Collections Import"
+      "label": "Collections Submission",
+      "options": "Collections Submission"
     },
     {
       "fieldname": "customer",
@@ -51,7 +51,7 @@
     {
       "fieldname": "follow_up_section",
       "fieldtype": "Section Break",
-      "label": "Follow Up"
+      "label": "Follow Up Details"
     },
     {
       "fieldname": "comment_date",
@@ -121,7 +121,7 @@
   ],
   "index_web_pages_for_search": 0,
   "links": [],
-  "modified": "2026-04-04 00:00:00.000000",
+  "modified": "2026-04-05 00:00:00.000000",
   "modified_by": "Administrator",
   "module": "VCL Sales Dashboard",
   "name": "Collections Follow Up",

@@ -1,12 +1,12 @@
 {
   "actions": [],
   "autoname": "hash",
-  "creation": "2026-04-04 00:00:00.000000",
+  "creation": "2026-04-05 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
   "field_order": [
-    "snapshot_identity_section",
-    "collections_import",
+    "submission_link_section",
+    "collections_submission",
     "period_start",
     "period_end",
     "snapshot_label",
@@ -49,11 +49,11 @@
     "due_next_month",
     "pd_cheques_cm",
     "check_value",
-    "dashboard_state_section",
+    "workflow_state_section",
     "latest_follow_up_status",
     "latest_comment_date",
     "latest_comment_by",
-    "column_break_dashboard",
+    "column_break_workflow",
     "promised_payment_date",
     "expected_collection_amount",
     "next_action_date",
@@ -62,15 +62,15 @@
   ],
   "fields": [
     {
-      "fieldname": "snapshot_identity_section",
+      "fieldname": "submission_link_section",
       "fieldtype": "Section Break",
-      "label": "Snapshot Identity"
+      "label": "Submission Link"
     },
     {
-      "fieldname": "collections_import",
+      "fieldname": "collections_submission",
       "fieldtype": "Link",
-      "label": "Collections Import",
-      "options": "Collections Import",
+      "label": "Collections Submission",
+      "options": "Collections Submission",
       "reqd": 1
     },
     {
@@ -289,9 +289,9 @@
       "label": "Check Value"
     },
     {
-      "fieldname": "dashboard_state_section",
+      "fieldname": "workflow_state_section",
       "fieldtype": "Section Break",
-      "label": "Dashboard State"
+      "label": "Workflow State"
     },
     {
       "fieldname": "latest_follow_up_status",
@@ -312,7 +312,7 @@
       "options": "User"
     },
     {
-      "fieldname": "column_break_dashboard",
+      "fieldname": "column_break_workflow",
       "fieldtype": "Column Break"
     },
     {
@@ -343,7 +343,7 @@
   ],
   "index_web_pages_for_search": 0,
   "links": [],
-  "modified": "2026-04-04 00:00:00.000000",
+  "modified": "2026-04-05 00:00:00.000000",
   "modified_by": "Administrator",
   "module": "VCL Sales Dashboard",
   "name": "Collections Customer Snapshot",

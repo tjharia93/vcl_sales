@@ -42,8 +42,8 @@ def get_collections_summary(period_start=None, period_end=None, sales_rep_user=N
                 SUM(CASE WHEN cs.is_escalated = 1 THEN 1 ELSE 0 END) as escalated,
                 SUM(CASE WHEN cs.is_priority = 1 THEN 1 ELSE 0 END) as priority_count
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
-                AND ci.status = 'Imported'
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
+                AND sub.status = 'Processed'
             {where}
         """, values, as_dict=True)
 
@@ -60,7 +60,7 @@ def get_collections_rep_summary(period_start=None, period_end=None):
     try:
         role_filter = get_collections_role_filter()
 
-        conditions = ["ci.status = 'Imported'"]
+        conditions = ["sub.status = 'Processed'"]
         values = {}
 
         if period_start:
@@ -86,7 +86,7 @@ def get_collections_rep_summary(period_start=None, period_end=None):
                 SUM(cs.due_current_month) as due_current_month,
                 SUM(CASE WHEN cs.latest_follow_up_status = 'Not Contacted' THEN 1 ELSE 0 END) as not_contacted
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
             GROUP BY cs.assigned_sales_representative, cs.sales_rep_user
             ORDER BY total_overdue DESC
@@ -111,7 +111,7 @@ def get_collections_customer_list(filters=None):
         if role_filter:
             filters["sales_rep_user"] = role_filter
 
-        conditions = ["ci.status = 'Imported'"]
+        conditions = ["sub.status = 'Processed'"]
         values = {}
 
         if filters.get("period_start"):
@@ -147,7 +147,7 @@ def get_collections_customer_list(filters=None):
 
         result = frappe.db.sql(f"""
             SELECT
-                cs.name, cs.collections_import,
+                cs.name, cs.collections_submission,
                 cs.excel_customer_name, cs.customer, cs.customer_name_display,
                 cs.customer_match_status,
                 cs.assigned_sales_representative, cs.sales_rep_user,
@@ -160,17 +160,16 @@ def get_collections_customer_list(filters=None):
                 cs.next_action_date, cs.is_priority, cs.is_escalated,
                 cs.period_start, cs.period_end
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
             ORDER BY cs.overdue_amount DESC
             LIMIT %(limit)s OFFSET %(offset)s
         """, {**values, "limit": limit, "offset": offset}, as_dict=True)
 
-        # Get total count
         count = frappe.db.sql(f"""
             SELECT COUNT(*) as cnt
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
         """, values, as_dict=True)
 
@@ -191,7 +190,6 @@ def get_customer_snapshot_detail(snapshot_name):
     try:
         doc = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        # Permission check
         role_filter = get_collections_role_filter()
         if role_filter and doc.sales_rep_user != role_filter:
             frappe.throw("Not permitted", frappe.PermissionError)
@@ -206,7 +204,7 @@ def get_customer_snapshot_detail(snapshot_name):
 def get_customer_month_history(customer=None, excel_customer_name=None):
     """Return month-over-month snapshots for a customer."""
     try:
-        conditions = ["ci.status = 'Imported'"]
+        conditions = ["sub.status = 'Processed'"]
         values = {}
 
         if customer:
@@ -231,7 +229,7 @@ def get_customer_month_history(customer=None, excel_customer_name=None):
                 cs.total_balance, cs.overdue_amount, cs.overdue_30_amount,
                 cs.due_current_month, cs.latest_follow_up_status
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
             ORDER BY cs.period_start DESC
         """, values, as_dict=True)
@@ -252,14 +250,13 @@ def add_follow_up(snapshot_name, payload=None):
 
         snapshot = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        # Permission check
         role_filter = get_collections_role_filter()
         if role_filter and snapshot.sales_rep_user != role_filter:
             frappe.throw("Not permitted", frappe.PermissionError)
 
         follow_up = frappe.new_doc("Collections Follow Up")
         follow_up.collections_customer_snapshot = snapshot_name
-        follow_up.collections_import = snapshot.collections_import
+        follow_up.collections_submission = snapshot.collections_submission
         follow_up.customer = snapshot.customer
         follow_up.comment_date = now_datetime()
         follow_up.comment_by = frappe.session.user
@@ -291,7 +288,6 @@ def get_follow_ups(snapshot_name):
     try:
         snapshot = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        # Permission check
         role_filter = get_collections_role_filter()
         if role_filter and snapshot.sales_rep_user != role_filter:
             frappe.throw("Not permitted", frappe.PermissionError)
@@ -316,12 +312,12 @@ def get_follow_ups(snapshot_name):
 
 @frappe.whitelist()
 def get_available_periods():
-    """Return list of available import periods for filter dropdowns."""
+    """Return list of available submission periods for filter dropdowns."""
     try:
         result = frappe.db.sql("""
-            SELECT DISTINCT period_start, period_end, import_label
-            FROM `tabCollections Import`
-            WHERE status = 'Imported'
+            SELECT DISTINCT period_start, period_end, submission_label
+            FROM `tabCollections Submission`
+            WHERE status = 'Processed'
             ORDER BY period_start DESC
         """, as_dict=True)
 
@@ -331,25 +327,15 @@ def get_available_periods():
         return {"status": "error", "message": str(e)}
 
 
-# ── Phase 4: Warning / Review Queues ────────────────────────────────
+# ── Warning / Review Queues ──────────────────────────────────────────
 
 @frappe.whitelist()
 def get_warning_queues(period_start=None, period_end=None):
-    """Return warning/review queue counts and rows for the selected period.
-
-    Queues:
-      - customer_not_matched: snapshots where customer could not be matched
-      - no_rep_assignment: matched customer but no valid rep for the period
-      - multiple_assignments: matched customer with multiple rep assignments
-      - promise_to_pay_due: promised payment date is today or past, status still Promise to Pay
-      - escalated: flagged for escalation
-      - in_dispute: currently in dispute
-      - no_comment_overdue: overdue > 0 and status is Not Contacted
-    """
+    """Return warning/review queue counts and rows for the selected period."""
     try:
         role_filter = get_collections_role_filter()
 
-        conditions = ["ci.status = 'Imported'"]
+        conditions = ["sub.status = 'Processed'"]
         values = {}
 
         if period_start:
@@ -374,38 +360,34 @@ def get_warning_queues(period_start=None, period_end=None):
 
         queues = {}
 
-        # 1. Customer Not Matched
         queues["customer_not_matched"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where} AND cs.customer_match_status = 'Customer Not Matched'
             ORDER BY cs.total_balance DESC
         """, values, as_dict=True)
 
-        # 2. No Valid Rep Assignment
         queues["no_rep_assignment"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where} AND cs.assignment_match_status = 'No Valid Assignment For Period'
             ORDER BY cs.overdue_amount DESC
         """, values, as_dict=True)
 
-        # 3. Multiple Assignments
         queues["multiple_assignments"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where} AND cs.assignment_match_status = 'Multiple Assignments Found'
             ORDER BY cs.overdue_amount DESC
         """, values, as_dict=True)
 
-        # 4. Promise to Pay Due (promised date <= today, status still Promise to Pay)
         queues["promise_to_pay_due"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
               AND cs.latest_follow_up_status = 'Promise to Pay'
               AND cs.promised_payment_date IS NOT NULL
@@ -413,29 +395,26 @@ def get_warning_queues(period_start=None, period_end=None):
             ORDER BY cs.promised_payment_date ASC
         """, values, as_dict=True)
 
-        # 5. Escalated accounts
         queues["escalated"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where} AND cs.is_escalated = 1
             ORDER BY cs.overdue_amount DESC
         """, values, as_dict=True)
 
-        # 6. In Dispute
         queues["in_dispute"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where} AND cs.latest_follow_up_status = 'In Dispute'
             ORDER BY cs.overdue_amount DESC
         """, values, as_dict=True)
 
-        # 7. Overdue with No Contact
         queues["no_comment_overdue"] = frappe.db.sql(f"""
             SELECT {base_fields}
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
               AND cs.latest_follow_up_status = 'Not Contacted'
               AND cs.overdue_amount > 0
@@ -443,7 +422,6 @@ def get_warning_queues(period_start=None, period_end=None):
             LIMIT 50
         """, values, as_dict=True)
 
-        # Build summary counts
         summary = {k: len(v) for k, v in queues.items()}
 
         return {"status": "ok", "summary": summary, "queues": queues}
@@ -455,9 +433,9 @@ def get_warning_queues(period_start=None, period_end=None):
 
 @frappe.whitelist()
 def get_customer_month_trend(customer=None, excel_customer_name=None):
-    """Return month-over-month trend data for a customer, including balance movement."""
+    """Return month-over-month trend data for a customer."""
     try:
-        conditions = ["ci.status = 'Imported'"]
+        conditions = ["sub.status = 'Processed'"]
         values = {}
 
         if customer:
@@ -489,12 +467,11 @@ def get_customer_month_trend(customer=None, excel_customer_name=None):
                 cs.bucket_166_180, cs.bucket_181_over,
                 cs.latest_follow_up_status, cs.pd_cheques_cm
             FROM `tabCollections Customer Snapshot` cs
-            INNER JOIN `tabCollections Import` ci ON cs.collections_import = ci.name
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
             ORDER BY cs.period_start ASC
         """, values, as_dict=True)
 
-        # Compute month-over-month movement
         trend = []
         for i, row in enumerate(result):
             entry = dict(row)

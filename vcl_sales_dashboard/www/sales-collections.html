@@ -167,7 +167,7 @@
   <div class="topbar__inner">
     <div class="topbar__title">Collections Dashboard</div>
     <nav class="topbar__nav">
-      {% if is_manager %}<a href="/sales-collections-import">Import</a>{% endif %}
+      {% if is_manager %}<a href="/sales-collections-submission">Submit</a>{% endif %}
       <a href="/sales-dashboard">Sales Dashboard</a>
     </nav>
   </div>
@@ -316,7 +316,7 @@
       res.data.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.period_start + '|' + p.period_end;
-        opt.textContent = p.import_label || (p.period_start + ' to ' + p.period_end);
+        opt.textContent = p.submission_label || (p.period_start + ' to ' + p.period_end);
         sel.appendChild(opt);
       });
       // Auto-select first period

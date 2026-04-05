@@ -1,21 +1,22 @@
 {
   "actions": [],
-  "autoname": "format:COLL-IMP-{period_start}-{#####}",
-  "creation": "2026-04-04 00:00:00.000000",
+  "autoname": "format:COLL-SUB-{period_start}-{#####}",
+  "creation": "2026-04-05 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
   "field_order": [
-    "import_details_section",
-    "import_label",
+    "submission_details_section",
+    "submission_label",
     "period_start",
     "period_end",
-    "source_file",
     "column_break_1",
     "status",
-    "uploaded_by",
-    "upload_datetime",
+    "submitted_by",
+    "submitted_on",
+    "source_filename",
+    "submission_notes",
+    "replace_existing_month",
     "validation_summary_section",
-    "sheet_name_used",
     "rows_found",
     "rows_imported",
     "rows_skipped",
@@ -33,21 +34,18 @@
     "column_break_3",
     "total_due_current_month",
     "total_due_next_month",
-    "total_pd_cheques_cm",
-    "controls_section",
-    "replace_existing_month",
-    "import_notes"
+    "total_pd_cheques_cm"
   ],
   "fields": [
     {
-      "fieldname": "import_details_section",
+      "fieldname": "submission_details_section",
       "fieldtype": "Section Break",
-      "label": "Import Details"
+      "label": "Submission Details"
     },
     {
-      "fieldname": "import_label",
+      "fieldname": "submission_label",
       "fieldtype": "Data",
-      "label": "Import Label",
+      "label": "Submission Label",
       "description": "e.g. Jan 2025"
     },
     {
@@ -63,12 +61,6 @@
       "reqd": 1
     },
     {
-      "fieldname": "source_file",
-      "fieldtype": "Attach",
-      "label": "Source File",
-      "reqd": 1
-    },
-    {
       "fieldname": "column_break_1",
       "fieldtype": "Column Break"
     },
@@ -76,32 +68,43 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Draft\nValidated\nImported\nFailed",
+      "options": "Draft\nValidated\nProcessed\nFailed",
       "default": "Draft"
     },
     {
-      "fieldname": "uploaded_by",
+      "fieldname": "submitted_by",
       "fieldtype": "Link",
-      "label": "Uploaded By",
+      "label": "Submitted By",
       "options": "User",
       "default": "__user"
     },
     {
-      "fieldname": "upload_datetime",
+      "fieldname": "submitted_on",
       "fieldtype": "Datetime",
-      "label": "Upload Datetime"
+      "label": "Submitted On"
+    },
+    {
+      "fieldname": "source_filename",
+      "fieldtype": "Data",
+      "label": "Source Filename",
+      "read_only": 1
+    },
+    {
+      "fieldname": "submission_notes",
+      "fieldtype": "Small Text",
+      "label": "Submission Notes"
+    },
+    {
+      "fieldname": "replace_existing_month",
+      "fieldtype": "Check",
+      "label": "Replace Existing Month",
+      "description": "Check to allow replacing existing snapshot data for the same period"
     },
     {
       "fieldname": "validation_summary_section",
       "fieldtype": "Section Break",
       "label": "Validation Summary",
       "collapsible": 1
-    },
-    {
-      "fieldname": "sheet_name_used",
-      "fieldtype": "Data",
-      "label": "Sheet Name Used",
-      "read_only": 1
     },
     {
       "fieldname": "rows_found",
@@ -206,30 +209,14 @@
       "fieldtype": "Currency",
       "label": "Total PD Cheques CM",
       "read_only": 1
-    },
-    {
-      "fieldname": "controls_section",
-      "fieldtype": "Section Break",
-      "label": "Controls"
-    },
-    {
-      "fieldname": "replace_existing_month",
-      "fieldtype": "Check",
-      "label": "Replace Existing Month",
-      "description": "Check to allow replacing existing snapshot data for the same period"
-    },
-    {
-      "fieldname": "import_notes",
-      "fieldtype": "Small Text",
-      "label": "Import Notes"
     }
   ],
   "index_web_pages_for_search": 0,
   "links": [],
-  "modified": "2026-04-04 00:00:00.000000",
+  "modified": "2026-04-05 00:00:00.000000",
   "modified_by": "Administrator",
   "module": "VCL Sales Dashboard",
-  "name": "Collections Import",
+  "name": "Collections Submission",
   "naming_rule": "Expression",
   "owner": "Administrator",
   "permissions": [
