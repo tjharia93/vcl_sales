@@ -170,8 +170,10 @@ def resolve_sales_rep_assignment(customer, period_end):
     """Resolve the sales rep assignment for a customer as of the period end date.
 
     Returns dict with:
-        assigned_sales_representative, sales_rep_user,
-        customer_sales_rep_assignment, assignment_match_status
+        assigned_sales_representative,
+        sales_rep_user,
+        customer_sales_rep_assignment,
+        assignment_match_status
     """
     result = {
         "assigned_sales_representative": None,
@@ -191,27 +193,30 @@ def resolve_sales_rep_assignment(customer, period_end):
           AND status = 'Active'
           AND effective_from <= %(period_end)s
           AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %(period_end)s)
-        ORDER BY priority ASC
+        ORDER BY priority ASC, modified DESC
     """, {
         "customer": customer,
         "period_end": period_end,
     }, as_dict=True)
 
-    if len(assignments) == 0:
+    if not assignments:
         result["assignment_match_status"] = "No Valid Assignment For Period"
-    elif len(assignments) == 1:
-        a = assignments[0]
-        result["assigned_sales_representative"] = a.sales_representative
-        result["sales_rep_user"] = resolve_sales_rep_user(a.sales_representative)
-        result["customer_sales_rep_assignment"] = a.name
-        result["assignment_match_status"] = "Matched"
-    else:
-        # Multiple found — use highest priority (first row) but flag it
-        a = assignments[0]
-        result["assigned_sales_representative"] = a.sales_representative
-        result["sales_rep_user"] = resolve_sales_rep_user(a.sales_representative)
-        result["customer_sales_rep_assignment"] = a.name
+        return result
+
+    # Use first valid assignment by priority
+    a = assignments[0]
+    rep_label = (a.sales_representative or "").strip()
+
+    result["assigned_sales_representative"] = rep_label or None
+    result["customer_sales_rep_assignment"] = a.name
+    result["sales_rep_user"] = resolve_sales_rep_user(rep_label) if rep_label else None
+
+    if len(assignments) > 1:
+        # Multiple active assignments — still use first, but flag it
         result["assignment_match_status"] = "Multiple Assignments Found"
+    else:
+        # Only call it fully matched if user resolution also succeeded
+        result["assignment_match_status"] = "Matched" if result["sales_rep_user"] else "Imported With Warning"
 
     return result
 

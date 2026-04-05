@@ -235,9 +235,6 @@
       || (typeof frappe !== 'undefined' && frappe.csrf_token)
       || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1]
       || '';
-
-    // Reject template placeholders that weren't rendered
-    if (token && (token.indexOf('{{') !== -1 || token.indexOf('}}') !== -1)) return '';
     return token;
   }
 
@@ -885,15 +882,8 @@
 
   document.addEventListener('DOMContentLoaded', async function() {
     var token = await fetchCsrfToken();
-    var status;
-    if (!token) {
-      status = 'MISSING';
-    } else if (token.indexOf('{{') !== -1) {
-      status = 'INVALID TEMPLATE PLACEHOLDER';
-    } else {
-      status = 'PRESENT (' + token.substring(0, 8) + '...)';
-    }
-    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + status, token && status.startsWith('PRESENT') ? 'ok' : 'error');
+    var status = token ? ('PRESENT (' + token.substring(0, 8) + '...)') : 'MISSING';
+    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + status, token ? 'ok' : 'error');
     restoreFormState();
     loadPastSubmissions();
   });

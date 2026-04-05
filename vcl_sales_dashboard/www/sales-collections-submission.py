@@ -13,9 +13,10 @@ def get_context(context):
     if not any(r in roles for r in allowed_roles):
         frappe.throw("Not permitted. Only Finance Manager or System Manager can submit collections.", frappe.PermissionError)
 
+    context.no_cache = 1
     context.user_name = frappe.utils.get_fullname(frappe.session.user)
     context.user_role = next(
         (r for r in ["System Manager", "Finance Manager"] if r in roles),
         "Finance Manager"
     )
-    context.csrf_token = frappe.sessions.get_csrf_token()
+    return context
