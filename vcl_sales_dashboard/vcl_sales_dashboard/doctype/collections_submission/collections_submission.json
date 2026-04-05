@@ -1,13 +1,12 @@
 {
   "actions": [],
-  "autoname": "format:COLL-SUB-{period_start}-{#####}",
+  "autoname": "format:COLL-SUB-{period_end}-{#####}",
   "creation": "2026-04-05 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
   "field_order": [
     "submission_details_section",
     "submission_label",
-    "period_start",
     "period_end",
     "column_break_1",
     "status",
@@ -46,13 +45,8 @@
       "fieldname": "submission_label",
       "fieldtype": "Data",
       "label": "Submission Label",
-      "description": "e.g. Jan 2025"
-    },
-    {
-      "fieldname": "period_start",
-      "fieldtype": "Date",
-      "label": "Period Start",
-      "reqd": 1
+      "description": "Auto-derived from Period End, e.g. Jan 2025",
+      "read_only": 1
     },
     {
       "fieldname": "period_end",

@@ -45,10 +45,9 @@ def extract_ageing_dataframe(file_content):
     return data, headers, sheet_name
 
 
-def check_duplicate_period(period_start, period_end, replace_flag, exclude_name=None):
-    """Check if a submission already exists for this period."""
+def check_duplicate_period(period_end, replace_flag, exclude_name=None):
+    """Check if a submission already exists for this period end."""
     conditions = {
-        "period_start": period_start,
         "period_end": period_end,
         "status": ["in", ["Validated", "Processed"]],
     }
@@ -59,7 +58,7 @@ def check_duplicate_period(period_start, period_end, replace_flag, exclude_name=
 
     if existing and not cint(replace_flag):
         frappe.throw(
-            f"A submission already exists for period {period_start} to {period_end}: "
+            f"A submission already exists for period ending {period_end}: "
             f"{', '.join(existing)}. Check 'Replace Existing Month' to overwrite."
         )
     return existing
@@ -96,13 +95,10 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines):
         return None, "Skipped: empty customer name"
 
     customer, match_status = match_customer(excel_name)
-    rep_info = resolve_sales_rep_assignment(
-        customer, submission_doc.period_start, submission_doc.period_end
-    )
+    rep_info = resolve_sales_rep_assignment(customer, submission_doc.period_end)
 
     snapshot = frappe.new_doc("Collections Customer Snapshot")
     snapshot.collections_submission = submission_doc.name
-    snapshot.period_start = submission_doc.period_start
     snapshot.period_end = submission_doc.period_end
     snapshot.snapshot_label = submission_doc.submission_label
 
@@ -169,17 +165,15 @@ def update_submission_summary(submission_doc):
 
 @frappe.whitelist()
 def validate_submission_file():
-    """Validate an uploaded Excel file without creating any records.
-    File is read from the HTTP request (multipart form)."""
+    """Validate an uploaded Excel file without creating any records."""
     try:
         file = frappe.request.files.get("file")
-        period_start = frappe.form_dict.get("period_start")
         period_end = frappe.form_dict.get("period_end")
 
         if not file:
             return {"status": "error", "message": "No file uploaded."}
-        if not period_start or not period_end:
-            return {"status": "error", "message": "Period start and end are required."}
+        if not period_end:
+            return {"status": "error", "message": "Period End is required."}
 
         file_content = file.read()
         filename = file.filename or ""
@@ -221,20 +215,17 @@ def validate_submission_file():
 
 @frappe.whitelist()
 def process_collections_submission():
-    """Create a submission header and process all rows from the uploaded file.
-    File is read from the HTTP request (multipart form)."""
+    """Create a submission header and process all rows from the uploaded file."""
     try:
         file = frappe.request.files.get("file")
-        period_start = frappe.form_dict.get("period_start")
         period_end = frappe.form_dict.get("period_end")
-        submission_label = frappe.form_dict.get("submission_label", "")
         replace_existing = cint(frappe.form_dict.get("replace_existing_month", 0))
         notes = frappe.form_dict.get("submission_notes", "")
 
         if not file:
             return {"status": "error", "message": "No file uploaded."}
-        if not period_start or not period_end:
-            return {"status": "error", "message": "Period start and end are required."}
+        if not period_end:
+            return {"status": "error", "message": "Period End is required."}
 
         file_content = file.read()
         filename = file.filename or ""
@@ -251,14 +242,12 @@ def process_collections_submission():
             return {"status": "error", "message": f"Missing required columns: {', '.join(missing)}"}
 
         # Check for duplicate period
-        existing = check_duplicate_period(period_start, period_end, replace_existing)
+        existing = check_duplicate_period(period_end, replace_existing)
         if existing:
             delete_existing_snapshots(existing)
 
-        # Create submission header
+        # Create submission header (submission_label is auto-derived in validate)
         sub = frappe.new_doc("Collections Submission")
-        sub.submission_label = submission_label
-        sub.period_start = period_start
         sub.period_end = period_end
         sub.status = "Validated"
         sub.submitted_by = frappe.session.user

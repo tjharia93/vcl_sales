@@ -107,8 +107,8 @@ def match_customer(excel_customer_name):
 
 # ── Sales rep assignment resolution ──────────────────────────────────
 
-def resolve_sales_rep_assignment(customer, period_start, period_end):
-    """Resolve the sales rep assignment for a customer within the import period.
+def resolve_sales_rep_assignment(customer, period_end):
+    """Resolve the sales rep assignment for a customer as of the period end date.
 
     Returns dict with:
         assigned_sales_representative, sales_rep_user,
@@ -131,11 +131,10 @@ def resolve_sales_rep_assignment(customer, period_start, period_end):
         WHERE customer = %(customer)s
           AND status = 'Active'
           AND effective_from <= %(period_end)s
-          AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %(period_start)s)
+          AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %(period_end)s)
         ORDER BY priority ASC
     """, {
         "customer": customer,
-        "period_start": period_start,
         "period_end": period_end,
     }, as_dict=True)
 

@@ -129,22 +129,12 @@
     <h3 class="card__title">New Monthly Submission</h3>
     <div class="form-row">
       <div class="form-group">
-        <label>Submission Label</label>
-        <input type="text" id="submission_label" placeholder="e.g. Mar 2026" />
+        <label>Period End (Month-End Date) *</label>
+        <input type="date" id="period_end" required />
       </div>
       <div class="form-group">
         <label>Status</label>
         <span id="current_status" class="status-badge status-draft">Draft</span>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Period Start *</label>
-        <input type="date" id="period_start" required />
-      </div>
-      <div class="form-group">
-        <label>Period End *</label>
-        <input type="date" id="period_end" required />
       </div>
     </div>
     <div class="form-group">
@@ -373,11 +363,17 @@
   }
 
   function getFormData() {
+    // CSRF guard
+    if (!getCsrfToken()) {
+      showMsg('CSRF token missing. Please refresh the page or contact support.', 'error');
+      debugLog('CSRF GUARD', 'POST blocked — no CSRF token available', 'error');
+      return null;
+    }
+
     const fileInput = document.getElementById('source_file');
-    const period_start = document.getElementById('period_start').value;
     const period_end = document.getElementById('period_end').value;
 
-    if (!period_start || !period_end) { showMsg('Period start and end are required.', 'error'); return null; }
+    if (!period_end) { showMsg('Period End is required.', 'error'); return null; }
     if (!fileInput.files.length) { showMsg('Please select an Excel file.', 'error'); return null; }
 
     const f = fileInput.files[0];
@@ -385,9 +381,7 @@
 
     const formData = new FormData();
     formData.append('file', f);
-    formData.append('period_start', period_start);
     formData.append('period_end', period_end);
-    formData.append('submission_label', document.getElementById('submission_label').value);
     formData.append('replace_existing_month', document.getElementById('replace_existing_month').checked ? '1' : '0');
     formData.append('submission_notes', document.getElementById('submission_notes').value);
     return formData;
@@ -513,7 +507,7 @@
   async function loadPastSubmissions() {
     try {
       const res = await apiCall(
-        '/api/resource/Collections Submission?filters=[["status","in",["Validated","Processed","Failed","Draft"]]]&fields=["name","submission_label","period_start","period_end","status","rows_imported","total_balance","total_overdue","submitted_on"]&order_by=period_start desc&limit_page_length=20',
+        '/api/resource/Collections Submission?filters=[["status","in",["Validated","Processed","Failed","Draft"]]]&fields=["name","submission_label","period_end","status","rows_imported","total_balance","total_overdue","submitted_on"]&order_by=period_end desc&limit_page_length=20',
         { method: 'GET', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() } },
         'LOAD PAST'
       );
@@ -532,7 +526,7 @@
         html += `<tr>
           <td><a href="/app/collections-submission/${r.name}">${r.name}</a></td>
           <td>${r.submission_label || ''}</td>
-          <td>${r.period_start || ''} to ${r.period_end || ''}</td>
+          <td>${r.period_end || ''}</td>
           <td><span class="status-badge ${cls}">${r.status}</span></td>
           <td>${r.rows_imported || 0}</td>
           <td style="text-align:right">${fmtCurrency(r.total_balance)}</td>

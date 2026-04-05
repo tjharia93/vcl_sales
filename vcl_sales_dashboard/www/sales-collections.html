@@ -323,13 +323,12 @@
     if (res.status === 'ok' && res.data) {
       res.data.forEach(p => {
         const opt = document.createElement('option');
-        opt.value = p.period_start + '|' + p.period_end;
-        opt.textContent = p.submission_label || (p.period_start + ' to ' + p.period_end);
+        opt.value = p.period_end;
+        opt.textContent = p.submission_label || p.period_end;
         sel.appendChild(opt);
       });
-      // Auto-select first period
       if (res.data.length > 0) {
-        sel.value = res.data[0].period_start + '|' + res.data[0].period_end;
+        sel.value = res.data[0].period_end;
       }
     }
   }
@@ -358,9 +357,7 @@
     const periodVal = document.getElementById('f-period').value;
     const filters = {};
     if (periodVal) {
-      const parts = periodVal.split('|');
-      filters.period_start = parts[0];
-      filters.period_end = parts[1];
+      filters.period_end = periodVal;
     }
     const rep = document.getElementById('f-rep').value;
     if (rep) filters.sales_rep_user = rep;
@@ -384,7 +381,7 @@
   async function loadSummary() {
     const f = currentFilters;
     const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_summary', {
-      period_start: f.period_start, period_end: f.period_end, sales_rep_user: f.sales_rep_user
+      period_end: f.period_end, sales_rep_user: f.sales_rep_user
     });
     if (res.status === 'ok' && res.data) {
       const d = res.data;
@@ -401,7 +398,7 @@
     if (!isManager) return;
     const f = currentFilters;
     const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_collections_rep_summary', {
-      period_start: f.period_start, period_end: f.period_end
+      period_end: f.period_end
     });
     const body = document.getElementById('rep-summary-body');
     if (res.status === 'ok' && res.data && res.data.length) {
@@ -500,7 +497,7 @@
         <div class="dlbl">Customer</div><div class="dval">${d.customer || 'Not Matched'}</div>
         <div class="dlbl">Sales Rep</div><div class="dval">${d.assigned_sales_representative || '--'}</div>
         <div class="dlbl">Terms</div><div class="dval">${d.terms || '--'}</div>
-        <div class="dlbl">Period</div><div class="dval">${d.period_start} to ${d.period_end}</div>
+        <div class="dlbl">Period End</div><div class="dval">${d.period_end}</div>
         <div class="dlbl">Customer Match</div><div class="dval">${d.customer_match_status}</div>
         <div class="dlbl">Rep Match</div><div class="dval">${d.assignment_match_status}</div>
       </div>
@@ -659,7 +656,7 @@
     if (!isManager) return;
     const f = currentFilters;
     const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_warning_queues', {
-      period_start: f.period_start, period_end: f.period_end
+      period_end: f.period_end
     });
     const container = document.getElementById('queue-cards');
     if (res.status !== 'ok') { container.innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading queues.</p>'; return; }
@@ -748,7 +745,7 @@
       const barW = Math.round((Math.abs(bal) / maxBal) * 120);
       const chgCls = chg > 0 ? 'trend-pos' : (chg < 0 ? 'trend-neg' : 'trend-zero');
       const chgIcon = chg > 0 ? '&#9650;' : (chg < 0 ? '&#9660;' : '&#8212;');
-      const label = d.snapshot_label || d.period_start;
+      const label = d.snapshot_label || d.period_end;
       const sc = statusClass(d.latest_follow_up_status);
 
       html += `<tr>

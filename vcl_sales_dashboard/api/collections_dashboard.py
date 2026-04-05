@@ -5,7 +5,7 @@ from vcl_sales_dashboard.api.collections_utils import get_collections_role_filte
 
 
 @frappe.whitelist()
-def get_collections_summary(period_start=None, period_end=None, sales_rep_user=None):
+def get_collections_summary(period_end=None, sales_rep_user=None):
     """Return KPI summary for the collections dashboard."""
     try:
         role_filter = get_collections_role_filter()
@@ -15,9 +15,6 @@ def get_collections_summary(period_start=None, period_end=None, sales_rep_user=N
         conditions = []
         values = {}
 
-        if period_start:
-            conditions.append("cs.period_start = %(period_start)s")
-            values["period_start"] = period_start
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
@@ -55,7 +52,7 @@ def get_collections_summary(period_start=None, period_end=None, sales_rep_user=N
 
 
 @frappe.whitelist()
-def get_collections_rep_summary(period_start=None, period_end=None):
+def get_collections_rep_summary(period_end=None):
     """Return collections summary grouped by sales rep."""
     try:
         role_filter = get_collections_role_filter()
@@ -63,9 +60,6 @@ def get_collections_rep_summary(period_start=None, period_end=None):
         conditions = ["sub.status = 'Processed'"]
         values = {}
 
-        if period_start:
-            conditions.append("cs.period_start = %(period_start)s")
-            values["period_start"] = period_start
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
@@ -114,9 +108,6 @@ def get_collections_customer_list(filters=None):
         conditions = ["sub.status = 'Processed'"]
         values = {}
 
-        if filters.get("period_start"):
-            conditions.append("cs.period_start = %(period_start)s")
-            values["period_start"] = filters["period_start"]
         if filters.get("period_end"):
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = filters["period_end"]
@@ -158,7 +149,7 @@ def get_collections_customer_list(filters=None):
                 cs.latest_follow_up_status, cs.latest_comment_date,
                 cs.promised_payment_date, cs.expected_collection_amount,
                 cs.next_action_date, cs.is_priority, cs.is_escalated,
-                cs.period_start, cs.period_end
+                cs.period_end
             FROM `tabCollections Customer Snapshot` cs
             INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
@@ -225,13 +216,13 @@ def get_customer_month_history(customer=None, excel_customer_name=None):
 
         result = frappe.db.sql(f"""
             SELECT
-                cs.name, cs.period_start, cs.period_end, cs.snapshot_label,
+                cs.name, cs.period_end, cs.snapshot_label,
                 cs.total_balance, cs.overdue_amount, cs.overdue_30_amount,
                 cs.due_current_month, cs.latest_follow_up_status
             FROM `tabCollections Customer Snapshot` cs
             INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
-            ORDER BY cs.period_start DESC
+            ORDER BY cs.period_end DESC
         """, values, as_dict=True)
 
         return {"status": "ok", "data": result}
@@ -315,10 +306,10 @@ def get_available_periods():
     """Return list of available submission periods for filter dropdowns."""
     try:
         result = frappe.db.sql("""
-            SELECT DISTINCT period_start, period_end, submission_label
+            SELECT DISTINCT period_end, submission_label
             FROM `tabCollections Submission`
             WHERE status = 'Processed'
-            ORDER BY period_start DESC
+            ORDER BY period_end DESC
         """, as_dict=True)
 
         return {"status": "ok", "data": result}
@@ -330,7 +321,7 @@ def get_available_periods():
 # ── Warning / Review Queues ──────────────────────────────────────────
 
 @frappe.whitelist()
-def get_warning_queues(period_start=None, period_end=None):
+def get_warning_queues(period_end=None):
     """Return warning/review queue counts and rows for the selected period."""
     try:
         role_filter = get_collections_role_filter()
@@ -338,9 +329,6 @@ def get_warning_queues(period_start=None, period_end=None):
         conditions = ["sub.status = 'Processed'"]
         values = {}
 
-        if period_start:
-            conditions.append("cs.period_start = %(period_start)s")
-            values["period_start"] = period_start
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
@@ -456,7 +444,7 @@ def get_customer_month_trend(customer=None, excel_customer_name=None):
 
         result = frappe.db.sql(f"""
             SELECT
-                cs.name, cs.period_start, cs.period_end,
+                cs.name, cs.period_end,
                 cs.snapshot_label,
                 cs.total_balance, cs.overdue_amount, cs.overdue_30_amount,
                 cs.due_current_month, cs.due_next_month,
@@ -469,7 +457,7 @@ def get_customer_month_trend(customer=None, excel_customer_name=None):
             FROM `tabCollections Customer Snapshot` cs
             INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
-            ORDER BY cs.period_start ASC
+            ORDER BY cs.period_end ASC
         """, values, as_dict=True)
 
         trend = []

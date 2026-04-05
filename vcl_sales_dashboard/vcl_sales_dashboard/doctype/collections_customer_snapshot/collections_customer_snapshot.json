@@ -7,7 +7,6 @@
   "field_order": [
     "submission_link_section",
     "collections_submission",
-    "period_start",
     "period_end",
     "snapshot_label",
     "customer_matching_section",
@@ -72,11 +71,6 @@
       "label": "Collections Submission",
       "options": "Collections Submission",
       "reqd": 1
-    },
-    {
-      "fieldname": "period_start",
-      "fieldtype": "Date",
-      "label": "Period Start"
     },
     {
       "fieldname": "period_end",

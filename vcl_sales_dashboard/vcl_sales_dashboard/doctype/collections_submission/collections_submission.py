@@ -1,6 +1,12 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import now_datetime, getdate
+
+
+MONTH_NAMES = [
+    "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+]
 
 
 class CollectionsSubmission(Document):
@@ -9,9 +15,9 @@ class CollectionsSubmission(Document):
             self.submitted_on = now_datetime()
 
     def validate(self):
-        self.validate_period()
+        self.derive_submission_label()
 
-    def validate_period(self):
-        if self.period_start and self.period_end:
-            if self.period_start > self.period_end:
-                frappe.throw("Period Start must be before or equal to Period End.")
+    def derive_submission_label(self):
+        if self.period_end:
+            d = getdate(self.period_end)
+            self.submission_label = f"{MONTH_NAMES[d.month]} {d.year}"
