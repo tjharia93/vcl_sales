@@ -288,8 +288,16 @@
 </div>
 
 <script>
-  function getCsrfToken() {
-    return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+  let _csrfToken = '';
+  function getCsrfToken() { return _csrfToken; }
+  async function initCsrfToken() {
+    _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    if (_csrfToken) return;
+    try {
+      const res = await fetch('/api/method/frappe.auth.get_csrf_token', { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const json = await res.json();
+      if (json.message) _csrfToken = json.message;
+    } catch (e) { console.error('CSRF fetch failed:', e); }
   }
 
   const isManager = {% if is_manager %}true{% else %}false{% endif %};
@@ -760,6 +768,7 @@
   // ── Init ──────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', async function() {
+    await initCsrfToken();
     await Promise.all([loadPeriods(), loadRepOptions()]);
     applyFilters();
   });

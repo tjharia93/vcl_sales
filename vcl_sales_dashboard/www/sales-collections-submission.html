@@ -191,8 +191,32 @@
 </div>
 
 <script>
+  let _csrfToken = '';
+
   function getCsrfToken() {
-    return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    return _csrfToken;
+  }
+
+  async function initCsrfToken() {
+    // Try cookie first
+    _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    if (_csrfToken) return;
+
+    // Fetch from Frappe API
+    try {
+      const res = await fetch('/api/method/frappe.auth.get_csrf_token', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      const json = await res.json();
+      if (json.message) {
+        _csrfToken = json.message;
+        debugLog('CSRF TOKEN', 'Fetched from API: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+      }
+    } catch (e) {
+      debugLog('CSRF TOKEN', 'Failed to fetch: ' + e.message, 'error');
+    }
   }
 
   // ── Debug logger ──────────────────────────────────────────────────
@@ -523,8 +547,9 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (getCsrfToken() ? 'present' : 'MISSING!'), getCsrfToken() ? 'ok' : 'error');
+  document.addEventListener('DOMContentLoaded', async function() {
+    await initCsrfToken();
+    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (getCsrfToken() ? 'present (' + getCsrfToken().substring(0, 8) + '...)' : 'MISSING!'), getCsrfToken() ? 'ok' : 'error');
     loadPastSubmissions();
   });
 </script>
