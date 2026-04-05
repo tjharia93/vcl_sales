@@ -287,24 +287,14 @@
   <div id="detail-content"></div>
 </div>
 
+<script>window.vcl_csrf_token = "{{ csrf_token }}";</script>
+
 <script>
-  let _csrfToken = '';
-  function getCsrfToken() { return _csrfToken; }
-  async function initCsrfToken() {
-    _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-    if (_csrfToken) return;
-    if (typeof frappe !== 'undefined' && frappe.csrf_token) { _csrfToken = frappe.csrf_token; return; }
-    var meta = document.querySelector('meta[name="csrf_token"]');
-    if (meta && meta.content) { _csrfToken = meta.content; return; }
-    try {
-      var res = await fetch('/api/method/frappe.auth.get_csrf_token', { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
-      var json = await res.json();
-      if (json.message) { _csrfToken = json.message; return; }
-    } catch (e) {}
-    try {
-      await fetch('/api/method/frappe.auth.get_logged_user', { method: 'GET', credentials: 'same-origin' });
-      _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-    } catch (e) {}
+  function getCsrfToken() {
+    return window.vcl_csrf_token
+      || (typeof frappe !== 'undefined' && frappe.csrf_token)
+      || (document.querySelector('meta[name="csrf-token"]') || {}).content
+      || '';
   }
 
   const isManager = {% if is_manager %}true{% else %}false{% endif %};
@@ -772,7 +762,6 @@
   // ── Init ──────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', async function() {
-    await initCsrfToken();
     await Promise.all([loadPeriods(), loadRepOptions()]);
     applyFilters();
   });

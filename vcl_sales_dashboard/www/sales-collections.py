@@ -19,3 +19,4 @@ def get_context(context):
         "Sales User"
     )
     context.is_manager = context.user_role in ["Sales Manager", "Finance Manager", "System Manager"]
+    context.csrf_token = frappe.sessions.get_csrf_token()

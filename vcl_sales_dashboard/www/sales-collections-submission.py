@@ -18,3 +18,4 @@ def get_context(context):
         (r for r in ["System Manager", "Finance Manager"] if r in roles),
         "Finance Manager"
     )
+    context.csrf_token = frappe.sessions.get_csrf_token()

@@ -180,71 +180,34 @@
   </div>
 </div>
 
+<!-- CSRF token injected from server-side context -->
 <script>
-  let _csrfToken = '';
+  window.vcl_csrf_token = "{{ csrf_token }}";
+</script>
 
+<script>
   function getCsrfToken() {
-    return _csrfToken;
+    return window.vcl_csrf_token
+      || (typeof frappe !== 'undefined' && frappe.csrf_token)
+      || (document.querySelector('meta[name="csrf-token"]') || {}).content
+      || '';
   }
 
-  async function initCsrfToken() {
-    // 1. Try cookie
-    _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-    if (_csrfToken) {
-      debugLog('CSRF TOKEN', 'From cookie: ' + _csrfToken.substring(0, 8) + '...', 'ok');
-      return;
+  // ── Authenticated POST helper ─────────────────────────────────────
+
+  async function apiPost(url, body, label) {
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      debugLog('CSRF GUARD', 'POST blocked — no CSRF token available', 'error');
+      throw new Error('CSRF token missing. Please refresh the page or contact support.');
     }
-
-    // 2. Try frappe boot object (available if Frappe JS is loaded)
-    if (typeof frappe !== 'undefined' && frappe.csrf_token) {
-      _csrfToken = frappe.csrf_token;
-      debugLog('CSRF TOKEN', 'From frappe object: ' + _csrfToken.substring(0, 8) + '...', 'ok');
-      return;
-    }
-
-    // 3. Try meta tag
-    const meta = document.querySelector('meta[name="csrf_token"]');
-    if (meta && meta.content) {
-      _csrfToken = meta.content;
-      debugLog('CSRF TOKEN', 'From meta tag: ' + _csrfToken.substring(0, 8) + '...', 'ok');
-      return;
-    }
-
-    // 4. Fetch from Frappe API (this GET endpoint doesn't need CSRF)
-    try {
-      const res = await fetch('/api/method/frappe.auth.get_csrf_token', {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin'
-      });
-      const json = await res.json();
-      const token = json.message || (json.data && json.data.csrf_token);
-      if (token) {
-        _csrfToken = token;
-        debugLog('CSRF TOKEN', 'From API: ' + _csrfToken.substring(0, 8) + '...', 'ok');
-        return;
-      }
-      debugLog('CSRF TOKEN', 'API returned empty: ' + JSON.stringify(json), 'warn');
-    } catch (e) {
-      debugLog('CSRF TOKEN', 'API fetch failed: ' + e.message, 'error');
-    }
-
-    // 5. Last resort: try loading the login page to get a session cookie
-    try {
-      const pageRes = await fetch('/api/method/frappe.auth.get_logged_user', {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin'
-      });
-      // After this call, check cookie again
-      _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-      if (_csrfToken) {
-        debugLog('CSRF TOKEN', 'From cookie after auth check: ' + _csrfToken.substring(0, 8) + '...', 'ok');
-        return;
-      }
-    } catch (e) {}
-
-    debugLog('CSRF TOKEN', 'All methods failed — POST requests will be blocked', 'error');
+    debugLog((label || 'POST') + ' REQUEST', { url: url }, 'ok');
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'X-Frappe-CSRF-Token': csrf },
+      body: body,
+      credentials: 'same-origin'
+    });
   }
 
   // ── Debug logger ──────────────────────────────────────────────────
@@ -350,40 +313,6 @@
     return parts.join('\n\n');
   }
 
-  // ── API call wrapper ──────────────────────────────────────────────
-
-  async function apiCall(url, options, label) {
-    debugLog(label + ' REQUEST', { url: url, method: options.method || 'GET' });
-
-    let response, rawJson;
-    try {
-      response = await fetch(url, options);
-      rawJson = await response.json();
-    } catch (networkErr) {
-      debugLog(label + ' NETWORK ERROR', networkErr.message, 'error');
-      throw new Error('Network error: ' + networkErr.message);
-    }
-
-    // Log full response
-    debugLog(label + ' HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
-
-    // Check if HTTP-level error
-    if (!response.ok) {
-      const errMsg = extractFrappeError(rawJson);
-      debugLog(label + ' EXTRACTED ERROR', errMsg, 'error');
-      throw new Error(errMsg);
-    }
-
-    // Check if the API returned our status:error format
-    const result = rawJson.message || rawJson;
-    if (result && result.status === 'error') {
-      debugLog(label + ' API ERROR', result.message || 'Unknown API error', 'error');
-      throw new Error(result.message || 'Unknown API error');
-    }
-
-    return result;
-  }
-
   // ── UI helpers ────────────────────────────────────────────────────
 
   function showMsg(text, type) {
@@ -436,11 +365,15 @@
     btn.innerHTML = '<span class="spinner"></span> Validating...';
 
     try {
-      const res = await apiCall(
+      const response = await apiPost(
         '/api/method/vcl_sales_dashboard.api.collections_submission.validate_submission_file',
-        { method: 'POST', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }, body: formData },
-        'VALIDATE'
+        formData, 'VALIDATE'
       );
+      const rawJson = await response.json();
+      debugLog('VALIDATE HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      const res = rawJson.message || rawJson;
+      if (res && res.status === 'error') throw new Error(res.message || 'Validation error');
 
       document.getElementById('results-card').classList.remove('hidden');
       setStatus('Validated');
@@ -481,11 +414,15 @@
     btn.innerHTML = '<span class="spinner"></span> Processing...';
 
     try {
-      const res = await apiCall(
+      const response = await apiPost(
         '/api/method/vcl_sales_dashboard.api.collections_submission.process_collections_submission',
-        { method: 'POST', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() }, body: formData },
-        'PROCESS'
+        formData, 'PROCESS'
       );
+      const rawJson = await response.json();
+      debugLog('PROCESS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      const res = rawJson.message || rawJson;
+      if (res && res.status === 'error') throw new Error(res.message || 'Processing error');
 
       document.getElementById('results-card').classList.remove('hidden');
       setStatus('Processed');
@@ -494,17 +431,16 @@
 
       // Load the submission log
       try {
-        const logRes = await apiCall(
+        const logBody = new FormData();
+        logBody.append('submission_name', res.submission_name);
+        const logResponse = await apiPost(
           '/api/method/vcl_sales_dashboard.api.collections_submission.get_submission_log',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
-            body: JSON.stringify({ submission_name: res.submission_name })
-          },
-          'LOAD LOG'
+          logBody, 'LOAD LOG'
         );
+        const logJson = await logResponse.json();
+        const logRes = logJson.message || logJson;
 
-        if (logRes.data) {
+        if (logRes && logRes.data) {
           const d = logRes.data;
           document.getElementById('summary-grid').innerHTML = [
             ['Rows Found', d.rows_found],
@@ -544,14 +480,16 @@
 
   async function loadPastSubmissions() {
     try {
-      const res = await apiCall(
-        '/api/method/vcl_sales_dashboard.api.collections_submission.get_past_submissions',
-        { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' },
-        'LOAD PAST'
-      );
+      debugLog('LOAD PAST REQUEST', { url: '/api/method/...get_past_submissions', method: 'GET' });
+      const response = await fetch('/api/method/vcl_sales_dashboard.api.collections_submission.get_past_submissions', {
+        method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+      });
+      const rawJson = await response.json();
+      debugLog('LOAD PAST HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+      const res = rawJson.message || rawJson;
 
       const container = document.getElementById('past-submissions');
-      const rows = res.data || [];
+      const rows = (res && res.data) || [];
 
       if (!Array.isArray(rows) || !rows.length) {
         container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No submissions found.</p>';
@@ -579,9 +517,9 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', async function() {
-    await initCsrfToken();
-    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (getCsrfToken() ? 'present (' + getCsrfToken().substring(0, 8) + '...)' : 'MISSING!'), getCsrfToken() ? 'ok' : 'error');
+  document.addEventListener('DOMContentLoaded', function() {
+    const csrf = getCsrfToken();
+    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (csrf ? 'PRESENT (' + csrf.substring(0, 8) + '...)' : 'MISSING!'), csrf ? 'ok' : 'error');
     loadPastSubmissions();
   });
 </script>
