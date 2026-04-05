@@ -105,6 +105,65 @@ def match_customer(excel_customer_name):
     return None, "Customer Not Matched"
 
 
+# ── Sales rep user resolution ────────────────────────────────────────
+
+def resolve_sales_rep_user(rep_value):
+    """Resolve a rep label/name to a real ERPNext User.name.
+
+    Resolution order:
+    1. Exact User.name match (email-style)
+    2. Exact User.full_name match
+    3. Case-insensitive User.name match
+    4. Case-insensitive User.full_name match
+    5. Sales Rep User Mapping lookup
+    6. Return None (don't fail)
+    """
+    if not rep_value:
+        return None
+
+    rep_value = str(rep_value).strip()
+    if not rep_value:
+        return None
+
+    # 1. Exact User.name
+    if frappe.db.exists("User", rep_value):
+        return rep_value
+
+    # 2. Exact full_name
+    user = frappe.db.get_value("User", {"full_name": rep_value, "enabled": 1}, "name")
+    if user:
+        return user
+
+    # 3. Case-insensitive User.name
+    result = frappe.db.sql("""
+        SELECT name FROM `tabUser`
+        WHERE enabled = 1 AND LOWER(name) = LOWER(%(val)s)
+        LIMIT 1
+    """, {"val": rep_value}, as_dict=True)
+    if result:
+        return result[0].name
+
+    # 4. Case-insensitive full_name
+    result = frappe.db.sql("""
+        SELECT name FROM `tabUser`
+        WHERE enabled = 1 AND LOWER(full_name) = LOWER(%(val)s)
+        LIMIT 1
+    """, {"val": rep_value}, as_dict=True)
+    if result:
+        return result[0].name
+
+    # 5. Sales Rep User Mapping
+    mapping_user = frappe.db.get_value(
+        "Sales Rep User Mapping",
+        {"sales_rep_label": rep_value},
+        "user"
+    )
+    if mapping_user and frappe.db.exists("User", mapping_user):
+        return mapping_user
+
+    return None
+
+
 # ── Sales rep assignment resolution ──────────────────────────────────
 
 def resolve_sales_rep_assignment(customer, period_end):
@@ -143,14 +202,14 @@ def resolve_sales_rep_assignment(customer, period_end):
     elif len(assignments) == 1:
         a = assignments[0]
         result["assigned_sales_representative"] = a.sales_representative
-        result["sales_rep_user"] = a.sales_representative
+        result["sales_rep_user"] = resolve_sales_rep_user(a.sales_representative)
         result["customer_sales_rep_assignment"] = a.name
         result["assignment_match_status"] = "Matched"
     else:
         # Multiple found — use highest priority (first row) but flag it
         a = assignments[0]
         result["assigned_sales_representative"] = a.sales_representative
-        result["sales_rep_user"] = a.sales_representative
+        result["sales_rep_user"] = resolve_sales_rep_user(a.sales_representative)
         result["customer_sales_rep_assignment"] = a.name
         result["assignment_match_status"] = "Multiple Assignments Found"
 

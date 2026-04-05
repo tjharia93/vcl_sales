@@ -5,6 +5,7 @@ from vcl_sales_dashboard.api.collections_utils import (
     normalise_header, map_headers, validate_required_columns,
     match_customer, resolve_sales_rep_assignment, safe_flt,
     CURRENCY_FIELDS, get_rep_label_map, resolve_rep_user_from_label,
+    resolve_sales_rep_user,
 )
 import json
 
@@ -98,14 +99,19 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
     customer, match_status = match_customer(excel_name)
     rep_info = resolve_sales_rep_assignment(customer, submission_doc.period_end)
 
-    # Resolve sales_rep_user from Excel label via mapping if CSR assignment didn't resolve
     excel_rep_label = (mapped.get("excel_sales_representative") or "").strip() if mapped.get("excel_sales_representative") else ""
+
+    # If CSR assignment didn't resolve a user, try the Excel label
     if not rep_info["sales_rep_user"] and excel_rep_label:
-        mapped_user = resolve_rep_user_from_label(excel_rep_label, label_map)
-        if mapped_user:
-            rep_info["sales_rep_user"] = mapped_user
+        resolved = resolve_sales_rep_user(excel_rep_label)
+        if resolved:
+            rep_info["sales_rep_user"] = resolved
             if not rep_info["assigned_sales_representative"]:
-                rep_info["assigned_sales_representative"] = mapped_user
+                rep_info["assigned_sales_representative"] = excel_rep_label
+
+    # Final safety: sales_rep_user must be a real User or blank
+    if rep_info["sales_rep_user"] and not frappe.db.exists("User", rep_info["sales_rep_user"]):
+        rep_info["sales_rep_user"] = None
 
     snapshot = frappe.new_doc("Collections Customer Snapshot")
     snapshot.collections_submission = submission_doc.name
@@ -118,8 +124,8 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
     snapshot.customer_match_status = match_status
 
     snapshot.excel_sales_representative = excel_rep_label
-    snapshot.assigned_sales_representative = rep_info["assigned_sales_representative"]
-    snapshot.sales_rep_user = rep_info["sales_rep_user"]
+    snapshot.assigned_sales_representative = rep_info["assigned_sales_representative"] or excel_rep_label
+    snapshot.sales_rep_user = rep_info["sales_rep_user"] or None
     snapshot.customer_sales_rep_assignment = rep_info["customer_sales_rep_assignment"]
     snapshot.assignment_match_status = rep_info["assignment_match_status"]
 
@@ -136,6 +142,11 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
         warnings.append(f"customer: {match_status}")
     if rep_info["assignment_match_status"] != "Matched":
         warnings.append(f"rep: {rep_info['assignment_match_status']}")
+    if excel_rep_label and not snapshot.sales_rep_user:
+        warnings.append(f"rep user unresolved: '{excel_rep_label}'")
+        if snapshot.assignment_match_status not in ("Imported With Warning",):
+            snapshot.assignment_match_status = "Imported With Warning"
+            snapshot.save(ignore_permissions=True)
     if warnings:
         log_lines.append(f"  [{excel_name}] {', '.join(warnings)}")
 
