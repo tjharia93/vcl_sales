@@ -96,6 +96,18 @@
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--text-on-dark); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* Mapping popup modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: 0 8px 30px rgba(0,0,0,0.15); width: 640px; max-width: 95vw; max-height: 85vh; overflow-y: auto; padding: var(--space-6); }
+    .modal-box h3 { margin: 0 0 4px; font-size: 17px; color: var(--vcl-primary); }
+    .modal-box .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-5); }
+    .mapping-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .mapping-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    .mapping-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    .mapping-table select { width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; }
+    .modal-actions { display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-5); }
+
     /* Debug panel */
     .debug-panel { background: #1e1e2e; border: 2px solid #f38ba8; border-radius: var(--radius-md); padding: var(--space-5); margin-bottom: var(--space-5); }
     .debug-panel__title { font-size: 14px; font-weight: 700; color: #f38ba8; margin: 0 0 var(--space-3); font-family: "Courier New", monospace; }
@@ -177,6 +189,22 @@
   <div class="debug-panel" id="debug-panel">
     <div class="debug-panel__title">DEBUG OUTPUT (Testing Mode)</div>
     <div class="debug-log" id="debug-log">Waiting for activity...</div>
+  </div>
+</div>
+
+<!-- Mapping Popup Modal -->
+<div class="modal-overlay" id="mapping-modal">
+  <div class="modal-box">
+    <h3>Unresolved Sales Rep Users</h3>
+    <p class="modal-desc">The following sales rep labels from the file could not be matched to ERPNext users. Please select the correct user for each one. These mappings will be saved for future submissions.</p>
+    <table class="mapping-table">
+      <thead><tr><th>Sales Rep Label Found</th><th>Select ERPNext User</th></tr></thead>
+      <tbody id="mapping-tbody"></tbody>
+    </table>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-skip-mapping" onclick="skipMapping()" style="background:var(--text-muted);">Skip (Import Without Mapping)</button>
+      <button class="btn btn-success" id="btn-save-mapping" onclick="saveMappings()">Save Mappings &amp; Continue</button>
+    </div>
   </div>
 </div>
 
@@ -375,6 +403,18 @@
       const res = rawJson.message || rawJson;
       if (res && res.status === 'error') throw new Error(res.message || 'Validation error');
 
+      // Handle needs_mapping status
+      if (res && res.status === 'needs_mapping') {
+        debugLog('NEEDS MAPPING', res, 'warn');
+        document.getElementById('results-card').classList.remove('hidden');
+        document.getElementById('validation-log').textContent =
+          'Rows found: ' + (res.rows_found || 0) + '\nUnresolved rep labels: ' + (res.unresolved_sales_rep_labels || []).join(', ');
+        setStatus('Draft');
+        showMsg(res.message, 'warning');
+        showMappingPopup(res.unresolved_sales_rep_labels, 'validate');
+        return;
+      }
+
       document.getElementById('results-card').classList.remove('hidden');
       setStatus('Validated');
       document.getElementById('btn-process').disabled = false;
@@ -469,6 +509,188 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Process Submission';
+    }
+  }
+
+  // ── Process with explicit FormData (for skip mapping flow) ────────
+
+  async function processSubmissionWithFormData(formData) {
+    const btn = document.getElementById('btn-process');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+    try {
+      const response = await apiPost(
+        '/api/method/vcl_sales_dashboard.api.collections_submission.process_collections_submission',
+        formData, 'PROCESS'
+      );
+      const rawJson = await response.json();
+      debugLog('PROCESS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      const res = rawJson.message || rawJson;
+      if (res && res.status === 'error') throw new Error(res.message || 'Processing error');
+
+      document.getElementById('results-card').classList.remove('hidden');
+      setStatus('Processed');
+      showMsg(res.message || 'Processing complete.', 'success');
+      debugLog('PROCESS OK', res, 'ok');
+
+      try {
+        const logBody = new FormData();
+        logBody.append('submission_name', res.submission_name);
+        const logResponse = await apiPost(
+          '/api/method/vcl_sales_dashboard.api.collections_submission.get_submission_log',
+          logBody, 'LOAD LOG'
+        );
+        const logJson = await logResponse.json();
+        const logRes = logJson.message || logJson;
+        if (logRes && logRes.data) {
+          const d = logRes.data;
+          document.getElementById('summary-grid').innerHTML = [
+            ['Rows Found', d.rows_found], ['Processed', d.rows_imported],
+            ['Skipped', d.rows_skipped], ['Cust Matched', d.customers_matched],
+            ['Cust Unmatched', d.customers_unmatched], ['Rep Matched', d.assignment_matched],
+            ['Rep Unmatched', d.assignment_unmatched], ['Multiple Reps', d.multiple_assignments_found],
+          ].map(([lbl, val]) => `<div class="summary-item"><div class="val">${val||0}</div><div class="lbl">${lbl}</div></div>`).join('');
+          document.getElementById('validation-log').textContent = d.validation_log || 'No log.';
+        }
+      } catch (logErr) { debugLog('LOG LOAD ERROR', logErr.message, 'warn'); }
+
+      loadPastSubmissions();
+    } catch (e) {
+      setStatus('Failed');
+      document.getElementById('results-card').classList.remove('hidden');
+      document.getElementById('validation-log').textContent = e.message;
+      showMsg('Processing failed: ' + e.message, 'error');
+      debugLog('PROCESS FAILED', e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Process Submission';
+    }
+  }
+
+  // ── Sales Rep Mapping Popup ────────────────────────────────────────
+
+  let cachedUserList = null;
+  let pendingMappingAction = null; // 'validate' or 'process'
+
+  async function loadUserList() {
+    if (cachedUserList) return cachedUserList;
+    try {
+      const response = await fetch('/api/method/vcl_sales_dashboard.api.collections_submission.get_user_list', {
+        method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+      });
+      const json = await response.json();
+      const res = json.message || json;
+      cachedUserList = (res && res.data) || [];
+    } catch (e) {
+      cachedUserList = [];
+    }
+    return cachedUserList;
+  }
+
+  async function showMappingPopup(unresolvedLabels, afterAction) {
+    pendingMappingAction = afterAction;
+    const users = await loadUserList();
+    const tbody = document.getElementById('mapping-tbody');
+
+    let optionsHtml = '<option value="">-- Select User --</option>';
+    users.forEach(u => {
+      const display = u.full_name ? `${u.full_name} (${u.name})` : u.name;
+      optionsHtml += `<option value="${escapeHtml(u.name)}">${escapeHtml(display)}</option>`;
+    });
+
+    let html = '';
+    unresolvedLabels.forEach(label => {
+      html += `<tr>
+        <td><strong>${escapeHtml(label)}</strong></td>
+        <td><select class="mapping-select" data-label="${escapeHtml(label)}">${optionsHtml}</select></td>
+      </tr>`;
+    });
+    tbody.innerHTML = html;
+    document.getElementById('mapping-modal').classList.add('open');
+    debugLog('MAPPING POPUP', `${unresolvedLabels.length} unresolved label(s): ${unresolvedLabels.join(', ')}`, 'warn');
+  }
+
+  function closeMappingPopup() {
+    document.getElementById('mapping-modal').classList.remove('open');
+  }
+
+  async function saveMappings() {
+    const selects = document.querySelectorAll('.mapping-select');
+    const mappings = [];
+    let allSelected = true;
+
+    selects.forEach(sel => {
+      const label = sel.getAttribute('data-label');
+      const user = sel.value;
+      if (!user) {
+        allSelected = false;
+        sel.style.borderColor = 'var(--danger)';
+      } else {
+        sel.style.borderColor = '';
+        mappings.push({ label, user });
+      }
+    });
+
+    if (!allSelected) {
+      showMsg('Please select a user for each unresolved label, or click Skip.', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-save-mapping');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const body = new FormData();
+      body.append('mappings', JSON.stringify(mappings));
+      const response = await apiPost(
+        '/api/method/vcl_sales_dashboard.api.collections_submission.save_rep_mappings',
+        body, 'SAVE MAPPINGS'
+      );
+      const rawJson = await response.json();
+      debugLog('SAVE MAPPINGS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+
+      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      const res = rawJson.message || rawJson;
+      if (res && res.status === 'error') throw new Error(res.message);
+
+      showMsg(`${res.saved || mappings.length} mapping(s) saved.`, 'success');
+      debugLog('MAPPINGS SAVED', res, 'ok');
+      closeMappingPopup();
+
+      // Re-run the action that triggered the popup
+      if (pendingMappingAction === 'validate') {
+        validateFile();
+      } else if (pendingMappingAction === 'process') {
+        processSubmission();
+      }
+    } catch (e) {
+      showMsg('Error saving mappings: ' + e.message, 'error');
+      debugLog('SAVE MAPPINGS ERROR', e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Mappings & Continue';
+    }
+  }
+
+  function skipMapping() {
+    closeMappingPopup();
+    debugLog('MAPPING SKIPPED', 'User chose to skip rep mapping', 'warn');
+
+    // Proceed with processing anyway (reps will be unresolved in snapshots)
+    if (pendingMappingAction === 'process') {
+      // Set a flag to skip mapping check on the backend
+      const formData = getFormData();
+      if (formData) {
+        formData.append('skip_mapping_check', '1');
+        processSubmissionWithFormData(formData);
+      }
+    } else {
+      showMsg('Mappings skipped. You can proceed to Process Submission.', 'warning');
+      setStatus('Validated');
+      document.getElementById('btn-process').disabled = false;
     }
   }
 

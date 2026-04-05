@@ -183,6 +183,29 @@ def safe_flt(val):
         return 0.0
 
 
+# ── Sales rep label → User mapping ───────────────────────────────────
+
+def get_rep_label_map():
+    """Return {label: user} dict from Sales Rep User Mapping."""
+    rows = frappe.get_all(
+        "Sales Rep User Mapping",
+        fields=["sales_rep_label", "user"],
+        ignore_permissions=True,
+    )
+    return {r.sales_rep_label: r.user for r in rows}
+
+
+def resolve_rep_user_from_label(label, label_map=None):
+    """Resolve an Excel rep label to an ERPNext User via Sales Rep User Mapping.
+    Returns the user email or None."""
+    if not label:
+        return None
+    label = label.strip()
+    if label_map is None:
+        label_map = get_rep_label_map()
+    return label_map.get(label)
+
+
 # ── Role helpers ─────────────────────────────────────────────────────
 
 def get_collections_role_filter():

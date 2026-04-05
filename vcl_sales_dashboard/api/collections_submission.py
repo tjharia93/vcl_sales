@@ -4,8 +4,9 @@ from frappe.utils import flt, cint, now_datetime
 from vcl_sales_dashboard.api.collections_utils import (
     normalise_header, map_headers, validate_required_columns,
     match_customer, resolve_sales_rep_assignment, safe_flt,
-    CURRENCY_FIELDS,
+    CURRENCY_FIELDS, get_rep_label_map, resolve_rep_user_from_label,
 )
+import json
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -84,7 +85,7 @@ def delete_existing_snapshots(submission_names):
     frappe.db.commit()
 
 
-def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines):
+def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_map=None):
     """Create one Collections Customer Snapshot from a mapped row."""
     mapped = {}
     for excel_col, field in header_map.items():
@@ -97,6 +98,15 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines):
     customer, match_status = match_customer(excel_name)
     rep_info = resolve_sales_rep_assignment(customer, submission_doc.period_end)
 
+    # Resolve sales_rep_user from Excel label via mapping if CSR assignment didn't resolve
+    excel_rep_label = (mapped.get("excel_sales_representative") or "").strip() if mapped.get("excel_sales_representative") else ""
+    if not rep_info["sales_rep_user"] and excel_rep_label:
+        mapped_user = resolve_rep_user_from_label(excel_rep_label, label_map)
+        if mapped_user:
+            rep_info["sales_rep_user"] = mapped_user
+            if not rep_info["assigned_sales_representative"]:
+                rep_info["assigned_sales_representative"] = mapped_user
+
     snapshot = frappe.new_doc("Collections Customer Snapshot")
     snapshot.collections_submission = submission_doc.name
     snapshot.period_end = submission_doc.period_end
@@ -107,7 +117,7 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines):
     snapshot.customer_name_display = customer or excel_name
     snapshot.customer_match_status = match_status
 
-    snapshot.excel_sales_representative = (mapped.get("excel_sales_representative") or "").strip() if mapped.get("excel_sales_representative") else ""
+    snapshot.excel_sales_representative = excel_rep_label
     snapshot.assigned_sales_representative = rep_info["assigned_sales_representative"]
     snapshot.sales_rep_user = rep_info["sales_rep_user"]
     snapshot.customer_sales_rep_assignment = rep_info["customer_sales_rep_assignment"]
@@ -198,6 +208,40 @@ def validate_submission_file():
         if not valid_rows:
             return {"status": "error", "message": "No customer rows found in the Ageing Report sheet."}
 
+        # Check for unresolved sales rep labels
+        rep_col = None
+        for raw_col, field in header_map.items():
+            if field == "excel_sales_representative":
+                rep_col = raw_col
+                break
+
+        unresolved_labels = []
+        if rep_col:
+            label_map = get_rep_label_map()
+            seen_labels = set()
+            for row in valid_rows:
+                label = (str(row.get(rep_col, "") or "")).strip()
+                if label and label not in seen_labels:
+                    seen_labels.add(label)
+                    # Check if this label is already a valid User email
+                    if frappe.db.exists("User", label):
+                        continue
+                    # Check if it's in the mapping table
+                    if label in label_map:
+                        continue
+                    unresolved_labels.append(label)
+
+        if unresolved_labels:
+            return {
+                "status": "needs_mapping",
+                "message": f"{len(unresolved_labels)} sales rep label(s) could not be resolved to ERPNext users.",
+                "unresolved_sales_rep_labels": sorted(unresolved_labels),
+                "rows_found": len(valid_rows),
+                "columns_mapped": len(header_map),
+                "sheet_name": sheet_name,
+                "filename": filename,
+            }
+
         return {
             "status": "ok",
             "message": "Validation successful.",
@@ -266,6 +310,9 @@ def process_collections_submission():
                 customer_col = raw_col
                 break
 
+        # Load rep label mappings for fallback resolution
+        label_map = get_rep_label_map()
+
         # Process rows
         log_lines = []
         imported = 0
@@ -277,7 +324,7 @@ def process_collections_submission():
                 skipped += 1
                 continue
 
-            snapshot, err = build_snapshot_doc(sub, row, header_map, log_lines)
+            snapshot, err = build_snapshot_doc(sub, row, header_map, log_lines, label_map)
             if snapshot:
                 imported += 1
             else:
@@ -351,6 +398,58 @@ def get_submission_log(submission_name):
                 "multiple_assignments_found": doc.multiple_assignments_found,
             },
         }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
+def save_rep_mappings(mappings=None):
+    """Save sales rep label → ERPNext User mappings.
+    Accepts a JSON array of {label, user} objects.
+    Creates or updates Sales Rep User Mapping records."""
+    try:
+        if isinstance(mappings, str):
+            mappings = json.loads(mappings)
+        if not mappings:
+            return {"status": "error", "message": "No mappings provided."}
+
+        saved = 0
+        for m in mappings:
+            label = (m.get("label") or "").strip()
+            user = (m.get("user") or "").strip()
+            if not label or not user:
+                continue
+
+            if frappe.db.exists("Sales Rep User Mapping", label):
+                frappe.db.set_value("Sales Rep User Mapping", label, "user", user)
+            else:
+                doc = frappe.new_doc("Sales Rep User Mapping")
+                doc.sales_rep_label = label
+                doc.user = user
+                doc.insert(ignore_permissions=True)
+            saved += 1
+
+        frappe.db.commit()
+        return {"status": "ok", "message": f"{saved} mapping(s) saved.", "saved": saved}
+
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Save rep mappings error")
+        return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
+def get_user_list():
+    """Return list of active users for the mapping dropdown."""
+    try:
+        users = frappe.get_all(
+            "User",
+            filters={"enabled": 1, "user_type": "System User"},
+            fields=["name", "full_name"],
+            order_by="full_name asc",
+            limit_page_length=200,
+            ignore_permissions=True,
+        )
+        return {"status": "ok", "data": users}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
