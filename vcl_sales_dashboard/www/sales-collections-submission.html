@@ -188,11 +188,29 @@
   }
 
   async function initCsrfToken() {
-    // Try cookie first
+    // 1. Try cookie
     _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-    if (_csrfToken) return;
+    if (_csrfToken) {
+      debugLog('CSRF TOKEN', 'From cookie: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+      return;
+    }
 
-    // Fetch from Frappe API
+    // 2. Try frappe boot object (available if Frappe JS is loaded)
+    if (typeof frappe !== 'undefined' && frappe.csrf_token) {
+      _csrfToken = frappe.csrf_token;
+      debugLog('CSRF TOKEN', 'From frappe object: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+      return;
+    }
+
+    // 3. Try meta tag
+    const meta = document.querySelector('meta[name="csrf_token"]');
+    if (meta && meta.content) {
+      _csrfToken = meta.content;
+      debugLog('CSRF TOKEN', 'From meta tag: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+      return;
+    }
+
+    // 4. Fetch from Frappe API (this GET endpoint doesn't need CSRF)
     try {
       const res = await fetch('/api/method/frappe.auth.get_csrf_token', {
         method: 'GET',
@@ -200,13 +218,33 @@
         credentials: 'same-origin'
       });
       const json = await res.json();
-      if (json.message) {
-        _csrfToken = json.message;
-        debugLog('CSRF TOKEN', 'Fetched from API: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+      const token = json.message || (json.data && json.data.csrf_token);
+      if (token) {
+        _csrfToken = token;
+        debugLog('CSRF TOKEN', 'From API: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+        return;
       }
+      debugLog('CSRF TOKEN', 'API returned empty: ' + JSON.stringify(json), 'warn');
     } catch (e) {
-      debugLog('CSRF TOKEN', 'Failed to fetch: ' + e.message, 'error');
+      debugLog('CSRF TOKEN', 'API fetch failed: ' + e.message, 'error');
     }
+
+    // 5. Last resort: try loading the login page to get a session cookie
+    try {
+      const pageRes = await fetch('/api/method/frappe.auth.get_logged_user', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin'
+      });
+      // After this call, check cookie again
+      _csrfToken = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+      if (_csrfToken) {
+        debugLog('CSRF TOKEN', 'From cookie after auth check: ' + _csrfToken.substring(0, 8) + '...', 'ok');
+        return;
+      }
+    } catch (e) {}
+
+    debugLog('CSRF TOKEN', 'All methods failed — POST requests will be blocked', 'error');
   }
 
   // ── Debug logger ──────────────────────────────────────────────────
@@ -507,13 +545,13 @@
   async function loadPastSubmissions() {
     try {
       const res = await apiCall(
-        '/api/resource/Collections Submission?filters=[["status","in",["Validated","Processed","Failed","Draft"]]]&fields=["name","submission_label","period_end","status","rows_imported","total_balance","total_overdue","submitted_on"]&order_by=period_end desc&limit_page_length=20',
-        { method: 'GET', headers: { 'X-Frappe-CSRF-Token': getCsrfToken() } },
+        '/api/method/vcl_sales_dashboard.api.collections_submission.get_past_submissions',
+        { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' },
         'LOAD PAST'
       );
 
       const container = document.getElementById('past-submissions');
-      const rows = res.data || res || [];
+      const rows = res.data || [];
 
       if (!Array.isArray(rows) || !rows.length) {
         container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No submissions found.</p>';

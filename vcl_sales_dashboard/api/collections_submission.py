@@ -353,3 +353,24 @@ def get_submission_log(submission_name):
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
+def get_past_submissions():
+    """Return past submissions list. Uses ignore_permissions since the
+    page controller already enforces role access."""
+    try:
+        result = frappe.get_all(
+            "Collections Submission",
+            filters={"status": ["in", ["Validated", "Processed", "Failed", "Draft"]]},
+            fields=[
+                "name", "submission_label", "period_end", "status",
+                "rows_imported", "total_balance", "total_overdue", "submitted_on",
+            ],
+            order_by="period_end desc",
+            limit_page_length=20,
+            ignore_permissions=True,
+        )
+        return {"status": "ok", "data": result}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
