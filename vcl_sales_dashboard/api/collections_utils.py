@@ -73,16 +73,27 @@ TERM_BUCKET_RULES = {
 
 
 def parse_credit_days(term_value):
-    """Parse a terms string into an integer day count.
+    """Parse a terms string or number into an integer day count.
     Returns one of 15, 30, 45, 60, 75, 90 or None."""
-    if not term_value:
+    if term_value is None:
         return None
-    s = str(term_value).strip().lower()
-    # Extract first number from the string
-    match = re.search(r"(\d+)", s)
-    if not match:
+
+    # Handle numeric values directly (Excel may pass int/float)
+    if isinstance(term_value, (int, float)):
+        days = int(term_value)
+    else:
+        s = str(term_value).strip().lower()
+        if not s:
+            return None
+        # Extract first number from the string
+        match = re.search(r"(\d+)", s)
+        if not match:
+            return None
+        days = int(match.group(1))
+
+    if days <= 0:
         return None
-    days = int(match.group(1))
+
     # Snap to nearest supported bucket threshold
     supported = sorted(TERM_BUCKET_RULES.keys())
     for t in supported:
@@ -138,11 +149,35 @@ def resolve_terms(customer, terms_from_file):
     }
 
     # Get ERPNext customer terms if customer matched
+    erp_terms = None
     if customer:
-        erp_terms = frappe.db.get_value("Customer", customer, "payment_terms") or None
+        # Try multiple ERPNext fields where terms might be stored
+        cust = frappe.db.get_value(
+            "Customer", customer,
+            ["payment_terms", "credit_days"],
+            as_dict=True
+        ) or {}
+
+        # credit_days is a direct numeric field in some ERPNext setups
+        if cust.get("credit_days"):
+            erp_terms = str(int(cust["credit_days"])) + " Days"
+        elif cust.get("payment_terms"):
+            # Payment Terms Template name — try to extract days from the template
+            pt_name = cust["payment_terms"]
+            try:
+                credit_days_from_template = frappe.db.get_value(
+                    "Payment Terms Template Detail",
+                    {"parent": pt_name},
+                    "credit_days"
+                )
+                if credit_days_from_template:
+                    erp_terms = str(int(credit_days_from_template)) + " Days"
+                else:
+                    erp_terms = pt_name  # Use template name as-is
+            except Exception:
+                erp_terms = pt_name
+
         result["credit_terms_from_customer"] = erp_terms
-    else:
-        erp_terms = None
 
     file_days = parse_credit_days(terms_from_file) if terms_from_file else None
     erp_days = parse_credit_days(erp_terms) if erp_terms else None
