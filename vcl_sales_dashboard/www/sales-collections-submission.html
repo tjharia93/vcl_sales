@@ -240,36 +240,61 @@
 
   async function fetchCsrfToken() {
     // 1. Check cookie
+    var allCookies = document.cookie || '(none)';
+    debugLog('CSRF INIT', 'Cookies: ' + allCookies.substring(0, 200));
     var fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-    if (fromCookie) { window.vcl_csrf_token = fromCookie; return fromCookie; }
+    if (fromCookie) {
+      window.vcl_csrf_token = fromCookie;
+      debugLog('CSRF INIT', 'From cookie: ' + fromCookie.substring(0, 12) + '...', 'ok');
+      return fromCookie;
+    }
 
     // 2. Check frappe global
-    if (typeof frappe !== 'undefined' && frappe.csrf_token) {
+    var hasFrappe = typeof frappe !== 'undefined';
+    debugLog('CSRF INIT', 'frappe global: ' + (hasFrappe ? 'exists' : 'NOT FOUND') + (hasFrappe && frappe.csrf_token ? ', csrf_token: ' + frappe.csrf_token.substring(0, 12) + '...' : ''));
+    if (hasFrappe && frappe.csrf_token) {
       window.vcl_csrf_token = frappe.csrf_token;
       return frappe.csrf_token;
     }
 
-    // 3. Fetch via API (GET, no CSRF needed)
+    // 3. Fetch via API
+    debugLog('CSRF INIT', 'Trying GET /api/method/frappe.auth.get_csrf_token ...');
     try {
       var res = await fetch('/api/method/frappe.auth.get_csrf_token', {
         method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
       });
+      debugLog('CSRF INIT', 'get_csrf_token HTTP ' + res.status);
       var json = await res.json();
+      debugLog('CSRF INIT', 'get_csrf_token response: ' + JSON.stringify(json).substring(0, 200));
       if (json.message) {
         window.vcl_csrf_token = json.message;
         return json.message;
       }
-    } catch (e) {}
+    } catch (e) {
+      debugLog('CSRF INIT', 'get_csrf_token failed: ' + e.message, 'error');
+    }
 
-    // 4. Trigger session cookie via get_logged_user, then re-check cookie
+    // 4. Trigger session cookie
+    debugLog('CSRF INIT', 'Trying GET /api/method/frappe.auth.get_logged_user ...');
     try {
-      await fetch('/api/method/frappe.auth.get_logged_user', {
+      var res2 = await fetch('/api/method/frappe.auth.get_logged_user', {
         method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
       });
+      debugLog('CSRF INIT', 'get_logged_user HTTP ' + res2.status);
+      var json2 = await res2.json();
+      debugLog('CSRF INIT', 'get_logged_user response: ' + JSON.stringify(json2).substring(0, 200));
+      // Re-check cookie after this call
       fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-      if (fromCookie) { window.vcl_csrf_token = fromCookie; return fromCookie; }
-    } catch (e) {}
+      debugLog('CSRF INIT', 'Cookie after get_logged_user: ' + (fromCookie ? fromCookie.substring(0, 12) + '...' : 'still empty'));
+      if (fromCookie) {
+        window.vcl_csrf_token = fromCookie;
+        return fromCookie;
+      }
+    } catch (e) {
+      debugLog('CSRF INIT', 'get_logged_user failed: ' + e.message, 'error');
+    }
 
+    debugLog('CSRF INIT', 'All methods exhausted. Token not found.', 'error');
     return '';
   }
 
