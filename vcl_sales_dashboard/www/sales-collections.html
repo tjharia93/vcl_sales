@@ -287,14 +287,32 @@
   <div id="detail-content"></div>
 </div>
 
-<script>window.vcl_csrf_token = "{{ csrf_token }}";</script>
+<script>window.vcl_csrf_token = '';</script>
 
 <script>
   function getCsrfToken() {
-    return window.vcl_csrf_token
+    var token = window.vcl_csrf_token
       || (typeof frappe !== 'undefined' && frappe.csrf_token)
-      || (document.querySelector('meta[name="csrf-token"]') || {}).content
+      || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1]
       || '';
+    if (token && (token.indexOf('{{') !== -1 || token.indexOf('}}') !== -1)) return '';
+    return token;
+  }
+
+  async function fetchCsrfToken() {
+    var fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    if (fromCookie) { window.vcl_csrf_token = fromCookie; return; }
+    if (typeof frappe !== 'undefined' && frappe.csrf_token) { window.vcl_csrf_token = frappe.csrf_token; return; }
+    try {
+      var res = await fetch('/api/method/frappe.auth.get_csrf_token', { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      var json = await res.json();
+      if (json.message) { window.vcl_csrf_token = json.message; return; }
+    } catch (e) {}
+    try {
+      await fetch('/api/method/frappe.auth.get_logged_user', { method: 'GET', credentials: 'same-origin' });
+      fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+      if (fromCookie) { window.vcl_csrf_token = fromCookie; }
+    } catch (e) {}
   }
 
   const isManager = {% if is_manager %}true{% else %}false{% endif %};
@@ -762,6 +780,7 @@
   // ── Init ──────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', async function() {
+    await fetchCsrfToken();
     await Promise.all([loadPeriods(), loadRepOptions()]);
     applyFilters();
   });

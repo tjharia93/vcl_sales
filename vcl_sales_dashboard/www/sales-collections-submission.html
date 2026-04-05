@@ -224,17 +224,56 @@
   </div>
 </div>
 
-<!-- CSRF token injected from server-side context -->
+<!-- CSRF token: fetched on page load via API -->
 <script>
-  window.vcl_csrf_token = "{{ csrf_token }}";
+  window.vcl_csrf_token = '';
 </script>
 
 <script>
   function getCsrfToken() {
-    return window.vcl_csrf_token
+    var token = window.vcl_csrf_token
       || (typeof frappe !== 'undefined' && frappe.csrf_token)
-      || (document.querySelector('meta[name="csrf-token"]') || {}).content
+      || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1]
       || '';
+
+    // Reject template placeholders that weren't rendered
+    if (token && (token.indexOf('{{') !== -1 || token.indexOf('}}') !== -1)) return '';
+    return token;
+  }
+
+  async function fetchCsrfToken() {
+    // 1. Check cookie
+    var fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+    if (fromCookie) { window.vcl_csrf_token = fromCookie; return fromCookie; }
+
+    // 2. Check frappe global
+    if (typeof frappe !== 'undefined' && frappe.csrf_token) {
+      window.vcl_csrf_token = frappe.csrf_token;
+      return frappe.csrf_token;
+    }
+
+    // 3. Fetch via API (GET, no CSRF needed)
+    try {
+      var res = await fetch('/api/method/frappe.auth.get_csrf_token', {
+        method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+      });
+      var json = await res.json();
+      if (json.message) {
+        window.vcl_csrf_token = json.message;
+        return json.message;
+      }
+    } catch (e) {}
+
+    // 4. Trigger session cookie via get_logged_user, then re-check cookie
+    try {
+      await fetch('/api/method/frappe.auth.get_logged_user', {
+        method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+      });
+      fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
+      if (fromCookie) { window.vcl_csrf_token = fromCookie; return fromCookie; }
+    } catch (e) {}
+
+    return '';
   }
 
   // ── Authenticated POST helper ─────────────────────────────────────
@@ -844,9 +883,17 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function() {
-    const csrf = getCsrfToken();
-    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (csrf ? 'PRESENT (' + csrf.substring(0, 8) + '...)' : 'MISSING!'), csrf ? 'ok' : 'error');
+  document.addEventListener('DOMContentLoaded', async function() {
+    var token = await fetchCsrfToken();
+    var status;
+    if (!token) {
+      status = 'MISSING';
+    } else if (token.indexOf('{{') !== -1) {
+      status = 'INVALID TEMPLATE PLACEHOLDER';
+    } else {
+      status = 'PRESENT (' + token.substring(0, 8) + '...)';
+    }
+    debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + status, token && status.startsWith('PRESENT') ? 'ok' : 'error');
     restoreFormState();
     loadPastSubmissions();
   });
