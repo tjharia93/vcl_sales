@@ -107,6 +107,10 @@
     .mapping-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
     .mapping-table select { width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px; }
     .modal-actions { display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-5); }
+    .login-modal .modal-box { width: 420px; text-align: center; }
+    .login-modal .modal-box h3 { color: var(--danger); }
+    .login-modal .modal-desc { margin-bottom: var(--space-4); }
+    .login-modal .modal-actions { justify-content: center; }
 
     /* Debug panel */
     .debug-panel { background: #1e1e2e; border: 2px solid #f38ba8; border-radius: var(--radius-md); padding: var(--space-5); margin-bottom: var(--space-5); }
@@ -208,6 +212,18 @@
   </div>
 </div>
 
+<!-- Login Required Modal -->
+<div class="modal-overlay login-modal" id="login-modal">
+  <div class="modal-box">
+    <h3>Login Required</h3>
+    <p class="modal-desc">Your session has expired or you are not logged in. Please log in to continue with the Collections Submission.</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeLoginPopup()" style="background:var(--text-muted);">Cancel</button>
+      <button class="btn btn-success" onclick="redirectToLogin()">Login</button>
+    </div>
+  </div>
+</div>
+
 <!-- CSRF token injected from server-side context -->
 <script>
   window.vcl_csrf_token = "{{ csrf_token }}";
@@ -236,6 +252,82 @@
       body: body,
       credentials: 'same-origin'
     });
+  }
+
+  // ── Auth / Session expiry handling ─────────────────────────────────
+
+  function isAuthError(response, rawJson) {
+    // HTTP 401 or 403 with session/auth indicators
+    if (response.status === 401) return true;
+    if (response.status === 403) {
+      const exc = (rawJson && rawJson.exc_type) || '';
+      if (/session|auth|login|permission/i.test(exc)) return true;
+    }
+    // Frappe redirects to login for Guest users
+    if (rawJson && rawJson._server_messages) {
+      try {
+        const msgs = JSON.parse(rawJson._server_messages);
+        for (const m of msgs) {
+          const parsed = typeof m === 'string' ? JSON.parse(m) : m;
+          if (/not logged in|session expired|login required|guest/i.test(parsed.message || '')) return true;
+        }
+      } catch {}
+    }
+    // Check if response was a redirect to login page
+    if (response.redirected && /\/login/i.test(response.url)) return true;
+    // Check exception text
+    if (rawJson && rawJson.exception && /not logged in|session expired|authentication/i.test(rawJson.exception)) return true;
+    return false;
+  }
+
+  function showLoginPopup() {
+    debugLog('AUTH GUARD', 'Session expired — prompting login', 'error');
+    document.getElementById('login-modal').classList.add('open');
+  }
+
+  function closeLoginPopup() {
+    document.getElementById('login-modal').classList.remove('open');
+  }
+
+  function redirectToLogin() {
+    // Save form state to sessionStorage
+    try {
+      sessionStorage.setItem('vcl_collections_state', JSON.stringify({
+        period_end: document.getElementById('period_end').value,
+        replace_existing: document.getElementById('replace_existing_month').checked,
+        notes: document.getElementById('submission_notes').value,
+      }));
+    } catch {}
+
+    const returnUrl = encodeURIComponent('/sales-collections-submission');
+    debugLog('AUTH GUARD', 'Redirecting to login with return URL', 'warn');
+    window.location.href = '/login?redirect-to=' + returnUrl;
+  }
+
+  function restoreFormState() {
+    try {
+      const saved = sessionStorage.getItem('vcl_collections_state');
+      if (!saved) return;
+      const state = JSON.parse(saved);
+      if (state.period_end) document.getElementById('period_end').value = state.period_end;
+      if (state.replace_existing) document.getElementById('replace_existing_month').checked = true;
+      if (state.notes) document.getElementById('submission_notes').value = state.notes;
+      sessionStorage.removeItem('vcl_collections_state');
+      debugLog('STATE RESTORED', 'Form state restored from previous session', 'ok');
+    } catch {}
+  }
+
+  /**
+   * Wrapper that checks a fetch response for auth errors.
+   * Call after getting the response and parsing JSON.
+   * Returns true if auth error was detected and popup shown.
+   */
+  function handleAuthError(response, rawJson) {
+    if (isAuthError(response, rawJson)) {
+      showLoginPopup();
+      return true;
+    }
+    return false;
   }
 
   // ── Debug logger ──────────────────────────────────────────────────
@@ -399,7 +491,10 @@
       );
       const rawJson = await response.json();
       debugLog('VALIDATE HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
-      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      if (!response.ok) {
+        if (handleAuthError(response, rawJson)) return;
+        throw new Error(extractFrappeError(rawJson));
+      }
       const res = rawJson.message || rawJson;
       if (res && res.status === 'error') throw new Error(res.message || 'Validation error');
 
@@ -460,7 +555,10 @@
       );
       const rawJson = await response.json();
       debugLog('PROCESS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
-      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      if (!response.ok) {
+        if (handleAuthError(response, rawJson)) return;
+        throw new Error(extractFrappeError(rawJson));
+      }
       const res = rawJson.message || rawJson;
       if (res && res.status === 'error') throw new Error(res.message || 'Processing error');
 
@@ -526,7 +624,10 @@
       );
       const rawJson = await response.json();
       debugLog('PROCESS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
-      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      if (!response.ok) {
+        if (handleAuthError(response, rawJson)) return;
+        throw new Error(extractFrappeError(rawJson));
+      }
       const res = rawJson.message || rawJson;
       if (res && res.status === 'error') throw new Error(res.message || 'Processing error');
 
@@ -652,7 +753,10 @@
       const rawJson = await response.json();
       debugLog('SAVE MAPPINGS HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
 
-      if (!response.ok) throw new Error(extractFrappeError(rawJson));
+      if (!response.ok) {
+        if (handleAuthError(response, rawJson)) return;
+        throw new Error(extractFrappeError(rawJson));
+      }
       const res = rawJson.message || rawJson;
       if (res && res.status === 'error') throw new Error(res.message);
 
@@ -708,6 +812,7 @@
       });
       const rawJson = await response.json();
       debugLog('LOAD PAST HTTP ' + response.status, rawJson, response.ok ? 'ok' : 'error');
+      if (!response.ok && handleAuthError(response, rawJson)) return;
       const res = rawJson.message || rawJson;
 
       const container = document.getElementById('past-submissions');
@@ -742,6 +847,7 @@
   document.addEventListener('DOMContentLoaded', function() {
     const csrf = getCsrfToken();
     debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + (csrf ? 'PRESENT (' + csrf.substring(0, 8) + '...)' : 'MISSING!'), csrf ? 'ok' : 'error');
+    restoreFormState();
     loadPastSubmissions();
   });
 </script>
