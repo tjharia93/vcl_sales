@@ -257,10 +257,10 @@
       return frappe.csrf_token;
     }
 
-    // 3. Fetch via API
-    debugLog('CSRF INIT', 'Trying GET /api/method/frappe.auth.get_csrf_token ...');
+    // 3. Fetch via our own whitelisted endpoint
+    debugLog('CSRF INIT', 'Trying GET /api/method/vcl_sales_dashboard.api.collections_utils.get_csrf_token ...');
     try {
-      var res = await fetch('/api/method/frappe.auth.get_csrf_token', {
+      var res = await fetch('/api/method/vcl_sales_dashboard.api.collections_utils.get_csrf_token', {
         method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
       });
       debugLog('CSRF INIT', 'get_csrf_token HTTP ' + res.status);
@@ -272,26 +272,6 @@
       }
     } catch (e) {
       debugLog('CSRF INIT', 'get_csrf_token failed: ' + e.message, 'error');
-    }
-
-    // 4. Trigger session cookie
-    debugLog('CSRF INIT', 'Trying GET /api/method/frappe.auth.get_logged_user ...');
-    try {
-      var res2 = await fetch('/api/method/frappe.auth.get_logged_user', {
-        method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
-      });
-      debugLog('CSRF INIT', 'get_logged_user HTTP ' + res2.status);
-      var json2 = await res2.json();
-      debugLog('CSRF INIT', 'get_logged_user response: ' + JSON.stringify(json2).substring(0, 200));
-      // Re-check cookie after this call
-      fromCookie = (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
-      debugLog('CSRF INIT', 'Cookie after get_logged_user: ' + (fromCookie ? fromCookie.substring(0, 12) + '...' : 'still empty'));
-      if (fromCookie) {
-        window.vcl_csrf_token = fromCookie;
-        return fromCookie;
-      }
-    } catch (e) {
-      debugLog('CSRF INIT', 'get_logged_user failed: ' + e.message, 'error');
     }
 
     debugLog('CSRF INIT', 'All methods exhausted. Token not found.', 'error');

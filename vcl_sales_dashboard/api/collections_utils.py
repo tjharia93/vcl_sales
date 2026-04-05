@@ -3,6 +3,16 @@ import re
 from frappe.utils import flt
 
 
+# ── CSRF token helper ───────────────────────────────────────────────
+
+@frappe.whitelist(allow_guest=True)
+def get_csrf_token():
+    """Return the CSRF token for the current session.
+    This is a custom endpoint because frappe.auth.get_csrf_token
+    does not exist in all Frappe versions."""
+    return frappe.sessions.get_csrf_token()
+
+
 # ── Header normalization ─────────────────────────────────────────────
 
 # Maps normalized key → doctype field name
