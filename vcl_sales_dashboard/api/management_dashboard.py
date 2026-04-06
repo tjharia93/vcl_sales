@@ -130,8 +130,8 @@ def get_rep_performance(filters=None):
     except frappe.PermissionError:
         return {"status": "error", "message": "Not permitted", "data": []}
     except Exception as e:
-        frappe.log_error(f"get_rep_performance error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_rep_performance error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -191,8 +191,8 @@ def get_pipeline_summary(filters=None):
     except frappe.PermissionError:
         return {"status": "error", "message": "Not permitted", "data": {}}
     except Exception as e:
-        frappe.log_error(f"get_pipeline_summary error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {}}
+        frappe.log_error(frappe.get_traceback(), "get_pipeline_summary error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {}}
 
 
 @frappe.whitelist()
@@ -260,8 +260,8 @@ def get_team_collection_risk(filters=None):
     except frappe.PermissionError:
         return {"status": "error", "message": "Not permitted", "data": {}}
     except Exception as e:
-        frappe.log_error(f"get_team_collection_risk error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {}}
+        frappe.log_error(frappe.get_traceback(), "get_team_collection_risk error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {}}
 
 
 @frappe.whitelist()
@@ -383,5 +383,5 @@ def get_key_sales_exceptions(filters=None):
     except frappe.PermissionError:
         return {"status": "error", "message": "Not permitted", "data": []}
     except Exception as e:
-        frappe.log_error(f"get_key_sales_exceptions error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_key_sales_exceptions error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}

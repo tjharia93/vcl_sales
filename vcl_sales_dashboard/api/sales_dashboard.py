@@ -168,8 +168,8 @@ def get_filter_options():
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_filter_options error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_filter_options error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -256,8 +256,8 @@ def get_sales_dashboard_summary(filters=None):
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_sales_dashboard_summary error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_sales_dashboard_summary error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -416,8 +416,8 @@ def get_sales_action_queue(filters=None):
 
         return {"status": "ok", "data": actions}
     except Exception as e:
-        frappe.log_error(f"get_sales_action_queue error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_sales_action_queue error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -466,8 +466,8 @@ def get_open_quotations(filters=None):
 
         return {"status": "ok", "data": quotations}
     except Exception as e:
-        frappe.log_error(f"get_open_quotations error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_open_quotations error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -517,8 +517,8 @@ def get_open_sales_orders(filters=None):
 
         return {"status": "ok", "data": orders}
     except Exception as e:
-        frappe.log_error(f"get_open_sales_orders error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_open_sales_orders error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -612,8 +612,8 @@ def get_collections_alerts(filters=None):
 
         return {"status": "ok", "data": customers}
     except Exception as e:
-        frappe.log_error(f"get_collections_alerts error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "get_collections_alerts error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -708,8 +708,8 @@ def search_customer_quick(query="", filters=None):
 
         return {"status": "ok", "data": customers}
     except Exception as e:
-        frappe.log_error(f"search_customer_quick error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": []}
+        frappe.log_error(frappe.get_traceback(), "search_customer_quick error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": []}
 
 
 @frappe.whitelist()
@@ -789,8 +789,8 @@ def get_customer_snapshot(customer):
 
         return {"status": "ok", "data": data}
     except Exception as e:
-        frappe.log_error(f"get_customer_snapshot error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {}}
+        frappe.log_error(frappe.get_traceback(), "get_customer_snapshot error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {}}
 
 
 @frappe.whitelist()
@@ -907,8 +907,8 @@ def get_outstanding_invoices(filters=None):
 
         return {"status": "ok", "data": {"invoices": invoices, "summary": summary}}
     except Exception as e:
-        frappe.log_error(f"get_outstanding_invoices error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {"invoices": [], "summary": {}}}
+        frappe.log_error(frappe.get_traceback(), "get_outstanding_invoices error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {"invoices": [], "summary": {}}}
 
 
 @frappe.whitelist()
@@ -940,8 +940,8 @@ def get_net_sales_summary():
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_net_sales_summary error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {}}
+        frappe.log_error(frappe.get_traceback(), "get_net_sales_summary error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {}}
 
 
 @frappe.whitelist()
@@ -996,8 +996,8 @@ def get_sales_by_person():
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_sales_by_person error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {"mtd": [], "ytd": []}}
+        frappe.log_error(frappe.get_traceback(), "get_sales_by_person error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {"mtd": [], "ytd": []}}
 
 
 def _load_targets_json():
@@ -1048,8 +1048,8 @@ def get_sales_targets(month=None):
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_sales_targets error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {}}
+        frappe.log_error(frappe.get_traceback(), "get_sales_targets error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {}}
 
 
 @frappe.whitelist()
@@ -1156,5 +1156,5 @@ def get_sales_rep_discrepancies(filters=None):
             }
         }
     except Exception as e:
-        frappe.log_error(f"get_sales_rep_discrepancies error: {str(e)}")
-        return {"status": "error", "message": str(e), "data": {"discrepancies": [], "summary": {}}}
+        frappe.log_error(frappe.get_traceback(), "get_sales_rep_discrepancies error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {"discrepancies": [], "summary": {}}}
