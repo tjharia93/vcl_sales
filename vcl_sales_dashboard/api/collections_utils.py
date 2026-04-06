@@ -33,6 +33,12 @@ BUCKET_ORDER = [
 ]
 
 TERM_BUCKET_RULES = {
+    0: {
+        "due_current": "bucket_current",
+        "due_next": None,
+        "overdue_from": "bucket_1_15",
+        "overdue_30_from": "bucket_31_45",
+    },
     15: {
         "due_current": "bucket_1_15",
         "due_next": "bucket_current",
@@ -85,14 +91,17 @@ def parse_credit_days(term_value):
         s = str(term_value).strip().lower()
         if not s:
             return None
+        # "Current" or "COD" means 0-day terms
+        if s in ("current", "cod", "cash", "immediate", "c.o.d", "c.o.d."):
+            return 0
         # Extract first number from the string
         match = re.search(r"(\d+)", s)
         if not match:
-            return None
+            return 0  # No number found — treat as 0-day terms
         days = int(match.group(1))
 
     if days <= 0:
-        return None
+        return 0
 
     # Snap to nearest supported bucket threshold
     supported = sorted(TERM_BUCKET_RULES.keys())
@@ -107,11 +116,11 @@ def calculate_ageing_summary_from_buckets(bucket_values, credit_days):
 
     Args:
         bucket_values: dict of bucket fieldname -> float amount
-        credit_days: int (15, 30, 45, 60, 75, 90) or None
+        credit_days: int (0, 15, 30, 45, 60, 75, 90) or None
 
     Returns dict with due_current_month, due_next_month, overdue_amount, overdue_30_amount
     """
-    if not credit_days or credit_days not in TERM_BUCKET_RULES:
+    if credit_days is None or credit_days not in TERM_BUCKET_RULES:
         return {
             "due_current_month": 0,
             "due_next_month": 0,
@@ -127,7 +136,7 @@ def calculate_ageing_summary_from_buckets(bucket_values, credit_days):
 
     return {
         "due_current_month": flt(bucket_values.get(rules["due_current"], 0)),
-        "due_next_month": flt(bucket_values.get(rules["due_next"], 0)),
+        "due_next_month": flt(bucket_values.get(rules["due_next"], 0)) if rules["due_next"] else 0,
         "overdue_amount": bucket_sum_from(rules["overdue_from"]),
         "overdue_30_amount": bucket_sum_from(rules["overdue_30_from"]),
     }
@@ -195,13 +204,17 @@ def resolve_terms(customer, terms_from_file):
     else:
         result["terms_match_status"] = "Missing Both"
 
-    # Priority: file terms first, then ERPNext
-    if file_days:
+    # Priority: file terms first, then ERPNext, then default 0
+    if file_days is not None:
         result["terms_used_for_calculation"] = terms_from_file
         result["credit_days"] = file_days
-    elif erp_days:
+    elif erp_days is not None:
         result["terms_used_for_calculation"] = erp_terms
         result["credit_days"] = erp_days
+    else:
+        # Default: assume 0-day terms (everything except Current is overdue)
+        result["terms_used_for_calculation"] = "Current (default)"
+        result["credit_days"] = 0
 
     return result
 

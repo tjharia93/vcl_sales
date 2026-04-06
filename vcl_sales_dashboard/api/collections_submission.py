@@ -150,16 +150,13 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
     for field in CURRENCY_FIELDS:
         setattr(snapshot, field, safe_flt(mapped.get(field)))
 
-    # Calculate due/overdue from buckets + terms
+    # Calculate due/overdue from buckets + terms (always — credit_days defaults to 0)
     bucket_values = {b: safe_flt(mapped.get(b)) for b in BUCKET_ORDER}
-    if terms_info["credit_days"]:
-        # Terms resolved — calculate from buckets
-        ageing = calculate_ageing_summary_from_buckets(bucket_values, terms_info["credit_days"])
-        snapshot.due_current_month = ageing["due_current_month"]
-        snapshot.due_next_month = ageing["due_next_month"]
-        snapshot.overdue_amount = ageing["overdue_amount"]
-        snapshot.overdue_30_amount = ageing["overdue_30_amount"]
-    # else: keep the raw file values already set via CURRENCY_FIELDS loop
+    ageing = calculate_ageing_summary_from_buckets(bucket_values, terms_info["credit_days"])
+    snapshot.due_current_month = ageing["due_current_month"]
+    snapshot.due_next_month = ageing["due_next_month"]
+    snapshot.overdue_amount = ageing["overdue_amount"]
+    snapshot.overdue_30_amount = ageing["overdue_30_amount"]
 
     snapshot.latest_follow_up_status = "Not Contacted"
     snapshot.insert(ignore_permissions=True)
