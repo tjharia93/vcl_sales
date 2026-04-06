@@ -237,7 +237,7 @@ def get_sales_action_queue(filters=None):
 
         # a) Overdue invoices
         si_conditions = [
-            "si.docstatus IN (0, 1)",
+            "si.docstatus = 1",
             "si.outstanding_amount > 0",
             "si.due_date < %(today)s"
         ]
@@ -263,7 +263,7 @@ def get_sales_action_queue(filters=None):
 
         # b) Expiring quotations (valid_till <= today + 3 days)
         eq_conditions = [
-            "q.docstatus IN (0, 1)",
+            "q.docstatus IN (0, 1)",  -- Draft + submitted: intentional for pipeline tracking
             "q.status = 'Open'",
             "q.valid_till <= %(expiry_threshold)s",
             "q.valid_till >= %(today)s"
@@ -290,7 +290,7 @@ def get_sales_action_queue(filters=None):
 
         # c) Delivered but not invoiced
         dni_conditions = [
-            "so.docstatus IN (0, 1)",
+            "so.docstatus = 1",
             "so.per_delivered = 100",
             "so.per_billed < 100"
         ]
@@ -316,7 +316,7 @@ def get_sales_action_queue(filters=None):
 
         # d) Delayed deliveries
         dd_conditions = [
-            "so.docstatus IN (0, 1)",
+            "so.docstatus = 1",
             "so.per_delivered < 100",
             "so.delivery_date < %(today)s",
             "so.status NOT IN ('Cancelled', 'Closed', 'Completed')"
@@ -343,7 +343,7 @@ def get_sales_action_queue(filters=None):
 
         # e) Open quotations (not expiring soon)
         oq_conditions = [
-            "q.docstatus IN (0, 1)",
+            "q.docstatus IN (0, 1)",  -- Draft + submitted: intentional for pipeline tracking
             "q.status = 'Open'",
             "q.valid_till > %(expiry_threshold)s"
         ]
@@ -406,7 +406,7 @@ def get_open_quotations(filters=None):
             SELECT
                 q.name, q.customer, q.customer_name,
                 q.transaction_date, q.valid_till,
-                q.grand_total, q.status, q.owner,
+                q.grand_total, q.status, q.owner,  -- TODO: Replace owner with CSR Assignment lookup
                 DATEDIFF(%(today)s, q.transaction_date) as days_open,
                 CASE
                     WHEN q.valid_till < %(today)s THEN 'Expired'
@@ -457,7 +457,7 @@ def get_open_sales_orders(filters=None):
                 so.name, so.customer, so.customer_name,
                 so.transaction_date, so.grand_total,
                 so.per_delivered, so.per_billed,
-                so.delivery_date, so.status, so.owner,
+                so.delivery_date, so.status, so.owner,  -- TODO: Replace owner with CSR Assignment lookup
                 CASE
                     WHEN so.delivery_date < %(today)s AND so.per_delivered < 100 THEN 'Delayed'
                     WHEN so.per_delivered = 100 AND so.per_billed < 100 THEN 'Not Invoiced'
@@ -538,7 +538,7 @@ def get_collections_alerts(filters=None):
                 SUM(CASE WHEN DATEDIFF(CURDATE(), si.due_date) > 60 THEN si.outstanding_amount ELSE 0 END) as days_60_plus,
                 MAX(DATEDIFF(CURDATE(), si.due_date)) as oldest_invoice_age_days
             FROM `tabSales Invoice` si
-            WHERE si.docstatus IN (0, 1)
+            WHERE si.docstatus = 1
               AND si.outstanding_amount > 0
               {customer_condition}
               {territory_condition}
@@ -628,7 +628,7 @@ def search_customer_quick(query="", filters=None):
             outstanding = frappe.db.sql("""
                 SELECT COALESCE(SUM(outstanding_amount), 0) as total
                 FROM `tabSales Invoice`
-                WHERE customer = %(cust)s AND docstatus IN (0, 1)
+                WHERE customer = %(cust)s AND docstatus = 1
             """, {"cust": cust}, as_dict=True)
             row["outstanding_amount"] = flt(outstanding[0].total) if outstanding else 0
 
@@ -636,7 +636,7 @@ def search_customer_quick(query="", filters=None):
                 SELECT COALESCE(SUM(outstanding_amount), 0) as total,
                        MAX(DATEDIFF(CURDATE(), due_date)) as oldest
                 FROM `tabSales Invoice`
-                WHERE customer = %(cust)s AND docstatus IN (0, 1)
+                WHERE customer = %(cust)s AND docstatus = 1
                   AND outstanding_amount > 0 AND due_date < CURDATE()
             """, {"cust": cust}, as_dict=True)
             row["overdue_amount"] = flt(overdue[0].total) if overdue else 0
@@ -650,13 +650,13 @@ def search_customer_quick(query="", filters=None):
             row["last_payment_date"] = str(last_payment[0].posting_date) if last_payment else ""
 
             open_orders = frappe.db.count("Sales Order", {
-                "customer": cust, "docstatus": ["in", [0, 1]],
+                "customer": cust, "docstatus": 1,
                 "status": ["not in", ["Cancelled", "Closed", "Completed"]]
             })
             row["open_orders_count"] = cint(open_orders)
 
             open_quotes = frappe.db.count("Quotation", {
-                "customer": cust, "docstatus": ["in", [0, 1]], "status": "Open"
+                "customer": cust, "docstatus": ["in", [0, 1]], "status": "Open"  # Draft + submitted: intentional for pipeline tracking
             })
             row["open_quotations_count"] = cint(open_quotes)
 
@@ -767,7 +767,7 @@ def get_outstanding_invoices(filters=None):
         role_filter = get_role_filter()
         csr_map = get_csr_map()
 
-        conditions = ["si.docstatus IN (0, 1)", "si.outstanding_amount > 0"]
+        conditions = ["si.docstatus = 1", "si.outstanding_amount > 0"]
         values = {"today": today()}
 
         # Role-based filter — if sales rep, only show their assigned customers
@@ -779,7 +779,7 @@ def get_outstanding_invoices(filters=None):
                 for i, c in enumerate(my_customers):
                     values[f"rc{i}"] = c
             else:
-                # Fallback to owner
+                # Fallback to owner  -- TODO: Replace owner with CSR Assignment lookup
                 conditions.append("si.owner = %(role_owner)s")
                 values["role_owner"] = role_filter
 
@@ -827,7 +827,7 @@ def get_outstanding_invoices(filters=None):
                 si.name, si.customer, si.customer_name,
                 si.posting_date, si.due_date,
                 si.grand_total, si.outstanding_amount,
-                si.territory, si.owner, si.status,
+                si.territory, si.owner, si.status,  -- TODO: Replace owner with CSR Assignment lookup
                 CASE WHEN si.due_date < %(today)s THEN 1 ELSE 0 END as is_overdue
             FROM `tabSales Invoice` si
             WHERE {where}
@@ -886,14 +886,14 @@ def get_net_sales_summary():
         mtd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1) AND posting_date >= %(month_start)s
+            WHERE docstatus = 1 AND posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)[0]
 
         # YTD
         ytd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1) AND posting_date >= %(year_start)s
+            WHERE docstatus = 1 AND posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)[0]
 
         return {
@@ -920,14 +920,14 @@ def get_sales_by_person():
         mtd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(month_start)s
+            WHERE si.docstatus = 1 AND si.posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)
 
         # YTD invoices
         ytd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(year_start)s
+            WHERE si.docstatus = 1 AND si.posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)
 
         # Aggregate by sales rep using CSR map
@@ -1041,10 +1041,12 @@ def get_sales_rep_discrepancies(filters=None):
         for dt in doctypes_to_check:
             date_field = "posting_date" if dt == "Sales Invoice" else "transaction_date"
 
+            # Draft + submitted: intentional for pipeline tracking (Quotation only)
+            docstatus_filter = "docstatus IN (0, 1)" if dt == "Quotation" else "docstatus = 1"
             docs = frappe.db.sql(f"""
                 SELECT name, customer, customer_name, {date_field} as doc_date
                 FROM `tab{dt}`
-                WHERE docstatus IN (0, 1)
+                WHERE {docstatus_filter}
                 ORDER BY {date_field} DESC
                 LIMIT 500
             """, as_dict=True)

@@ -55,7 +55,7 @@ def get_rep_performance(filters=None):
         sales_mtd = frappe.db.sql(f"""
             SELECT customer, SUM(grand_total) as total
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE docstatus = 1
               AND posting_date >= %(month_start)s
               {territory_condition}
             GROUP BY customer
@@ -83,7 +83,7 @@ def get_rep_performance(filters=None):
         open_quotes = frappe.db.sql(f"""
             SELECT customer, SUM(grand_total) as total
             FROM `tabQuotation`
-            WHERE docstatus IN (0, 1) AND status = 'Open'
+            WHERE docstatus IN (0, 1) AND status = 'Open'  -- Draft + submitted: intentional for pipeline tracking
               {territory_condition}
             GROUP BY customer
         """, extra_values, as_dict=True)
@@ -96,7 +96,7 @@ def get_rep_performance(filters=None):
         overdue = frappe.db.sql(f"""
             SELECT customer, SUM(outstanding_amount) as total
             FROM `tabSales Invoice`
-            WHERE docstatus IN (0, 1)
+            WHERE docstatus = 1
               AND outstanding_amount > 0
               AND due_date < %(today)s
               {territory_condition}
@@ -220,7 +220,7 @@ def get_team_collection_risk(filters=None):
                 SUM(si.outstanding_amount) as overdue_amount,
                 MAX(DATEDIFF(%(today)s, si.due_date)) as oldest_age
             FROM `tabSales Invoice` si
-            WHERE si.docstatus IN (0, 1)
+            WHERE si.docstatus = 1
               AND si.outstanding_amount > 0
               AND si.due_date < %(today)s
               {territory_condition}
@@ -291,7 +291,7 @@ def get_key_sales_exceptions(filters=None):
                 name as docname,
                 grand_total as amount,
                 DATEDIFF(%(today)s, transaction_date) as age_days,
-                owner as sales_rep,
+                owner as sales_rep,  -- TODO: Replace owner with CSR Assignment lookup
                 'Critical' as urgency
             FROM `tabQuotation`
             WHERE docstatus = 1 AND status = 'Open'
@@ -310,7 +310,7 @@ def get_key_sales_exceptions(filters=None):
                 name as docname,
                 grand_total as amount,
                 DATEDIFF(%(today)s, delivery_date) as age_days,
-                owner as sales_rep,
+                owner as sales_rep,  -- TODO: Replace owner with CSR Assignment lookup
                 'Critical' as urgency
             FROM `tabSales Order`
             WHERE docstatus = 1
@@ -331,7 +331,7 @@ def get_key_sales_exceptions(filters=None):
                 '' as docname,
                 SUM(outstanding_amount) as amount,
                 MAX(DATEDIFF(%(today)s, due_date)) as age_days,
-                owner as sales_rep,
+                owner as sales_rep,  -- TODO: Replace owner with CSR Assignment lookup
                 'Critical' as urgency
             FROM `tabSales Invoice`
             WHERE docstatus = 1
@@ -352,7 +352,7 @@ def get_key_sales_exceptions(filters=None):
                 name as docname,
                 grand_total as amount,
                 DATEDIFF(%(today)s, posting_date) as age_days,
-                owner as sales_rep,
+                owner as sales_rep,  -- TODO: Replace owner with CSR Assignment lookup
                 'High' as urgency
             FROM `tabDelivery Note`
             WHERE docstatus = 1

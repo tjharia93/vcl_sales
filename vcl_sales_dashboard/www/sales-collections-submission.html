@@ -189,9 +189,9 @@
     </div>
   </div>
 
-  <!-- Debug Panel -->
-  <div class="debug-panel" id="debug-panel">
-    <div class="debug-panel__title">DEBUG OUTPUT (Testing Mode)</div>
+  <!-- Debug Panel (hidden by default, toggle with ?debug=1 in URL) -->
+  <div class="debug-panel hidden" id="debug-panel">
+    <div class="debug-panel__title">DEBUG OUTPUT</div>
     <div class="debug-log" id="debug-log">Waiting for activity...</div>
   </div>
 </div>
@@ -886,6 +886,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', async function() {
+    // Show debug panel only when ?debug=1 is in URL
+    if (window.location.search.indexOf('debug=1') !== -1) {
+      document.getElementById('debug-panel').classList.remove('hidden');
+    }
     var token = await fetchCsrfToken();
     var status = token ? ('PRESENT (' + token.substring(0, 8) + '...)') : 'MISSING';
     debugLog('PAGE LOADED', 'Collections Submission page ready. CSRF token: ' + status, token ? 'ok' : 'error');

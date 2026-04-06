@@ -1,0 +1,633 @@
+/* ============================================================
+   VCL Sales Dashboard - Shared Stylesheet
+   Canonical source for design tokens, layout, and components
+   used across all VCL dashboard pages.
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   1. Design Tokens (CSS Custom Properties)
+   ---------------------------------------------------------- */
+:root {
+  /* Brand */
+  --vcl-primary: #2B3990;
+  --vcl-primary-dark: #1f2a6d;
+  --vcl-secondary: #ED1C24;
+
+  /* Backgrounds */
+  --bg-page: #f5f6f8;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #fafbfc;
+  --bg-soft: #f0f2f5;
+
+  /* Borders */
+  --border-color: #d9dee7;
+  --border-strong: #c9d0db;
+
+  /* Text */
+  --text-primary: #1f2937;
+  --text-secondary: #5b6472;
+  --text-muted: #7a8596;
+  --text-on-dark: #ffffff;
+
+  /* Semantic colours */
+  --success: #167c45;
+  --success-bg: #eaf7ef;
+  --warning: #a16207;
+  --warning-bg: #fff7e6;
+  --danger: #b42318;
+  --danger-bg: #fdecec;
+  --info: #175cd3;
+  --info-bg: #edf4ff;
+
+  /* Typography */
+  --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+  --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Spacing scale */
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  /* Layout */
+  --container-max: 1440px;
+  --table-row-height: 44px;
+
+  /* Motion */
+  --transition-fast: 0.15s ease;
+}
+
+/* ----------------------------------------------------------
+   2. Reset & Base
+   ---------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-dashboard);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--vcl-primary);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------
+   3. Page Shell & Topbar
+   ---------------------------------------------------------- */
+.page-shell {
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+.topbar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar__inner {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+/* ----------------------------------------------------------
+   4. Brand
+   ---------------------------------------------------------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+.brand__mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--vcl-primary);
+  color: var(--text-on-dark);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+.brand__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.brand__name {
+  font-size: 15px;
+}
+.brand__sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------
+   5. Navigation
+   ---------------------------------------------------------- */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.nav__link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.nav__link:hover {
+  text-decoration: none;
+  background: var(--bg-soft);
+  color: var(--text-primary);
+}
+.nav__link.is-active {
+  background: rgba(43, 57, 144, 0.08);
+  color: var(--vcl-primary);
+}
+
+/* ----------------------------------------------------------
+   6. Page Container
+   ---------------------------------------------------------- */
+.page-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-left: var(--space-6);
+  padding-right: var(--space-6);
+  padding-top: var(--space-7);
+  padding-bottom: 32px;
+}
+
+/* ----------------------------------------------------------
+   7. Card
+   ---------------------------------------------------------- */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+.card__body {
+  padding: var(--space-5);
+}
+.card__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 var(--space-4);
+  color: var(--text-primary);
+}
+
+/* ----------------------------------------------------------
+   8. KPI Grid & Cards
+   ---------------------------------------------------------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+.kpi-card__label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.kpi-card__value {
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-card__meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ----------------------------------------------------------
+   9. Data Table
+   ---------------------------------------------------------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: var(--font-data);
+}
+.data-table th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table tr:hover {
+  background: var(--bg-soft);
+  cursor: pointer;
+}
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.data-table .nowrap {
+  white-space: nowrap;
+}
+
+/* Standalone utility aliases */
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.nowrap {
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------
+   10. Buttons
+   ---------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-data);
+  cursor: pointer;
+  background: var(--bg-soft);
+  color: var(--text-primary);
+  transition: background var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary,
+.btn--primary {
+  background: var(--vcl-primary);
+  color: var(--text-on-dark);
+  border-color: var(--vcl-primary);
+}
+.btn-primary:hover,
+.btn--primary:hover {
+  background: var(--vcl-primary-dark);
+  border-color: var(--vcl-primary-dark);
+  text-decoration: none;
+}
+.btn-success {
+  background: var(--success);
+  color: var(--text-on-dark);
+}
+.btn-success:hover {
+  background: #126b3a;
+}
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+  min-height: 0;
+}
+.btn-outline,
+.btn--outline {
+  background: var(--bg-surface);
+  color: var(--vcl-primary);
+  border: 1px solid var(--border-strong);
+}
+.btn--secondary {
+  background: var(--vcl-secondary);
+  color: var(--text-on-dark);
+  border-color: var(--vcl-secondary);
+}
+
+/* ----------------------------------------------------------
+   11. Status Badges
+   ---------------------------------------------------------- */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* Follow-up statuses (st-*) */
+.st-not-contacted   { background: var(--bg-soft);    color: var(--text-muted); }
+.st-contacted       { background: var(--info-bg);    color: var(--info); }
+.st-promise-to-pay  { background: var(--success-bg); color: var(--success); }
+.st-part-payment-expected { background: #e8f5e9;     color: #2e7d32; }
+.st-in-dispute      { background: var(--warning-bg); color: var(--warning); }
+.st-waiting-for-statement,
+.st-waiting-for-credit-note { background: #fff3e0;   color: #e65100; }
+.st-escalated       { background: var(--danger-bg);  color: var(--danger); }
+.st-cleared         { background: var(--success-bg); color: var(--success); }
+/* Submission statuses (status-*) */
+.status-draft       { background: var(--bg-soft);    color: var(--text-muted); }
+.status-validated   { background: var(--info-bg);    color: var(--info); }
+.status-processed   { background: var(--success-bg); color: var(--success); }
+.status-failed      { background: var(--danger-bg);  color: var(--danger); }
+
+/* ----------------------------------------------------------
+   12. Forms
+   ---------------------------------------------------------- */
+.form-group {
+  margin-bottom: var(--space-4);
+}
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-4);
+}
+.checkbox-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ----------------------------------------------------------
+   13. Button Row
+   ---------------------------------------------------------- */
+.btn-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ----------------------------------------------------------
+   14. Log Box
+   ---------------------------------------------------------- */
+.log-box {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  font-size: 13px;
+  font-family: "Courier New", monospace;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+  color: var(--text-secondary);
+}
+
+/* ----------------------------------------------------------
+   15. Summary Grid
+   ---------------------------------------------------------- */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.summary-item {
+  text-align: center;
+  padding: var(--space-3);
+  background: var(--bg-soft);
+  border-radius: var(--radius-sm);
+}
+.summary-item .val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--vcl-primary);
+}
+.summary-item .lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ----------------------------------------------------------
+   16. Utility Classes
+   ---------------------------------------------------------- */
+.hidden {
+  display: none;
+}
+
+/* ----------------------------------------------------------
+   17. Spinner
+   ---------------------------------------------------------- */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--vcl-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: vcl-spin 0.6s linear infinite;
+}
+@keyframes vcl-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ----------------------------------------------------------
+   18. Message Banners
+   ---------------------------------------------------------- */
+.msg-info {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: var(--space-4);
+}
+.msg-info.success {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.msg-info.error {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.msg-info.warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+/* ----------------------------------------------------------
+   19. Modal Overlay
+   ---------------------------------------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open {
+  display: flex;
+}
+.modal-box {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  width: 640px;
+  max-width: 95vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+.modal-box h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: var(--vcl-primary);
+}
+.modal-box .modal-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+}
+.modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}
+.login-modal .modal-box {
+  width: 420px;
+  text-align: center;
+}
+.login-modal .modal-box h3 {
+  color: var(--danger);
+}
+.login-modal .modal-desc {
+  margin-bottom: var(--space-4);
+}
+.login-modal .modal-actions {
+  justify-content: center;
+}
+
+/* ----------------------------------------------------------
+   20. Responsive Breakpoints
+   ---------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar__inner,
+  .page-container {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .nav {
+    width: 100%;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  h2 { font-size: 20px; }
+  h3 { font-size: 17px; }
+  .topbar__inner {
+    min-height: auto;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .page-container {
+    padding-top: var(--space-6);
+  }
+  .modal-box {
+    padding: var(--space-4);
+  }
+}
