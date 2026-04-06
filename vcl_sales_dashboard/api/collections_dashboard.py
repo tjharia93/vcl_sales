@@ -321,8 +321,9 @@ def get_available_periods():
 
 
 @frappe.whitelist()
-def get_terms_diagnostics(period_end=None):
-    """Diagnostic: show terms resolution stats for the selected period."""
+def get_terms_discrepancy(period_end=None):
+    """Return terms discrepancy report: summary stats and row-level detail
+    for customers with blank, missing, or mismatched terms."""
     try:
         conditions = ["sub.status = 'Processed'"]
         values = {}
@@ -331,24 +332,51 @@ def get_terms_diagnostics(period_end=None):
             values["period_end"] = period_end
         where = "WHERE " + " AND ".join(conditions)
 
-        result = frappe.db.sql(f"""
+        # Summary by terms_match_status
+        summary = frappe.db.sql(f"""
             SELECT
                 cs.terms_match_status,
-                cs.credit_days,
-                COUNT(*) as cnt,
-                cs.terms_from_file as sample_file_terms,
-                cs.credit_terms_from_customer as sample_erp_terms,
-                cs.terms_used_for_calculation as sample_used
+                COUNT(*) as count,
+                SUM(cs.total_balance) as total_balance
             FROM `tabCollections Customer Snapshot` cs
             INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
             {where}
-            GROUP BY cs.terms_match_status, cs.credit_days, cs.terms_from_file,
-                     cs.credit_terms_from_customer, cs.terms_used_for_calculation
-            ORDER BY cnt DESC
-            LIMIT 20
+            GROUP BY cs.terms_match_status
+            ORDER BY count DESC
         """, values, as_dict=True)
 
-        return {"status": "ok", "data": result}
+        # Row-level detail: all non-Matched rows
+        rows = frappe.db.sql(f"""
+            SELECT
+                cs.name,
+                cs.excel_customer_name,
+                cs.customer,
+                cs.customer_name_display,
+                cs.assigned_sales_representative,
+                cs.terms_from_file,
+                cs.credit_terms_from_customer,
+                cs.terms_used_for_calculation,
+                cs.credit_days,
+                cs.terms_match_status,
+                cs.total_balance,
+                cs.overdue_amount
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
+            {where}
+              AND cs.terms_match_status != 'Matched'
+            ORDER BY
+                CASE cs.terms_match_status
+                    WHEN 'Missing Both' THEN 1
+                    WHEN 'Mismatch' THEN 2
+                    WHEN 'ERPNext Only' THEN 3
+                    WHEN 'File Only' THEN 4
+                    ELSE 5
+                END,
+                cs.total_balance DESC
+            LIMIT 200
+        """, values, as_dict=True)
+
+        return {"status": "ok", "summary": summary, "data": rows}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

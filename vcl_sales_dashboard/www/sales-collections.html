@@ -253,6 +253,34 @@
   </div>
   {% endif %}
 
+  <!-- Terms Discrepancy Report -->
+  {% if is_manager %}
+  <div class="card" id="terms-discrepancy-card">
+    <h3 class="card__title" style="cursor:pointer;" onclick="toggleTermsDiscrepancy()">
+      Terms Discrepancy Report <span id="terms-disc-count" style="font-weight:400;color:var(--text-muted);font-size:13px;"></span>
+      <span id="terms-disc-toggle" style="float:right;font-size:12px;color:var(--text-muted);">Show</span>
+    </h3>
+    <div id="terms-disc-summary" style="margin-bottom:var(--space-4);"></div>
+    <div id="terms-disc-body" class="hidden" style="overflow-x:auto;">
+      <table class="data-table" id="terms-disc-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Rep</th>
+            <th>File Terms</th>
+            <th>ERPNext Terms</th>
+            <th>Used</th>
+            <th class="num">Days</th>
+            <th>Status</th>
+            <th class="num">Balance</th>
+          </tr>
+        </thead>
+        <tbody id="terms-disc-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Customer List -->
   <div class="card">
     <h3 class="card__title">Customer List <span id="list-count" style="font-weight:400;color:var(--text-muted);font-size:13px;"></span></h3>
@@ -384,7 +412,7 @@
     currentPage = 0;
     currentFilters = getFilterValues();
     const tasks = [loadSummary(), loadCustomerList()];
-    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); tasks.push(loadRepOptions()); }
+    if (isManager) { tasks.push(loadRepSummary()); tasks.push(loadWarningQueues()); tasks.push(loadRepOptions()); tasks.push(loadTermsDiscrepancy()); }
     await Promise.all(tasks);
   }
 
@@ -645,6 +673,75 @@
     } else {
       alert('Error: ' + (res.message || 'Unknown error'));
     }
+  }
+
+  // ── Terms Discrepancy ──────────────────────────────────────────────
+
+  let termsDiscVisible = false;
+
+  function toggleTermsDiscrepancy() {
+    termsDiscVisible = !termsDiscVisible;
+    document.getElementById('terms-disc-body').classList.toggle('hidden', !termsDiscVisible);
+    document.getElementById('terms-disc-toggle').textContent = termsDiscVisible ? 'Hide' : 'Show';
+  }
+
+  async function loadTermsDiscrepancy() {
+    if (!isManager) return;
+    const f = currentFilters;
+    const res = await api('vcl_sales_dashboard.api.collections_dashboard.get_terms_discrepancy', {
+      period_end: f.period_end
+    });
+
+    const summaryEl = document.getElementById('terms-disc-summary');
+    const countEl = document.getElementById('terms-disc-count');
+    const tbody = document.getElementById('terms-disc-tbody');
+
+    if (res.status !== 'ok') {
+      summaryEl.innerHTML = '<p style="color:var(--danger);font-size:13px;">Error loading terms data.</p>';
+      return;
+    }
+
+    // Summary badges
+    const summary = res.summary || [];
+    const totalDisc = summary.reduce(function(sum, s) { return sum + (s.terms_match_status !== 'Matched' ? s.count : 0); }, 0);
+    countEl.textContent = '(' + totalDisc + ' discrepancies)';
+
+    let sumHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;">';
+    var statusColors = {
+      'Matched': 'var(--success)', 'Mismatch': 'var(--danger)',
+      'Missing Both': 'var(--text-muted)', 'File Only': 'var(--info)', 'ERPNext Only': 'var(--warning)'
+    };
+    summary.forEach(function(s) {
+      var c = statusColors[s.terms_match_status] || 'var(--text-muted)';
+      sumHtml += '<span style="padding:3px 10px;border-radius:12px;background:var(--bg-soft);color:' + c + ';font-weight:600;">' +
+        s.terms_match_status + ': ' + s.count + ' (' + fmtC(s.total_balance) + ')</span>';
+    });
+    sumHtml += '</div>';
+    summaryEl.innerHTML = sumHtml;
+
+    // Detail rows
+    var rows = res.data || [];
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:20px;">No discrepancies found. All terms matched.</td></tr>';
+      return;
+    }
+
+    var html = '';
+    rows.forEach(function(r) {
+      var stCls = r.terms_match_status === 'Missing Both' ? 'color:var(--danger);font-weight:600' :
+                  r.terms_match_status === 'Mismatch' ? 'color:var(--warning);font-weight:600' : '';
+      html += '<tr>' +
+        '<td class="nowrap">' + (r.customer_name_display || r.excel_customer_name) + '</td>' +
+        '<td class="nowrap">' + (r.assigned_sales_representative || '--') + '</td>' +
+        '<td>' + (r.terms_from_file || '<span style="color:var(--danger)">BLANK</span>') + '</td>' +
+        '<td>' + (r.credit_terms_from_customer || '<span style="color:var(--danger)">BLANK</span>') + '</td>' +
+        '<td>' + (r.terms_used_for_calculation || '--') + '</td>' +
+        '<td class="num">' + (r.credit_days != null ? r.credit_days : '--') + '</td>' +
+        '<td style="' + stCls + '">' + (r.terms_match_status || '--') + '</td>' +
+        '<td class="num">' + fmtC(r.total_balance) + '</td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
   }
 
   // ── Warning Queues ─────────────────────────────────────────────────
