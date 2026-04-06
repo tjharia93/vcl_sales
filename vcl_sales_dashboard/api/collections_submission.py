@@ -140,11 +140,13 @@ def build_snapshot_doc(submission_doc, row_dict, header_map, log_lines, label_ma
     file_terms = (mapped.get("terms") or "").strip() if mapped.get("terms") else ""
     snapshot.terms = file_terms  # legacy
     terms_info = resolve_terms(customer, file_terms)
-    snapshot.terms_from_file = terms_info["terms_from_file"]
-    snapshot.credit_terms_from_customer = terms_info["credit_terms_from_customer"]
-    snapshot.terms_used_for_calculation = terms_info["terms_used_for_calculation"]
-    snapshot.credit_days = terms_info["credit_days"]
-    snapshot.terms_match_status = terms_info["terms_match_status"]
+    # Set new terms fields (safe for pre-migration — fields may not exist yet)
+    for tf in ("terms_from_file", "credit_terms_from_customer",
+               "terms_used_for_calculation", "credit_days", "terms_match_status"):
+        try:
+            setattr(snapshot, tf, terms_info.get(tf))
+        except Exception:
+            pass
 
     # Import raw bucket values
     for field in CURRENCY_FIELDS:

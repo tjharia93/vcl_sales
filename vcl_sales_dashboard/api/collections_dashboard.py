@@ -323,8 +323,13 @@ def get_available_periods():
 @frappe.whitelist()
 def get_terms_discrepancy(period_end=None):
     """Return terms discrepancy report: summary stats and row-level detail
-    for customers with blank, missing, or mismatched terms."""
+    for customers with blank, missing, or mismatched terms.
+    Returns empty data gracefully if new fields haven't been migrated yet."""
     try:
+        # Check if new fields exist (they may not be migrated yet)
+        cols = frappe.db.sql("SHOW COLUMNS FROM `tabCollections Customer Snapshot` LIKE 'credit_days'")
+        if not cols:
+            return {"status": "ok", "summary": [], "data": [], "note": "New terms fields not yet migrated. Please run bench migrate."}
         conditions = ["sub.status = 'Processed'"]
         values = {}
         if period_end:

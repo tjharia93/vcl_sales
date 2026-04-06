@@ -161,16 +161,16 @@ def resolve_terms(customer, terms_from_file):
     erp_terms = None
     if customer:
         # Try multiple ERPNext fields where terms might be stored
-        cust = frappe.db.get_value(
-            "Customer", customer,
-            ["payment_terms", "credit_days"],
-            as_dict=True
-        ) or {}
+        try:
+            cust = frappe.db.get_value(
+                "Customer", customer,
+                ["payment_terms"],
+                as_dict=True
+            ) or {}
+        except Exception:
+            cust = {}
 
-        # credit_days is a direct numeric field in some ERPNext setups
-        if cust.get("credit_days"):
-            erp_terms = str(int(cust["credit_days"])) + " Days"
-        elif cust.get("payment_terms"):
+        if cust.get("payment_terms"):
             # Payment Terms Template name — try to extract days from the template
             pt_name = cust["payment_terms"]
             try:
