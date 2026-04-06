@@ -299,7 +299,7 @@ def get_sales_action_queue(filters=None):
 
         # b) Expiring quotations (valid_till <= today + 3 days)
         eq_conditions = [
-            "q.docstatus IN (0, 1)",  -- Draft + submitted: intentional for pipeline tracking
+            "q.docstatus IN (0, 1)",  # Draft + submitted: intentional for pipeline tracking
             "q.status = 'Open'",
             "q.valid_till <= %(expiry_threshold)s",
             "q.valid_till >= %(today)s"
@@ -379,7 +379,7 @@ def get_sales_action_queue(filters=None):
 
         # e) Open quotations (not expiring soon)
         oq_conditions = [
-            "q.docstatus IN (0, 1)",  -- Draft + submitted: intentional for pipeline tracking
+            "q.docstatus IN (0, 1)",  # Draft + submitted: intentional for pipeline tracking
             "q.status = 'Open'",
             "q.valid_till > %(expiry_threshold)s"
         ]
