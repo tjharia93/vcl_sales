@@ -1,2 +1,716 @@
-<!-- Phase 3: Management Dashboard frontend — to be built -->
-<p>Management Dashboard loading...</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VCL Management Dashboard</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-surface-alt: #fafbfc;
+      --bg-soft: #f0f2f5;
+      --border-color: #d9dee7;
+      --border-strong: #c9d0db;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --container-max: 1440px;
+      --table-row-height: 44px;
+      --transition-fast: 0.15s ease;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font-dashboard);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .page-shell { min-height: 100vh; background: var(--bg-page); }
+
+    .topbar {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .topbar__inner, .page-container {
+      width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+    .topbar__inner {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+    }
+
+    .brand { display: flex; align-items: center; gap: var(--space-3); font-weight: 700; color: var(--text-primary); letter-spacing: 0.2px; }
+    .brand__mark {
+      width: 38px; height: 38px; border-radius: 10px; background: var(--vcl-primary); color: var(--text-on-dark);
+      display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; box-shadow: var(--shadow-sm);
+    }
+    .brand__text { display: flex; flex-direction: column; line-height: 1.1; }
+    .brand__name { font-size: 15px; }
+    .brand__sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; }
+
+    .nav { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+    .nav__link {
+      display: inline-flex; align-items: center; padding: 10px 14px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); font-size: 14px; font-weight: 600; transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .nav__link:hover { text-decoration: none; background: var(--bg-soft); color: var(--text-primary); }
+    .nav__link.is-active { background: rgba(43, 57, 144, 0.08); color: var(--vcl-primary); }
+
+    .page-container { padding-top: var(--space-7); padding-bottom: 32px; }
+    .page-header {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4);
+      margin-bottom: var(--space-6); flex-wrap: wrap;
+    }
+    .page-header__meta { display: flex; flex-direction: column; gap: var(--space-2); }
+    .eyebrow { color: var(--vcl-primary); text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; font-weight: 700; }
+
+    h1, h2, h3, h4 { margin: 0; color: var(--text-primary); font-weight: 700; letter-spacing: -0.01em; }
+    h1 { font-size: 30px; line-height: 1.2; }
+    h2 { font-size: 22px; line-height: 1.25; }
+    h3 { font-size: 18px; line-height: 1.3; }
+    h4 { font-size: 16px; line-height: 1.35; }
+
+    .type-body { font-size: 14px; line-height: 1.6; }
+    .type-small { font-size: 12px; line-height: 1.5; color: var(--text-muted); }
+    .type-label {
+      font-family: var(--font-data); font-size: 12px; font-weight: 700; line-height: 1.4;
+      color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
+    }
+
+    .text-secondary { color: var(--text-secondary); }
+    .text-muted { color: var(--text-muted); }
+    .text-right { text-align: right; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+
+    .grid { display: grid; gap: var(--space-5); }
+    .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+    }
+    .card__body { padding: var(--space-5); }
+    .card__header {
+      padding: var(--space-5); border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    }
+
+    .btn-row, .inline-filters {
+      display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: var(--radius-sm);
+      border: 1px solid transparent; font-size: 14px; font-weight: 700; font-family: var(--font-data);
+      cursor: pointer; background: var(--bg-soft); color: var(--text-primary); transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+    .btn--primary { background: var(--vcl-primary); color: var(--text-on-dark); border-color: var(--vcl-primary); }
+    .btn--primary:hover { background: var(--vcl-primary-dark); border-color: var(--vcl-primary-dark); text-decoration: none; }
+    .btn--outline { background: var(--bg-surface); color: var(--vcl-primary); border-color: var(--border-strong); }
+
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);
+    }
+    .kpi-card {
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); box-shadow: var(--shadow-card);
+    }
+    .kpi-card__label {
+      font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; margin-bottom: 10px;
+    }
+    .kpi-card__value {
+      font-size: 28px; line-height: 1.15; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); font-variant-numeric: tabular-nums;
+    }
+    .kpi-card__meta { font-size: 12px; color: var(--text-muted); }
+
+    .pill {
+      display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; border: 1px solid transparent; white-space: nowrap; font-family: var(--font-data);
+    }
+    .pill--critical { background: var(--danger-bg); color: var(--danger); border-color: #f6c7c2; }
+    .pill--high { background: var(--warning-bg); color: var(--warning); border-color: #f5dfaa; }
+    .pill--open { background: var(--info-bg); color: var(--info); border-color: #cfe0ff; }
+    .pill--overdue { background: var(--danger-bg); color: var(--danger); border-color: #f6c7c2; }
+    .pill--success { background: var(--success-bg); color: var(--success); border-color: #bfe3cb; }
+
+    .filter-group, .field {
+      display: flex; flex-direction: column; gap: 6px; min-width: 170px;
+    }
+
+    label {
+      font-family: var(--font-data); font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;
+    }
+
+    input, select {
+      width: 100%; min-height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); padding: 10px 12px;
+      font-family: var(--font-data); font-size: 14px; color: var(--text-primary); background: var(--bg-surface); font-variant-numeric: tabular-nums; outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    input:focus, select:focus {
+      border-color: var(--vcl-primary); box-shadow: 0 0 0 3px rgba(43, 57, 144, 0.10);
+    }
+
+    .table-wrap {
+      background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-card);
+    }
+    table {
+      width: 100%; border-collapse: collapse; font-family: var(--font-data); font-variant-numeric: tabular-nums;
+    }
+    thead th {
+      background: #f7f8fa; color: var(--text-secondary); text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px;
+      font-weight: 700; padding: 14px 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap;
+    }
+    thead th.text-right { text-align: right; }
+    tbody td {
+      font-size: 13px; color: var(--text-primary); padding: 12px 16px; border-bottom: 1px solid #eef1f5; vertical-align: middle; min-height: var(--table-row-height);
+    }
+    tbody tr:nth-child(even) { background: #fcfcfd; }
+    tbody tr:hover { background: #f7faff; }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .section-title {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .section-gap { margin-bottom: var(--space-7); }
+
+    .loading-row td {
+      text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px;
+    }
+    .empty-state {
+      text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px;
+    }
+
+    .user-badge {
+      display: flex; align-items: center; gap: var(--space-2); font-size: 13px; color: var(--text-secondary); font-weight: 600;
+    }
+    .user-badge__avatar {
+      width: 32px; height: 32px; border-radius: 999px; background: var(--vcl-primary); color: var(--text-on-dark);
+      display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 1200px) {
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      .topbar__inner, .page-container { padding-left: var(--space-4); padding-right: var(--space-4); }
+      .grid--2, .grid--3, .kpi-grid { grid-template-columns: 1fr; }
+      .nav { width: 100%; }
+    }
+    @media (max-width: 640px) {
+      h1 { font-size: 26px; }
+      h2 { font-size: 20px; }
+      h3 { font-size: 17px; }
+      .topbar__inner {
+        min-height: auto; padding-top: 12px; padding-bottom: 12px; align-items: flex-start; flex-direction: column;
+      }
+      .page-container { padding-top: var(--space-6); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+
+    <!-- ── Top Bar ── -->
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand">
+          <div class="brand__mark">VCL</div>
+          <div class="brand__text">
+            <span class="brand__name">VCL Sales</span>
+            <span class="brand__sub">Management</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <a class="nav__link" href="/sales-dashboard">Sales Invoice</a>
+          <a class="nav__link" href="/sales-collections">Collections</a>
+          <a class="nav__link" href="/sales-discrepancy">Discrepancy Report</a>
+          <a class="nav__link is-active" href="/sales-manager">Management</a>
+          <a class="nav__link" href="/app" style="margin-left:auto;border:1px solid var(--border-strong);">Desk</a>
+        </nav>
+        <div class="user-badge">
+          <div class="user-badge__avatar" id="user-initials">--</div>
+          <span id="user-display-name">{{ user_name }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Main Content ── -->
+    <div class="page-container">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header__meta">
+          <span class="eyebrow">Management Dashboard</span>
+          <h1>Team Overview</h1>
+          <p class="type-small" style="margin:0;">Role: {{ user_role }}</p>
+        </div>
+        <div class="inline-filters" style="align-items:flex-end;">
+          <div class="field">
+            <label for="filter-territory">Territory</label>
+            <select id="filter-territory">
+              <option value="">All Territories</option>
+            </select>
+          </div>
+          <button class="btn btn--primary" id="btn-refresh" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <!-- ── Pipeline Summary KPIs ── -->
+      <div class="section-gap">
+        <div class="section-title">
+          <h2>Pipeline Summary</h2>
+        </div>
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+          <div class="kpi-card">
+            <div class="kpi-card__label">Open Opportunities</div>
+            <div class="kpi-card__value" id="kpi-opp-value">--</div>
+            <div class="kpi-card__meta" id="kpi-opp-count">-- opportunities</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Open Quotations</div>
+            <div class="kpi-card__value" id="kpi-quot-value">--</div>
+            <div class="kpi-card__meta" id="kpi-quot-count">-- quotations</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Open Sales Orders</div>
+            <div class="kpi-card__value" id="kpi-order-value">--</div>
+            <div class="kpi-card__meta" id="kpi-order-count">-- orders</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Rep Performance ── -->
+      <div class="section-gap">
+        <div class="section-title">
+          <h2>Rep Performance</h2>
+          <span class="type-small">MTD figures for current month</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Sales Rep</th>
+                <th class="text-right">Sales MTD</th>
+                <th class="text-right">Collections MTD</th>
+                <th class="text-right">Open Quotes</th>
+                <th class="text-right">Overdue Value</th>
+                <th class="text-right">Overdue Customers</th>
+              </tr>
+            </thead>
+            <tbody id="rep-perf-body">
+              <tr class="loading-row"><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Team Collection Risk ── -->
+      <div class="section-gap">
+        <div class="section-title">
+          <h2>Team Collection Risk</h2>
+        </div>
+        <div class="grid grid--2">
+          <!-- Overdue by Rep -->
+          <div class="card">
+            <div class="card__header">
+              <h3>Overdue by Rep</h3>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sales Rep</th>
+                    <th class="text-right">Overdue Amount</th>
+                    <th class="text-right">Customers</th>
+                  </tr>
+                </thead>
+                <tbody id="risk-rep-body">
+                  <tr class="loading-row"><td colspan="3">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Top Overdue Customers -->
+          <div class="card">
+            <div class="card__header">
+              <h3>Top Overdue Customers</h3>
+            </div>
+            <div style="overflow-x:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Rep</th>
+                    <th class="text-right">Overdue</th>
+                    <th class="text-right">Oldest (days)</th>
+                  </tr>
+                </thead>
+                <tbody id="risk-cust-body">
+                  <tr class="loading-row"><td colspan="4">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Key Sales Exceptions ── -->
+      <div class="section-gap">
+        <div class="section-title">
+          <h2>Key Sales Exceptions</h2>
+          <span class="type-small">Items requiring management attention</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Urgency</th>
+                <th>Exception Type</th>
+                <th>Customer</th>
+                <th>Document</th>
+                <th>Rep</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Age (days)</th>
+              </tr>
+            </thead>
+            <tbody id="exceptions-body">
+              <tr class="loading-row"><td colspan="7">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-container -->
+  </div><!-- /page-shell -->
+
+  <script>
+    (function () {
+      "use strict";
+
+      var API_BASE = "/api/method/vcl_sales_dashboard.api.management_dashboard";
+
+      // ── Helpers ──
+
+      function formatKES(val) {
+        val = parseFloat(val) || 0;
+        if (val >= 1000000) return "KES " + (val / 1000000).toFixed(1) + "M";
+        if (val >= 1000) return "KES " + (val / 1000).toFixed(0) + "K";
+        return "KES " + val.toFixed(0);
+      }
+
+      function formatKESFull(val) {
+        val = parseFloat(val) || 0;
+        return "KES " + val.toLocaleString("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+
+      function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = (val !== null && val !== undefined) ? val : "--";
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        var div = document.createElement("div");
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      // ── Fetch helper ──
+      async function apiFetch(endpoint, params) {
+        var url = new URL(API_BASE + "." + endpoint, window.location.origin);
+        if (params) {
+          Object.keys(params).forEach(function (k) {
+            if (params[k] !== "" && params[k] !== null && params[k] !== undefined) {
+              url.searchParams.set(k, typeof params[k] === "object" ? JSON.stringify(params[k]) : params[k]);
+            }
+          });
+        }
+        try {
+          var resp = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Accept": "application/json",
+              "X-Frappe-CSRF-Token": (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || ""
+            },
+            credentials: "same-origin"
+          });
+          if (!resp.ok) {
+            console.error(endpoint + " returned " + resp.status);
+            return null;
+          }
+          var json = await resp.json();
+          var msg = json.message || json;
+          if (msg.status === "error") {
+            console.error(endpoint + ": " + (msg.message || "unknown error"));
+            return null;
+          }
+          return msg.data || msg;
+        } catch (err) {
+          console.error(endpoint + " fetch failed: " + err.message);
+          return null;
+        }
+      }
+
+      // ── Get territory filter ──
+      function getFilters() {
+        var territory = (document.getElementById("filter-territory") || {}).value || "";
+        if (!territory) return null;
+        return { territory: territory };
+      }
+
+      // ── Load territories into the dropdown ──
+      async function loadTerritories() {
+        try {
+          var url = "/api/resource/Territory?filters=" + encodeURIComponent(JSON.stringify([["is_group", "=", 0]])) + "&fields=" + encodeURIComponent(JSON.stringify(["name"])) + "&limit_page_length=0&order_by=name+asc";
+          var resp = await fetch(url, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            credentials: "same-origin"
+          });
+          if (!resp.ok) return;
+          var json = await resp.json();
+          var sel = document.getElementById("filter-territory");
+          if (!sel || !json.data) return;
+          json.data.forEach(function (t) {
+            var opt = document.createElement("option");
+            opt.value = t.name;
+            opt.textContent = t.name;
+            sel.appendChild(opt);
+          });
+        } catch (e) {
+          console.error("Failed to load territories: " + e.message);
+        }
+      }
+
+      // ── Pipeline Summary ──
+      async function loadPipeline() {
+        var data = await apiFetch("get_pipeline_summary", { filters: getFilters() });
+        if (!data) {
+          setText("kpi-opp-value", "--");
+          setText("kpi-quot-value", "--");
+          setText("kpi-order-value", "--");
+          return;
+        }
+        var opp = data.opportunities || {};
+        var quot = data.quotations || {};
+        var ord = data.orders || {};
+
+        setText("kpi-opp-value", formatKES(opp.value || 0));
+        setText("kpi-opp-count", (opp.count || 0) + " opportunities");
+        setText("kpi-quot-value", formatKES(quot.value || 0));
+        setText("kpi-quot-count", (quot.count || 0) + " quotations");
+        setText("kpi-order-value", formatKES(ord.value || 0));
+        setText("kpi-order-count", (ord.count || 0) + " orders");
+      }
+
+      // ── Rep Performance Table ──
+      async function loadRepPerformance() {
+        var tbody = document.getElementById("rep-perf-body");
+        if (!tbody) return;
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="6">Loading...</td></tr>';
+
+        var data = await apiFetch("get_rep_performance", { filters: getFilters() });
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No rep data available</td></tr>';
+          return;
+        }
+
+        var html = "";
+        data.forEach(function (rep) {
+          html += "<tr>";
+          html += "<td>" + escapeHtml(rep.sales_rep_name || rep.sales_rep || "Unknown") + "</td>";
+          html += '<td class="text-right font-semibold">' + formatKESFull(rep.sales_mtd) + "</td>";
+          html += '<td class="text-right">' + formatKESFull(rep.collections_mtd) + "</td>";
+          html += '<td class="text-right">' + formatKESFull(rep.open_quotes_value) + "</td>";
+          var overdueClass = (rep.overdue_value > 0) ? ' style="color:var(--danger);font-weight:700;"' : "";
+          html += '<td class="text-right"' + overdueClass + ">" + formatKESFull(rep.overdue_value) + "</td>";
+          html += '<td class="text-right">' + (rep.overdue_customers || 0) + "</td>";
+          html += "</tr>";
+        });
+        tbody.innerHTML = html;
+      }
+
+      // ── Team Collection Risk ──
+      async function loadCollectionRisk() {
+        var repBody = document.getElementById("risk-rep-body");
+        var custBody = document.getElementById("risk-cust-body");
+        if (repBody) repBody.innerHTML = '<tr class="loading-row"><td colspan="3">Loading...</td></tr>';
+        if (custBody) custBody.innerHTML = '<tr class="loading-row"><td colspan="4">Loading...</td></tr>';
+
+        var data = await apiFetch("get_team_collection_risk", { filters: getFilters() });
+        if (!data) {
+          if (repBody) repBody.innerHTML = '<tr><td colspan="3" class="empty-state">No data</td></tr>';
+          if (custBody) custBody.innerHTML = '<tr><td colspan="4" class="empty-state">No data</td></tr>';
+          return;
+        }
+
+        // Overdue by rep
+        var reps = data.overdue_by_rep || [];
+        if (reps.length === 0) {
+          if (repBody) repBody.innerHTML = '<tr><td colspan="3" class="empty-state">No overdue accounts</td></tr>';
+        } else {
+          var rhtml = "";
+          reps.forEach(function (r) {
+            rhtml += "<tr>";
+            rhtml += "<td>" + escapeHtml(r.sales_rep_name || r.sales_rep || "Unknown") + "</td>";
+            rhtml += '<td class="text-right" style="color:var(--danger);font-weight:700;">' + formatKESFull(r.overdue_amount) + "</td>";
+            rhtml += '<td class="text-right">' + (r.customer_count || 0) + "</td>";
+            rhtml += "</tr>";
+          });
+          if (repBody) repBody.innerHTML = rhtml;
+        }
+
+        // Top overdue customers
+        var custs = data.top_overdue_customers || [];
+        if (custs.length === 0) {
+          if (custBody) custBody.innerHTML = '<tr><td colspan="4" class="empty-state">No overdue customers</td></tr>';
+        } else {
+          var chtml = "";
+          custs.forEach(function (c) {
+            chtml += "<tr>";
+            chtml += "<td>" + escapeHtml(c.customer_name || c.customer || "") + "</td>";
+            chtml += "<td>" + escapeHtml(c.sales_rep_name || c.sales_rep || "") + "</td>";
+            chtml += '<td class="text-right" style="color:var(--danger);font-weight:700;">' + formatKESFull(c.overdue_amount) + "</td>";
+            chtml += '<td class="text-right">' + (c.oldest_age || 0) + "</td>";
+            chtml += "</tr>";
+          });
+          if (custBody) custBody.innerHTML = chtml;
+        }
+      }
+
+      // ── Key Sales Exceptions ──
+      async function loadExceptions() {
+        var tbody = document.getElementById("exceptions-body");
+        if (!tbody) return;
+        tbody.innerHTML = '<tr class="loading-row"><td colspan="7">Loading...</td></tr>';
+
+        var data = await apiFetch("get_key_sales_exceptions", { filters: getFilters() });
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No exceptions found -- all clear</td></tr>';
+          return;
+        }
+
+        var html = "";
+        data.forEach(function (ex) {
+          var urgencyClass = "pill--open";
+          var urgency = (ex.urgency || "Medium").toLowerCase();
+          if (urgency === "critical") urgencyClass = "pill--critical";
+          else if (urgency === "high") urgencyClass = "pill--high";
+
+          var docLink = "";
+          if (ex.docname) {
+            var doctype = "";
+            var etype = (ex.exception_type || "").toLowerCase();
+            if (etype.indexOf("quote") >= 0) doctype = "Quotation";
+            else if (etype.indexOf("order") >= 0) doctype = "Sales Order";
+            else if (etype.indexOf("deliver") >= 0) doctype = "Delivery Note";
+            else if (etype.indexOf("overdue") >= 0) doctype = "Sales Invoice";
+
+            if (doctype) {
+              docLink = '<a href="/app/' + doctype.toLowerCase().replace(/ /g, "-") + "/" + encodeURIComponent(ex.docname) + '">' + escapeHtml(ex.docname) + "</a>";
+            } else {
+              docLink = escapeHtml(ex.docname);
+            }
+          } else {
+            docLink = "--";
+          }
+
+          html += "<tr>";
+          html += '<td><span class="pill ' + urgencyClass + '">' + escapeHtml(ex.urgency || "Medium") + "</span></td>";
+          html += "<td>" + escapeHtml(ex.exception_type || "") + "</td>";
+          html += "<td>" + escapeHtml(ex.customer_name || ex.customer || "") + "</td>";
+          html += "<td>" + docLink + "</td>";
+          html += "<td>" + escapeHtml(ex.sales_rep_name || ex.sales_rep || "") + "</td>";
+          html += '<td class="text-right font-bold">' + formatKESFull(ex.amount) + "</td>";
+          html += '<td class="text-right">' + (ex.age_days || 0) + "</td>";
+          html += "</tr>";
+        });
+        tbody.innerHTML = html;
+      }
+
+      // ── Set user initials ──
+      function setUserInitials() {
+        var nameEl = document.getElementById("user-display-name");
+        var avatarEl = document.getElementById("user-initials");
+        if (!nameEl || !avatarEl) return;
+        var name = nameEl.textContent.trim();
+        if (!name) return;
+        var parts = name.split(" ");
+        var initials = parts[0].charAt(0).toUpperCase();
+        if (parts.length > 1) initials += parts[parts.length - 1].charAt(0).toUpperCase();
+        avatarEl.textContent = initials;
+      }
+
+      // ── Refresh all ──
+      function refreshAll() {
+        loadPipeline();
+        loadRepPerformance();
+        loadCollectionRisk();
+        loadExceptions();
+      }
+
+      // ── Init ──
+      document.addEventListener("DOMContentLoaded", function () {
+        setUserInitials();
+        loadTerritories();
+        refreshAll();
+
+        var btnRefresh = document.getElementById("btn-refresh");
+        if (btnRefresh) {
+          btnRefresh.addEventListener("click", refreshAll);
+        }
+
+        var territoryFilter = document.getElementById("filter-territory");
+        if (territoryFilter) {
+          territoryFilter.addEventListener("change", refreshAll);
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>

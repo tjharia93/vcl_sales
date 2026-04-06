@@ -1,2 +1,525 @@
-<!-- Phase 2: Customer 360 frontend — to be built -->
-<p>Customer 360 loading...</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer 360 - {{ customer_name }}</title>
+  <style>
+    :root {
+      --vcl-primary: #2B3990;
+      --vcl-primary-dark: #1f2a6d;
+      --vcl-secondary: #ED1C24;
+      --bg-page: #f5f6f8;
+      --bg-surface: #ffffff;
+      --bg-soft: #f0f2f5;
+      --border-color: #d9dee7;
+      --text-primary: #1f2937;
+      --text-secondary: #5b6472;
+      --text-muted: #7a8596;
+      --text-on-dark: #ffffff;
+      --success: #167c45;
+      --success-bg: #eaf7ef;
+      --warning: #a16207;
+      --warning-bg: #fff7e6;
+      --danger: #b42318;
+      --danger-bg: #fdecec;
+      --info: #175cd3;
+      --info-bg: #edf4ff;
+      --font-dashboard: Inter, "Segoe UI", Arial, sans-serif;
+      --font-data: "Segoe UI", Tahoma, Arial, sans-serif;
+      --shadow-card: 0 1px 3px rgba(16, 24, 40, 0.08);
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-7: 32px;
+      --container-max: 1440px;
+      --transition-fast: 0.15s ease;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: var(--font-dashboard); background: var(--bg-page); color: var(--text-primary); line-height: 1.45; }
+    a { color: var(--vcl-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .topbar { background: var(--bg-surface); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 20; }
+    .topbar__inner { max-width: var(--container-max); margin: 0 auto; padding: 0 var(--space-6); min-height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar__title { font-size: 18px; font-weight: 700; color: var(--vcl-primary); }
+    .topbar__nav a { margin-left: var(--space-4); font-size: 14px; color: var(--text-secondary); }
+
+    .page-container { max-width: var(--container-max); margin: 0 auto; padding: var(--space-6); }
+
+    .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5); margin-bottom: var(--space-5); }
+    .card__title { font-size: 15px; font-weight: 600; margin: 0 0 var(--space-4); color: var(--text-primary); }
+
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5); }
+    .kpi-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); text-align: center; box-shadow: var(--shadow-card); }
+    .kpi-card .kpi-val { font-size: 26px; font-weight: 700; color: var(--vcl-primary); }
+    .kpi-card .kpi-lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-card.danger .kpi-val { color: var(--danger); }
+    .kpi-card.warning .kpi-val { color: var(--warning); }
+    .kpi-card.success .kpi-val { color: var(--success); }
+
+    /* Customer header */
+    .customer-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+    .customer-header h1 { font-size: 24px; font-weight: 700; margin: 0; color: var(--text-primary); }
+    .customer-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+    .meta-item { font-size: 13px; color: var(--text-secondary); }
+    .meta-item strong { color: var(--text-primary); }
+
+    /* Ageing buckets */
+    .ageing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+    .ageing-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-4); text-align: center; box-shadow: var(--shadow-card); }
+    .ageing-card .age-val { font-size: 20px; font-weight: 700; }
+    .ageing-card .age-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .ageing-card .age-cnt { font-size: 11px; color: var(--text-muted); }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-data); }
+    .data-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; white-space: nowrap; }
+    .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+    .data-table tr:hover { background: var(--bg-soft); }
+    .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .data-table .nowrap { white-space: nowrap; }
+
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-overdue { background: var(--danger-bg); color: var(--danger); }
+    .badge-paid { background: var(--success-bg); color: var(--success); }
+    .badge-open { background: var(--info-bg); color: var(--info); }
+    .badge-partial { background: var(--warning-bg); color: var(--warning); }
+
+    /* Timeline */
+    .timeline { list-style: none; padding: 0; margin: 0; }
+    .timeline li { position: relative; padding: 0 0 var(--space-4) 24px; border-left: 2px solid var(--border-color); }
+    .timeline li:last-child { border-left-color: transparent; }
+    .timeline li::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--vcl-primary); }
+    .timeline .tl-date { font-size: 11px; color: var(--text-muted); }
+    .timeline .tl-label { font-size: 13px; font-weight: 600; }
+    .timeline .tl-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Collections status badges */
+    .st-not-contacted { background: var(--bg-soft); color: var(--text-muted); }
+    .st-contacted { background: var(--info-bg); color: var(--info); }
+    .st-promise-to-pay { background: var(--success-bg); color: var(--success); }
+    .st-part-payment-expected { background: #e8f5e9; color: #2e7d32; }
+    .st-in-dispute { background: var(--warning-bg); color: var(--warning); }
+    .st-waiting-for-statement, .st-waiting-for-credit-note { background: #fff3e0; color: #e65100; }
+    .st-escalated { background: var(--danger-bg); color: var(--danger); }
+    .st-cleared { background: var(--success-bg); color: var(--success); }
+
+    .hidden { display: none; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--vcl-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: 13px; }
+
+    .back-link { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-4); display: inline-block; }
+    .back-link:hover { color: var(--vcl-primary); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+    @media (max-width: 768px) {
+      .two-col { grid-template-columns: 1fr; }
+      .ageing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar__inner">
+    <div class="topbar__title">Customer 360</div>
+    <nav class="topbar__nav">
+      <a href="/sales-dashboard">Sales Invoice</a>
+      <a href="/sales-collections">Collections</a>
+      <a href="/sales-discrepancy">Discrepancy Report</a>
+      <a href="/app">Desk</a>
+    </nav>
+  </div>
+</div>
+
+<div class="page-container">
+  <a class="back-link" href="/sales-dashboard">&larr; Back to Dashboard</a>
+
+  <!-- Customer Header -->
+  <div class="customer-header">
+    <h1 id="hdr-name" data-customer="{{ customer }}">{{ customer_name }}</h1>
+  </div>
+  <div class="customer-meta" id="hdr-meta" style="margin-bottom:var(--space-5);">
+    <span class="meta-item"><strong>Rep:</strong> <span id="hdr-rep">--</span></span>
+    <span class="meta-item"><strong>Territory:</strong> <span id="hdr-territory">--</span></span>
+    <span class="meta-item"><strong>Group:</strong> <span id="hdr-group">--</span></span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card" id="kpi-outstanding">
+      <div class="kpi-val" id="kpi-outstanding-val">--</div>
+      <div class="kpi-lbl">Outstanding Balance</div>
+    </div>
+    <div class="kpi-card" id="kpi-overdue">
+      <div class="kpi-val" id="kpi-overdue-val">--</div>
+      <div class="kpi-lbl">Overdue Amount</div>
+    </div>
+    <div class="kpi-card" id="kpi-oldest">
+      <div class="kpi-val" id="kpi-oldest-val">--</div>
+      <div class="kpi-lbl">Oldest Invoice (days)</div>
+    </div>
+    <div class="kpi-card" id="kpi-lastpay">
+      <div class="kpi-val" id="kpi-lastpay-val">--</div>
+      <div class="kpi-lbl">Last Payment</div>
+    </div>
+    <div class="kpi-card" id="kpi-orders">
+      <div class="kpi-val" id="kpi-orders-val">--</div>
+      <div class="kpi-lbl">Open Orders</div>
+    </div>
+    <div class="kpi-card" id="kpi-quotes">
+      <div class="kpi-val" id="kpi-quotes-val">--</div>
+      <div class="kpi-lbl">Open Quotations</div>
+    </div>
+  </div>
+
+  <!-- Ageing Buckets -->
+  <div class="card" id="ageing-section">
+    <div class="card__title">Ageing Buckets</div>
+    <div class="ageing-grid" id="ageing-grid">
+      <div class="ageing-card">
+        <div class="age-val" id="age-0-30" style="color:var(--warning);">--</div>
+        <div class="age-lbl">0 - 30 days</div>
+        <div class="age-cnt" id="age-0-30-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-31-60" style="color:var(--warning);">--</div>
+        <div class="age-lbl">31 - 60 days</div>
+        <div class="age-cnt" id="age-31-60-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-61-90" style="color:var(--danger);">--</div>
+        <div class="age-lbl">61 - 90 days</div>
+        <div class="age-cnt" id="age-61-90-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-90-plus" style="color:var(--danger);">--</div>
+        <div class="age-lbl">90+ days</div>
+        <div class="age-cnt" id="age-90-plus-cnt"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Invoices -->
+  <div class="card">
+    <div class="card__title">Recent Invoices</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="invoices-table">
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Date</th>
+            <th>Due Date</th>
+            <th class="num">Total</th>
+            <th class="num">Outstanding</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="invoices-body">
+          <tr><td colspan="6" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Two column: Payments + Open Documents -->
+  <div class="two-col">
+    <!-- Recent Payments -->
+    <div class="card">
+      <div class="card__title">Recent Payments</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="payments-table">
+          <thead>
+            <tr>
+              <th>Payment</th>
+              <th>Date</th>
+              <th class="num">Amount</th>
+              <th>Mode</th>
+              <th>Reference</th>
+            </tr>
+          </thead>
+          <tbody id="payments-body">
+            <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Open Documents -->
+    <div class="card">
+      <div class="card__title">Open Documents</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="docs-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Document</th>
+              <th>Date</th>
+              <th class="num">Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="docs-body">
+            <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collections Follow-up History -->
+  <div class="card" id="collections-section">
+    <div class="card__title">Collections Follow-up History</div>
+    <div id="collections-content">
+      <div class="empty-state"><span class="spinner"></span> Loading...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  // -- Config from Jinja context (safe: only in HTML, never in JS comparisons) --
+  var CUSTOMER_ID = document.getElementById('hdr-name').getAttribute('data-customer');
+
+  // -- CSRF --
+  function getCsrfToken() {
+    var token = window.vcl_csrf_token
+      || (typeof frappe !== 'undefined' && frappe.csrf_token)
+      || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1]
+      || '';
+    return token;
+  }
+
+  async function fetchCsrf() {
+    try {
+      var res = await fetch('/api/method/vcl_sales_dashboard.api.collections_utils.get_csrf_token', { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      var json = await res.json();
+      if (json.message) { window.vcl_csrf_token = json.message; }
+    } catch (e) {}
+  }
+
+  function api(method, args) {
+    return fetch('/api/method/' + method, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
+      credentials: 'same-origin',
+      body: JSON.stringify(args)
+    }).then(function(r) { return r.json(); }).then(function(r) { return r.message || r; });
+  }
+
+  function fmtC(v) {
+    return parseFloat(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtDate(d) {
+    if (!d) return '--';
+    var dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString('en-ZA');
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function makeLink(doctype, name) {
+    var dt = (doctype || '').replace(/\s+/g, '-').toLowerCase();
+    return '/app/' + dt + '/' + encodeURIComponent(name);
+  }
+
+  // -- Load customer snapshot (header + KPIs) --
+  async function loadSnapshot() {
+    var res = await api('vcl_sales_dashboard.api.sales_dashboard.get_customer_snapshot', { customer: CUSTOMER_ID });
+    if (res.status !== 'ok') return;
+    var d = res.data;
+
+    document.getElementById('hdr-rep').textContent = d.sales_person || '--';
+    document.getElementById('hdr-territory').textContent = d.territory || '--';
+    document.getElementById('hdr-group').textContent = d.customer_group || '--';
+
+    document.getElementById('kpi-outstanding-val').textContent = fmtC(d.outstanding_amount);
+    if (d.outstanding_amount > 0) document.getElementById('kpi-outstanding').classList.add('warning');
+
+    document.getElementById('kpi-overdue-val').textContent = fmtC(d.overdue_amount);
+    if (d.overdue_amount > 0) document.getElementById('kpi-overdue').classList.add('danger');
+
+    document.getElementById('kpi-oldest-val').textContent = d.oldest_invoice_age_days || '0';
+    if (d.oldest_invoice_age_days > 60) document.getElementById('kpi-oldest').classList.add('danger');
+
+    document.getElementById('kpi-lastpay-val').textContent = fmtDate(d.last_payment_date);
+    document.getElementById('kpi-orders-val').textContent = d.open_orders_count || '0';
+    document.getElementById('kpi-quotes-val').textContent = d.open_quotations_count || '0';
+  }
+
+  // -- Load ageing buckets --
+  async function loadAgeing() {
+    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_collections_ageing', { customer: CUSTOMER_ID });
+    if (res.status !== 'ok') {
+      document.getElementById('ageing-section').classList.add('hidden');
+      return;
+    }
+    var d = res.data;
+    var hasData = false;
+    var buckets = [
+      { id: '0-30', key: 'bucket_0_30' },
+      { id: '31-60', key: 'bucket_31_60' },
+      { id: '61-90', key: 'bucket_61_90' },
+      { id: '90-plus', key: 'bucket_90_plus' }
+    ];
+    for (var i = 0; i < buckets.length; i++) {
+      var b = buckets[i];
+      var val = d[b.key] ? d[b.key].value : 0;
+      var cnt = d[b.key] ? d[b.key].count : 0;
+      if (val > 0) hasData = true;
+      document.getElementById('age-' + b.id).textContent = fmtC(val);
+      document.getElementById('age-' + b.id + '-cnt').textContent = cnt + ' invoice' + (cnt !== 1 ? 's' : '');
+    }
+    if (!hasData) {
+      document.getElementById('ageing-section').classList.add('hidden');
+    }
+  }
+
+  // -- Load recent invoices --
+  async function loadInvoices() {
+    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_recent_invoices', { customer: CUSTOMER_ID });
+    var tbody = document.getElementById('invoices-body');
+    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No invoices found</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < res.data.length; i++) {
+      var inv = res.data[i];
+      var overdueClass = inv.is_overdue ? ' badge-overdue' : '';
+      var statusText = inv.status || '';
+      if (inv.is_overdue) statusText = 'Overdue';
+      else if (inv.outstanding_amount <= 0) statusText = 'Paid';
+
+      var badgeClass = 'badge-open';
+      if (inv.is_overdue) badgeClass = 'badge-overdue';
+      else if (inv.outstanding_amount <= 0) badgeClass = 'badge-paid';
+      else if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total) badgeClass = 'badge-partial';
+
+      html += '<tr>'
+        + '<td class="nowrap"><a href="' + makeLink('Sales Invoice', inv.name) + '">' + escHtml(inv.name) + '</a></td>'
+        + '<td class="nowrap">' + fmtDate(inv.posting_date) + '</td>'
+        + '<td class="nowrap">' + fmtDate(inv.due_date) + '</td>'
+        + '<td class="num">' + fmtC(inv.grand_total) + '</td>'
+        + '<td class="num">' + fmtC(inv.outstanding_amount) + '</td>'
+        + '<td><span class="status-badge ' + badgeClass + '">' + escHtml(statusText) + '</span></td>'
+        + '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // -- Load recent payments --
+  async function loadPayments() {
+    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_recent_payments', { customer: CUSTOMER_ID });
+    var tbody = document.getElementById('payments-body');
+    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No payments found</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < res.data.length; i++) {
+      var p = res.data[i];
+      html += '<tr>'
+        + '<td class="nowrap"><a href="' + makeLink('Payment Entry', p.name) + '">' + escHtml(p.name) + '</a></td>'
+        + '<td class="nowrap">' + fmtDate(p.posting_date) + '</td>'
+        + '<td class="num">' + fmtC(p.paid_amount) + '</td>'
+        + '<td>' + escHtml(p.mode_of_payment) + '</td>'
+        + '<td>' + escHtml(p.reference_no) + '</td>'
+        + '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // -- Load open documents --
+  async function loadOpenDocs() {
+    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_open_documents', { customer: CUSTOMER_ID });
+    var tbody = document.getElementById('docs-body');
+    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No open documents</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < res.data.length; i++) {
+      var doc = res.data[i];
+      html += '<tr>'
+        + '<td>' + escHtml(doc.doctype) + '</td>'
+        + '<td class="nowrap"><a href="' + makeLink(doc.doctype, doc.name) + '">' + escHtml(doc.name) + '</a></td>'
+        + '<td class="nowrap">' + fmtDate(doc.date) + '</td>'
+        + '<td class="num">' + fmtC(doc.grand_total) + '</td>'
+        + '<td>' + escHtml(doc.status) + '</td>'
+        + '</tr>';
+    }
+    tbody.innerHTML = html;
+  }
+
+  // -- Load collections follow-up history --
+  async function loadCollectionsHistory() {
+    var container = document.getElementById('collections-content');
+    try {
+      var res = await api('vcl_sales_dashboard.api.collections_dashboard.get_customer_month_history', { customer: CUSTOMER_ID });
+      if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No collections history available for this customer.</div>';
+        return;
+      }
+
+      var html = '<table class="data-table"><thead><tr>'
+        + '<th>Period</th><th class="num">Total Balance</th><th class="num">Overdue</th>'
+        + '<th class="num">Overdue 30+</th><th class="num">Due This Month</th><th>Status</th>'
+        + '</tr></thead><tbody>';
+
+      for (var i = 0; i < res.data.length; i++) {
+        var s = res.data[i];
+        var statusLabel = s.latest_follow_up_status || 'Not Contacted';
+        var statusCls = 'st-' + statusLabel.toLowerCase().replace(/\s+/g, '-');
+
+        html += '<tr>'
+          + '<td class="nowrap">' + escHtml(s.snapshot_label || fmtDate(s.period_end)) + '</td>'
+          + '<td class="num">' + fmtC(s.total_balance) + '</td>'
+          + '<td class="num">' + fmtC(s.overdue_amount) + '</td>'
+          + '<td class="num">' + fmtC(s.overdue_30_amount) + '</td>'
+          + '<td class="num">' + fmtC(s.due_current_month) + '</td>'
+          + '<td><span class="status-badge ' + statusCls + '">' + escHtml(statusLabel) + '</span></td>'
+          + '</tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = '<div class="empty-state">No collections history available for this customer.</div>';
+    }
+  }
+
+  // -- Init --
+  async function init() {
+    await fetchCsrf();
+    loadSnapshot();
+    loadAgeing();
+    loadInvoices();
+    loadPayments();
+    loadOpenDocs();
+    loadCollectionsHistory();
+  }
+
+  // Set data-customer via Jinja in a safe way (HTML attribute, not inside JS)
+  init();
+})();
+</script>
+
+
+</body>
+</html>
