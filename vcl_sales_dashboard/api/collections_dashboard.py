@@ -321,6 +321,39 @@ def get_available_periods():
 
 
 @frappe.whitelist()
+def get_terms_diagnostics(period_end=None):
+    """Diagnostic: show terms resolution stats for the selected period."""
+    try:
+        conditions = ["sub.status = 'Processed'"]
+        values = {}
+        if period_end:
+            conditions.append("cs.period_end = %(period_end)s")
+            values["period_end"] = period_end
+        where = "WHERE " + " AND ".join(conditions)
+
+        result = frappe.db.sql(f"""
+            SELECT
+                cs.terms_match_status,
+                cs.credit_days,
+                COUNT(*) as cnt,
+                cs.terms_from_file as sample_file_terms,
+                cs.credit_terms_from_customer as sample_erp_terms,
+                cs.terms_used_for_calculation as sample_used
+            FROM `tabCollections Customer Snapshot` cs
+            INNER JOIN `tabCollections Submission` sub ON cs.collections_submission = sub.name
+            {where}
+            GROUP BY cs.terms_match_status, cs.credit_days, cs.terms_from_file,
+                     cs.credit_terms_from_customer, cs.terms_used_for_calculation
+            ORDER BY cnt DESC
+            LIMIT 20
+        """, values, as_dict=True)
+
+        return {"status": "ok", "data": result}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@frappe.whitelist()
 def get_sales_rep_options(period_end=None):
     """Return distinct assigned_sales_representative values from snapshot data."""
     try:
