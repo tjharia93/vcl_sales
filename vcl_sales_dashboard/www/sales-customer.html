@@ -54,6 +54,16 @@
     .card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5); margin-bottom: var(--space-5); }
     .card__title { font-size: 15px; font-weight: 600; margin: 0 0 var(--space-4); color: var(--text-primary); }
 
+    /* Customer header card */
+    .customer-header { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5) var(--space-6); margin-bottom: var(--space-5); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-4); }
+    .customer-header__name { font-size: 22px; font-weight: 700; color: var(--vcl-primary); margin: 0; }
+    .customer-header__meta { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+    .customer-header__meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .customer-header__meta-item .meta-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .customer-header__meta-item .meta-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .back-link { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-4); display: inline-block; }
+    .back-link:hover { color: var(--vcl-primary); }
+
     /* KPI Cards */
     .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5); }
     .kpi-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: var(--space-5); text-align: center; box-shadow: var(--shadow-card); }
@@ -62,20 +72,6 @@
     .kpi-card.danger .kpi-val { color: var(--danger); }
     .kpi-card.warning .kpi-val { color: var(--warning); }
     .kpi-card.success .kpi-val { color: var(--success); }
-
-    /* Customer header */
-    .customer-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
-    .customer-header h1 { font-size: 24px; font-weight: 700; margin: 0; color: var(--text-primary); }
-    .customer-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); }
-    .meta-item { font-size: 13px; color: var(--text-secondary); }
-    .meta-item strong { color: var(--text-primary); }
-
-    /* Ageing buckets */
-    .ageing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
-    .ageing-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-4); text-align: center; box-shadow: var(--shadow-card); }
-    .ageing-card .age-val { font-size: 20px; font-weight: 700; }
-    .ageing-card .age-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .ageing-card .age-cnt { font-size: 11px; color: var(--text-muted); }
 
     /* Table */
     .data-table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-data); }
@@ -90,44 +86,32 @@
     .badge-paid { background: var(--success-bg); color: var(--success); }
     .badge-open { background: var(--info-bg); color: var(--info); }
     .badge-partial { background: var(--warning-bg); color: var(--warning); }
+    .badge-cancelled { background: var(--bg-soft); color: var(--text-muted); }
+    .badge-submitted { background: var(--info-bg); color: var(--info); }
 
-    /* Timeline */
-    .timeline { list-style: none; padding: 0; margin: 0; }
-    .timeline li { position: relative; padding: 0 0 var(--space-4) 24px; border-left: 2px solid var(--border-color); }
-    .timeline li:last-child { border-left-color: transparent; }
-    .timeline li::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--vcl-primary); }
-    .timeline .tl-date { font-size: 11px; color: var(--text-muted); }
-    .timeline .tl-label { font-size: 13px; font-weight: 600; }
-    .timeline .tl-detail { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    /* Ageing buckets */
+    .ageing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); }
+    .ageing-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: var(--space-4); text-align: center; box-shadow: var(--shadow-card); }
+    .ageing-card .age-val { font-size: 20px; font-weight: 700; }
+    .ageing-card .age-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .ageing-card .age-cnt { font-size: 11px; color: var(--text-muted); }
 
-    /* Collections status badges */
-    .st-not-contacted { background: var(--bg-soft); color: var(--text-muted); }
-    .st-contacted { background: var(--info-bg); color: var(--info); }
-    .st-promise-to-pay { background: var(--success-bg); color: var(--success); }
-    .st-part-payment-expected { background: #e8f5e9; color: #2e7d32; }
-    .st-in-dispute { background: var(--warning-bg); color: var(--warning); }
-    .st-waiting-for-statement, .st-waiting-for-credit-note { background: #fff3e0; color: #e65100; }
-    .st-escalated { background: var(--danger-bg); color: var(--danger); }
-    .st-cleared { background: var(--success-bg); color: var(--success); }
-
-    .hidden { display: none; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--vcl-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .empty-state { text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: 13px; }
-
-    .back-link { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-4); display: inline-block; }
-    .back-link:hover { color: var(--vcl-primary); }
-
+    /* Two-column layout */
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
     @media (max-width: 768px) {
       .two-col { grid-template-columns: 1fr; }
       .ageing-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    .hidden { display: none; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--vcl-primary); border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: var(--space-6); color: var(--text-muted); font-size: 13px; }
   </style>
 </head>
 <body>
 
+<!-- Top Navigation -->
 <div class="topbar">
   <div class="topbar__inner">
     <div class="topbar__title">Customer 360</div>
@@ -145,66 +129,59 @@
 
   <!-- Customer Header -->
   <div class="customer-header">
-    <h1 id="hdr-name" data-customer="{{ customer }}">{{ customer_name }}</h1>
-  </div>
-  <div class="customer-meta" id="hdr-meta" style="margin-bottom:var(--space-5);">
-    <span class="meta-item"><strong>Rep:</strong> <span id="hdr-rep">--</span></span>
-    <span class="meta-item"><strong>Territory:</strong> <span id="hdr-territory">--</span></span>
-    <span class="meta-item"><strong>Group:</strong> <span id="hdr-group">--</span></span>
+    <div>
+      <h1 class="customer-header__name" id="hdr-name" data-customer="{{ customer }}">{{ customer_name }}</h1>
+    </div>
+    <div class="customer-header__meta">
+      <div class="customer-header__meta-item">
+        <span class="meta-label">Assigned Rep</span>
+        <span class="meta-value" id="hdr-rep">--</span>
+      </div>
+      <div class="customer-header__meta-item">
+        <span class="meta-label">Territory</span>
+        <span class="meta-value" id="hdr-territory">--</span>
+      </div>
+      <div class="customer-header__meta-item">
+        <span class="meta-label">Customer Group</span>
+        <span class="meta-value" id="hdr-group">--</span>
+      </div>
+    </div>
   </div>
 
   <!-- KPI Cards -->
-  <div class="kpi-grid" id="kpi-grid">
-    <div class="kpi-card" id="kpi-outstanding">
+  <div class="kpi-grid">
+    <div class="kpi-card danger" id="kpi-outstanding-card">
       <div class="kpi-val" id="kpi-outstanding-val">--</div>
       <div class="kpi-lbl">Outstanding Balance</div>
     </div>
-    <div class="kpi-card" id="kpi-overdue">
-      <div class="kpi-val" id="kpi-overdue-val">--</div>
-      <div class="kpi-lbl">Overdue Amount</div>
+    <div class="kpi-card" id="kpi-invoiced-card">
+      <div class="kpi-val" id="kpi-invoiced-val">--</div>
+      <div class="kpi-lbl">Total Invoiced</div>
     </div>
-    <div class="kpi-card" id="kpi-oldest">
-      <div class="kpi-val" id="kpi-oldest-val">--</div>
-      <div class="kpi-lbl">Oldest Invoice (days)</div>
-    </div>
-    <div class="kpi-card" id="kpi-lastpay">
-      <div class="kpi-val" id="kpi-lastpay-val">--</div>
-      <div class="kpi-lbl">Last Payment</div>
-    </div>
-    <div class="kpi-card" id="kpi-orders">
-      <div class="kpi-val" id="kpi-orders-val">--</div>
-      <div class="kpi-lbl">Open Orders</div>
-    </div>
-    <div class="kpi-card" id="kpi-quotes">
-      <div class="kpi-val" id="kpi-quotes-val">--</div>
-      <div class="kpi-lbl">Open Quotations</div>
+    <div class="kpi-card success" id="kpi-paid-card">
+      <div class="kpi-val" id="kpi-paid-val">--</div>
+      <div class="kpi-lbl">Total Paid</div>
     </div>
   </div>
 
-  <!-- Ageing Buckets -->
-  <div class="card" id="ageing-section">
-    <div class="card__title">Ageing Buckets</div>
-    <div class="ageing-grid" id="ageing-grid">
-      <div class="ageing-card">
-        <div class="age-val" id="age-0-30" style="color:var(--warning);">--</div>
-        <div class="age-lbl">0 - 30 days</div>
-        <div class="age-cnt" id="age-0-30-cnt"></div>
-      </div>
-      <div class="ageing-card">
-        <div class="age-val" id="age-31-60" style="color:var(--warning);">--</div>
-        <div class="age-lbl">31 - 60 days</div>
-        <div class="age-cnt" id="age-31-60-cnt"></div>
-      </div>
-      <div class="ageing-card">
-        <div class="age-val" id="age-61-90" style="color:var(--danger);">--</div>
-        <div class="age-lbl">61 - 90 days</div>
-        <div class="age-cnt" id="age-61-90-cnt"></div>
-      </div>
-      <div class="ageing-card">
-        <div class="age-val" id="age-90-plus" style="color:var(--danger);">--</div>
-        <div class="age-lbl">90+ days</div>
-        <div class="age-cnt" id="age-90-plus-cnt"></div>
-      </div>
+  <!-- Open Documents (Quotations, Sales Orders, Delivery Notes) -->
+  <div class="card">
+    <div class="card__title">Open Documents</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="docs-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Document</th>
+            <th>Date</th>
+            <th class="num">Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="docs-body">
+          <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -230,90 +207,95 @@
     </div>
   </div>
 
-  <!-- Two column: Payments + Open Documents -->
-  <div class="two-col">
-    <!-- Recent Payments -->
-    <div class="card">
-      <div class="card__title">Recent Payments</div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="payments-table">
-          <thead>
-            <tr>
-              <th>Payment</th>
-              <th>Date</th>
-              <th class="num">Amount</th>
-              <th>Mode</th>
-              <th>Reference</th>
-            </tr>
-          </thead>
-          <tbody id="payments-body">
-            <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
+  <!-- Recent Payments -->
+  <div class="card">
+    <div class="card__title">Recent Payments</div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" id="payments-table">
+        <thead>
+          <tr>
+            <th>Payment</th>
+            <th>Date</th>
+            <th class="num">Amount</th>
+            <th>Mode</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+        <tbody id="payments-body">
+          <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <!-- Open Documents -->
-    <div class="card">
-      <div class="card__title">Open Documents</div>
-      <div style="overflow-x:auto;">
-        <table class="data-table" id="docs-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Document</th>
-              <th>Date</th>
-              <th class="num">Total</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="docs-body">
-            <tr><td colspan="5" class="empty-state"><span class="spinner"></span> Loading...</td></tr>
-          </tbody>
-        </table>
+  <!-- Ageing Buckets Breakdown -->
+  <div class="card" id="ageing-section">
+    <div class="card__title">Ageing Breakdown</div>
+    <div class="ageing-grid" id="ageing-grid">
+      <div class="ageing-card">
+        <div class="age-val" id="age-0-30" style="color:var(--warning);">--</div>
+        <div class="age-lbl">0 - 30 days</div>
+        <div class="age-cnt" id="age-0-30-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-31-60" style="color:var(--warning);">--</div>
+        <div class="age-lbl">31 - 60 days</div>
+        <div class="age-cnt" id="age-31-60-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-61-90" style="color:var(--danger);">--</div>
+        <div class="age-lbl">61 - 90 days</div>
+        <div class="age-cnt" id="age-61-90-cnt"></div>
+      </div>
+      <div class="ageing-card">
+        <div class="age-val" id="age-90-plus" style="color:var(--danger);">--</div>
+        <div class="age-lbl">90+ days</div>
+        <div class="age-cnt" id="age-90-plus-cnt"></div>
       </div>
     </div>
   </div>
 
-  <!-- Collections Follow-up History -->
-  <div class="card" id="collections-section">
-    <div class="card__title">Collections Follow-up History</div>
-    <div id="collections-content">
-      <div class="empty-state"><span class="spinner"></span> Loading...</div>
-    </div>
-  </div>
-
-</div>
+</div><!-- /page-container -->
 
 <script>
 (function() {
-  // -- Config from Jinja context (safe: only in HTML, never in JS comparisons) --
+
+  var API_BASE = "/api/method/vcl_sales_dashboard.api.customer_360";
+  var SNAP_BASE = "/api/method/vcl_sales_dashboard.api.sales_dashboard";
   var CUSTOMER_ID = document.getElementById('hdr-name').getAttribute('data-customer');
 
-  // -- CSRF --
   function getCsrfToken() {
-    var token = window.vcl_csrf_token
-      || (typeof frappe !== 'undefined' && frappe.csrf_token)
-      || (document.cookie.match(/csrf_token=([^;]+)/) || [])[1]
-      || '';
-    return token;
+    return (document.cookie.match(/csrf_token=([^;]+)/) || [])[1] || '';
   }
 
-  async function fetchCsrf() {
+  async function apiFetch(endpoint, params, base) {
+    var apiBase = base || API_BASE;
+    var url = new URL(apiBase + "." + endpoint, window.location.origin);
+    if (params) {
+      Object.keys(params).forEach(function(k) {
+        if (params[k] !== "" && params[k] !== null && params[k] !== undefined) {
+          url.searchParams.set(k, typeof params[k] === "object" ? JSON.stringify(params[k]) : params[k]);
+        }
+      });
+    }
     try {
-      var res = await fetch('/api/method/vcl_sales_dashboard.api.collections_utils.get_csrf_token', { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
-      var json = await res.json();
-      if (json.message) { window.vcl_csrf_token = json.message; }
-    } catch (e) {}
-  }
-
-  function api(method, args) {
-    return fetch('/api/method/' + method, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': getCsrfToken() },
-      credentials: 'same-origin',
-      body: JSON.stringify(args)
-    }).then(function(r) { return r.json(); }).then(function(r) { return r.message || r; });
+      var resp = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "X-Frappe-CSRF-Token": getCsrfToken()
+        },
+        credentials: "same-origin"
+      });
+      if (!resp.ok) { console.error(endpoint + " returned " + resp.status); return null; }
+      var json = await resp.json();
+      var msg = json.message || json;
+      if (msg.status === "error") { console.error(endpoint + ": " + (msg.message || "unknown error")); return null; }
+      return msg;
+    } catch (err) {
+      console.error(endpoint + " fetch failed: " + err.message);
+      return null;
+    }
   }
 
   function fmtC(v) {
@@ -339,79 +321,83 @@
     return '/app/' + dt + '/' + encodeURIComponent(name);
   }
 
-  // -- Load customer snapshot (header + KPIs) --
+  function invoiceBadgeClass(inv) {
+    if (inv.is_overdue) return 'badge-overdue';
+    if (inv.outstanding_amount <= 0) return 'badge-paid';
+    if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total) return 'badge-partial';
+    return 'badge-open';
+  }
+
+  function invoiceStatusText(inv) {
+    if (inv.is_overdue) return 'Overdue';
+    if (inv.outstanding_amount <= 0) return 'Paid';
+    if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total) return 'Partly Paid';
+    return inv.status || 'Unpaid';
+  }
+
+  // ── Load customer header metadata and KPIs via get_customer_snapshot ──
   async function loadSnapshot() {
-    var res = await api('vcl_sales_dashboard.api.sales_dashboard.get_customer_snapshot', { customer: CUSTOMER_ID });
-    if (res.status !== 'ok') return;
+    var res = await apiFetch('get_customer_snapshot', { customer: CUSTOMER_ID }, SNAP_BASE);
+    if (!res || res.status !== 'ok' || !res.data) return;
     var d = res.data;
 
+    // Header meta
     document.getElementById('hdr-rep').textContent = d.sales_person || '--';
     document.getElementById('hdr-territory').textContent = d.territory || '--';
     document.getElementById('hdr-group').textContent = d.customer_group || '--';
 
+    // KPI: Outstanding Balance
     document.getElementById('kpi-outstanding-val').textContent = fmtC(d.outstanding_amount);
-    if (d.outstanding_amount > 0) document.getElementById('kpi-outstanding').classList.add('warning');
-
-    document.getElementById('kpi-overdue-val').textContent = fmtC(d.overdue_amount);
-    if (d.overdue_amount > 0) document.getElementById('kpi-overdue').classList.add('danger');
-
-    document.getElementById('kpi-oldest-val').textContent = d.oldest_invoice_age_days || '0';
-    if (d.oldest_invoice_age_days > 60) document.getElementById('kpi-oldest').classList.add('danger');
-
-    document.getElementById('kpi-lastpay-val').textContent = fmtDate(d.last_payment_date);
-    document.getElementById('kpi-orders-val').textContent = d.open_orders_count || '0';
-    document.getElementById('kpi-quotes-val').textContent = d.open_quotations_count || '0';
   }
 
-  // -- Load ageing buckets --
-  async function loadAgeing() {
-    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_collections_ageing', { customer: CUSTOMER_ID });
-    if (res.status !== 'ok') {
-      document.getElementById('ageing-section').classList.add('hidden');
+  // ── Compute Total Invoiced and Total Paid from recent invoices ──
+  function computeKPIs(invoices) {
+    var totalInvoiced = 0;
+    var totalOutstanding = 0;
+    for (var i = 0; i < invoices.length; i++) {
+      totalInvoiced += parseFloat(invoices[i].grand_total) || 0;
+      totalOutstanding += parseFloat(invoices[i].outstanding_amount) || 0;
+    }
+    var totalPaid = totalInvoiced - totalOutstanding;
+    document.getElementById('kpi-invoiced-val').textContent = fmtC(totalInvoiced);
+    document.getElementById('kpi-paid-val').textContent = fmtC(totalPaid);
+  }
+
+  // ── Open Documents (Quotations, Sales Orders, Delivery Notes) ──
+  async function loadOpenDocs() {
+    var res = await apiFetch('get_customer_open_documents', { customer: CUSTOMER_ID });
+    var tbody = document.getElementById('docs-body');
+    if (!res || res.status !== 'ok' || !res.data || res.data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No open documents</td></tr>';
       return;
     }
-    var d = res.data;
-    var hasData = false;
-    var buckets = [
-      { id: '0-30', key: 'bucket_0_30' },
-      { id: '31-60', key: 'bucket_31_60' },
-      { id: '61-90', key: 'bucket_61_90' },
-      { id: '90-plus', key: 'bucket_90_plus' }
-    ];
-    for (var i = 0; i < buckets.length; i++) {
-      var b = buckets[i];
-      var val = d[b.key] ? d[b.key].value : 0;
-      var cnt = d[b.key] ? d[b.key].count : 0;
-      if (val > 0) hasData = true;
-      document.getElementById('age-' + b.id).textContent = fmtC(val);
-      document.getElementById('age-' + b.id + '-cnt').textContent = cnt + ' invoice' + (cnt !== 1 ? 's' : '');
+    var html = '';
+    for (var i = 0; i < res.data.length; i++) {
+      var doc = res.data[i];
+      html += '<tr>'
+        + '<td>' + escHtml(doc.doctype) + '</td>'
+        + '<td class="nowrap"><a href="' + makeLink(doc.doctype, doc.name) + '">' + escHtml(doc.name) + '</a></td>'
+        + '<td class="nowrap">' + fmtDate(doc.date) + '</td>'
+        + '<td class="num">' + fmtC(doc.grand_total) + '</td>'
+        + '<td><span class="status-badge badge-open">' + escHtml(doc.status) + '</span></td>'
+        + '</tr>';
     }
-    if (!hasData) {
-      document.getElementById('ageing-section').classList.add('hidden');
-    }
+    tbody.innerHTML = html;
   }
 
-  // -- Load recent invoices --
+  // ── Recent Invoices ──
   async function loadInvoices() {
-    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_recent_invoices', { customer: CUSTOMER_ID });
+    var res = await apiFetch('get_customer_recent_invoices', { customer: CUSTOMER_ID });
     var tbody = document.getElementById('invoices-body');
-    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+    if (!res || res.status !== 'ok' || !res.data || res.data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No invoices found</td></tr>';
       return;
     }
     var html = '';
     for (var i = 0; i < res.data.length; i++) {
       var inv = res.data[i];
-      var overdueClass = inv.is_overdue ? ' badge-overdue' : '';
-      var statusText = inv.status || '';
-      if (inv.is_overdue) statusText = 'Overdue';
-      else if (inv.outstanding_amount <= 0) statusText = 'Paid';
-
-      var badgeClass = 'badge-open';
-      if (inv.is_overdue) badgeClass = 'badge-overdue';
-      else if (inv.outstanding_amount <= 0) badgeClass = 'badge-paid';
-      else if (inv.outstanding_amount > 0 && inv.outstanding_amount < inv.grand_total) badgeClass = 'badge-partial';
-
+      var badgeClass = invoiceBadgeClass(inv);
+      var statusText = invoiceStatusText(inv);
       html += '<tr>'
         + '<td class="nowrap"><a href="' + makeLink('Sales Invoice', inv.name) + '">' + escHtml(inv.name) + '</a></td>'
         + '<td class="nowrap">' + fmtDate(inv.posting_date) + '</td>'
@@ -422,13 +408,14 @@
         + '</tr>';
     }
     tbody.innerHTML = html;
+    computeKPIs(res.data);
   }
 
-  // -- Load recent payments --
+  // ── Recent Payments ──
   async function loadPayments() {
-    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_recent_payments', { customer: CUSTOMER_ID });
+    var res = await apiFetch('get_customer_recent_payments', { customer: CUSTOMER_ID });
     var tbody = document.getElementById('payments-body');
-    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
+    if (!res || res.status !== 'ok' || !res.data || res.data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No payments found</td></tr>';
       return;
     }
@@ -446,80 +433,49 @@
     tbody.innerHTML = html;
   }
 
-  // -- Load open documents --
-  async function loadOpenDocs() {
-    var res = await api('vcl_sales_dashboard.api.customer_360.get_customer_open_documents', { customer: CUSTOMER_ID });
-    var tbody = document.getElementById('docs-body');
-    if (res.status !== 'ok' || !res.data || res.data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No open documents</td></tr>';
+  // ── Ageing Buckets ──
+  async function loadAgeing() {
+    var res = await apiFetch('get_customer_collections_ageing', { customer: CUSTOMER_ID });
+    if (!res || res.status !== 'ok' || !res.data) {
+      document.getElementById('ageing-section').classList.add('hidden');
       return;
     }
-    var html = '';
-    for (var i = 0; i < res.data.length; i++) {
-      var doc = res.data[i];
-      html += '<tr>'
-        + '<td>' + escHtml(doc.doctype) + '</td>'
-        + '<td class="nowrap"><a href="' + makeLink(doc.doctype, doc.name) + '">' + escHtml(doc.name) + '</a></td>'
-        + '<td class="nowrap">' + fmtDate(doc.date) + '</td>'
-        + '<td class="num">' + fmtC(doc.grand_total) + '</td>'
-        + '<td>' + escHtml(doc.status) + '</td>'
-        + '</tr>';
+    var d = res.data;
+    var buckets = [
+      { id: '0-30', key: 'bucket_0_30' },
+      { id: '31-60', key: 'bucket_31_60' },
+      { id: '61-90', key: 'bucket_61_90' },
+      { id: '90-plus', key: 'bucket_90_plus' }
+    ];
+    var hasData = false;
+    for (var i = 0; i < buckets.length; i++) {
+      var b = buckets[i];
+      var val = d[b.key] ? d[b.key].value : 0;
+      var cnt = d[b.key] ? d[b.key].count : 0;
+      if (val > 0) hasData = true;
+      document.getElementById('age-' + b.id).textContent = fmtC(val);
+      document.getElementById('age-' + b.id + '-cnt').textContent = cnt + ' invoice' + (cnt !== 1 ? 's' : '');
     }
-    tbody.innerHTML = html;
-  }
-
-  // -- Load collections follow-up history --
-  async function loadCollectionsHistory() {
-    var container = document.getElementById('collections-content');
-    try {
-      var res = await api('vcl_sales_dashboard.api.collections_dashboard.get_customer_month_history', { customer: CUSTOMER_ID });
-      if (res.status !== 'ok' || !res.data || res.data.length === 0) {
-        container.innerHTML = '<div class="empty-state">No collections history available for this customer.</div>';
-        return;
-      }
-
-      var html = '<table class="data-table"><thead><tr>'
-        + '<th>Period</th><th class="num">Total Balance</th><th class="num">Overdue</th>'
-        + '<th class="num">Overdue 30+</th><th class="num">Due This Month</th><th>Status</th>'
-        + '</tr></thead><tbody>';
-
-      for (var i = 0; i < res.data.length; i++) {
-        var s = res.data[i];
-        var statusLabel = s.latest_follow_up_status || 'Not Contacted';
-        var statusCls = 'st-' + statusLabel.toLowerCase().replace(/\s+/g, '-');
-
-        html += '<tr>'
-          + '<td class="nowrap">' + escHtml(s.snapshot_label || fmtDate(s.period_end)) + '</td>'
-          + '<td class="num">' + fmtC(s.total_balance) + '</td>'
-          + '<td class="num">' + fmtC(s.overdue_amount) + '</td>'
-          + '<td class="num">' + fmtC(s.overdue_30_amount) + '</td>'
-          + '<td class="num">' + fmtC(s.due_current_month) + '</td>'
-          + '<td><span class="status-badge ' + statusCls + '">' + escHtml(statusLabel) + '</span></td>'
-          + '</tr>';
-      }
-      html += '</tbody></table>';
-      container.innerHTML = html;
-    } catch (e) {
-      container.innerHTML = '<div class="empty-state">No collections history available for this customer.</div>';
+    if (!hasData) {
+      document.getElementById('ageing-section').classList.add('hidden');
     }
   }
 
-  // -- Init --
+  // ── Init: fire all data loads in parallel ──
   async function init() {
-    await fetchCsrf();
-    loadSnapshot();
-    loadAgeing();
-    loadInvoices();
-    loadPayments();
-    loadOpenDocs();
-    loadCollectionsHistory();
+    await Promise.all([
+      loadSnapshot(),
+      loadOpenDocs(),
+      loadInvoices(),
+      loadPayments(),
+      loadAgeing()
+    ]);
   }
 
-  // Set data-customer via Jinja in a safe way (HTML attribute, not inside JS)
   init();
+
 })();
 </script>
-
 
 </body>
 </html>
