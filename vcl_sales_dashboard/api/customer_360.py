@@ -20,8 +20,8 @@ def check_customer_access(customer):
     role_filter = get_role_filter()
     if role_filter:
         csr_map = get_csr_map()
-        assigned_rep = csr_map.get(customer, "")
-        if assigned_rep != role_filter:
+        assigned_rep = (csr_map.get(customer, "") or "").strip().lower()
+        if assigned_rep != (role_filter or "").strip().lower():
             frappe.throw("Not permitted", frappe.PermissionError)
 
 

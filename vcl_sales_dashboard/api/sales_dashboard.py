@@ -2,6 +2,7 @@ import frappe
 import json
 import os
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
+from vcl_sales_dashboard.api.collections_utils import resolve_sales_rep_user
 
 
 def get_role_filter():
@@ -33,7 +34,8 @@ def apply_filters_to_conditions(filters, conditions, values, table_alias=""):
 
 
 def apply_owner_filter(role_filter, filters, conditions, values, table_alias=""):
-    """Apply CSR-based filtering. Uses Customer Sales Rep Assignment to filter by customer."""
+    """Apply CSR-based filtering. Uses Customer Sales Rep Assignment to filter by customer.
+    Compares resolved User.name values (emails) for permission-based filtering."""
     prefix = f"{table_alias}." if table_alias else ""
     csr_map = get_csr_map()
 
@@ -45,10 +47,12 @@ def apply_owner_filter(role_filter, filters, conditions, values, table_alias="")
         target_rep = frappe.session.user
 
     if filters and filters.get("sales_rep"):
-        target_rep = filters["sales_rep"]
+        # sales_rep from filter could be a label — resolve to User.name
+        target_rep = resolve_sales_rep_user(filters["sales_rep"]) or filters["sales_rep"]
 
     if target_rep:
-        rep_customers = [c for c, r in csr_map.items() if r == target_rep]
+        target_lower = (target_rep or "").strip().lower()
+        rep_customers = [c for c, r in csr_map.items() if (r or "").strip().lower() == target_lower]
         if rep_customers:
             ph = ", ".join([f"%(csr_c{i})s" for i in range(len(rep_customers))])
             conditions.append(f"{prefix}customer IN ({ph})")
@@ -59,8 +63,37 @@ def apply_owner_filter(role_filter, filters, conditions, values, table_alias="")
 
 
 def get_csr_map(as_of_date=None):
-    """Return dict of {customer: sales_representative} from Customer Sales Rep Assignment.
+    """Return dict of {customer: sales_rep_user} from Customer Sales Rep Assignment.
+    Resolves sales_representative labels to real User.name (email) values.
     Uses the active assignment with highest priority for each customer as of the given date."""
+    if not as_of_date:
+        as_of_date = today()
+
+    assignments = frappe.db.sql("""
+        SELECT customer, sales_representative, priority
+        FROM `tabCustomer Sales Rep Assignment`
+        WHERE status = 'Active'
+          AND effective_from <= %(as_of)s
+          AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %(as_of)s)
+        ORDER BY customer, priority ASC
+    """, {"as_of": as_of_date}, as_dict=True)
+
+    # Cache resolved users to avoid repeated lookups
+    _user_cache = {}
+    csr_map = {}
+    for row in assignments:
+        cust = row.get("customer")
+        rep_label = row.get("sales_representative") or ""
+        if cust and cust not in csr_map:
+            if rep_label not in _user_cache:
+                _user_cache[rep_label] = resolve_sales_rep_user(rep_label) or rep_label
+            csr_map[cust] = _user_cache[rep_label]
+    return csr_map
+
+
+def get_csr_label_map(as_of_date=None):
+    """Return dict of {customer: sales_representative_label} (raw labels, not resolved).
+    Used for display purposes only."""
     if not as_of_date:
         as_of_date = today()
 
@@ -82,9 +115,12 @@ def get_csr_map(as_of_date=None):
 
 
 def get_customers_for_rep(sales_rep, as_of_date=None):
-    """Return list of customer names assigned to a sales rep as of the given date."""
+    """Return list of customer names assigned to a sales rep as of the given date.
+    Accepts either User.name (email) or display label."""
     csr_map = get_csr_map(as_of_date)
-    return [cust for cust, rep in csr_map.items() if rep == sales_rep]
+    # Compare case-insensitively since rep could be email or label
+    target = (sales_rep or "").strip().lower()
+    return [cust for cust, rep in csr_map.items() if (rep or "").strip().lower() == target]
 
 
 @frappe.whitelist()
