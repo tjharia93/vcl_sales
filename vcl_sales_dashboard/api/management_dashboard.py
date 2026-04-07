@@ -51,11 +51,11 @@ def get_rep_performance(filters=None):
             territory_condition = "AND territory = %(territory)s"
             extra_values["territory"] = filters["territory"]
 
-        # Sales MTD — aggregate by CSR rep
+        # Sales MTD — aggregate by CSR rep (Draft + Submitted)
         sales_mtd = frappe.db.sql(f"""
             SELECT customer, SUM(grand_total) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1
+            WHERE docstatus IN (0, 1)
               AND posting_date >= %(month_start)s
               {territory_condition}
             GROUP BY customer

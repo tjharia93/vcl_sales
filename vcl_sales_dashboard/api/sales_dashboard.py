@@ -913,23 +913,23 @@ def get_outstanding_invoices(filters=None):
 
 @frappe.whitelist()
 def get_net_sales_summary():
-    """Return net sales MTD and YTD from submitted Sales Invoices."""
+    """Return net sales MTD and YTD from Draft and Submitted Sales Invoices."""
     try:
         month_start = get_first_day(today())
         year_start = getdate(today()).replace(month=1, day=1)
 
-        # MTD
+        # MTD — Draft + Submitted
         mtd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1 AND posting_date >= %(month_start)s
+            WHERE docstatus IN (0, 1) AND posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)[0]
 
-        # YTD
+        # YTD — Draft + Submitted
         ytd = frappe.db.sql("""
             SELECT COALESCE(SUM(net_total), 0) as total
             FROM `tabSales Invoice`
-            WHERE docstatus = 1 AND posting_date >= %(year_start)s
+            WHERE docstatus IN (0, 1) AND posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)[0]
 
         return {
@@ -952,18 +952,18 @@ def get_sales_by_person():
         year_start = getdate(today()).replace(month=1, day=1)
         csr_map = get_csr_map()
 
-        # MTD invoices
+        # MTD invoices — Draft + Submitted
         mtd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(month_start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(month_start)s
         """, {"month_start": month_start}, as_dict=True)
 
-        # YTD invoices
+        # YTD invoices — Draft + Submitted
         ytd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(year_start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(year_start)s
         """, {"year_start": year_start}, as_dict=True)
 
         # Aggregate by sales rep using CSR map
