@@ -4,7 +4,7 @@ no_cache = 1
 
 def get_context(context):
     if frappe.session.user == "Guest":
-        frappe.local.flags.redirect_location = "/login"
+        frappe.local.flags.redirect_location = "/login?redirect-to=/sales-manager"
         raise frappe.Redirect
 
     roles = frappe.get_roles(frappe.session.user)
