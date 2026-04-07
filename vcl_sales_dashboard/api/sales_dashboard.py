@@ -114,6 +114,35 @@ def get_csr_label_map(as_of_date=None):
     return csr_map
 
 
+SYSTEM_USERS = {"Administrator", "Guest"}
+
+
+def is_system_user(email):
+    """Return True if the email belongs to a system/non-sales user."""
+    return email in SYSTEM_USERS or (email or "").startswith("Administrator")
+
+
+def get_display_name_map():
+    """Return {user_email: full_name} for all enabled users with a full_name."""
+    users = frappe.db.sql("""
+        SELECT name, full_name
+        FROM `tabUser`
+        WHERE enabled = 1 AND full_name IS NOT NULL AND full_name != ''
+    """, as_dict=True)
+    return {u.name: u.full_name for u in users}
+
+
+def resolve_display_name(email, display_map=None):
+    """Convert email to display name. Falls back to titlecased email prefix."""
+    if not email or email == "Unassigned":
+        return email or "Unassigned"
+    if display_map and email in display_map:
+        return display_map[email]
+    # Fallback: email prefix  (tanuj.haria@vimit.com → Tanuj Haria)
+    prefix = email.split("@")[0] if "@" in email else email
+    return prefix.replace(".", " ").replace("_", " ").title()
+
+
 def get_customers_for_rep(sales_rep, as_of_date=None):
     """Return list of customer names assigned to a sales rep as of the given date.
     Accepts either User.name (email) or display label."""
@@ -127,9 +156,11 @@ def get_customers_for_rep(sales_rep, as_of_date=None):
 def get_filter_options():
     """Return filter dropdown options for sales reps (from CSR Assignment), territories, customer groups."""
     try:
+        display_map = get_display_name_map()
+
         # Get distinct active sales reps from Customer Sales Rep Assignment
-        sales_reps = frappe.db.sql("""
-            SELECT DISTINCT sales_representative as name, sales_representative as full_name
+        raw_reps = frappe.db.sql("""
+            SELECT DISTINCT sales_representative
             FROM `tabCustomer Sales Rep Assignment`
             WHERE status = 'Active'
               AND sales_representative IS NOT NULL
@@ -137,8 +168,18 @@ def get_filter_options():
             ORDER BY sales_representative
         """, as_dict=True)
 
-        # Fallback to Sales Person doctype if CSR Assignment is empty
-        if not sales_reps:
+        if raw_reps:
+            sales_reps = []
+            for row in raw_reps:
+                label = row.get("sales_representative") or ""
+                # Resolve the label to a User.name (email) via the same logic used elsewhere
+                user_email = resolve_sales_rep_user(label) or label
+                if is_system_user(user_email):
+                    continue
+                full_name = resolve_display_name(user_email, display_map)
+                sales_reps.append({"name": label, "full_name": full_name})
+        else:
+            # Fallback to Sales Person doctype if CSR Assignment is empty
             sales_reps = frappe.get_all(
                 "Sales Person",
                 fields=["name", "sales_person_name as full_name"],
@@ -269,6 +310,7 @@ def get_sales_action_queue(filters=None):
 
         role_filter = get_role_filter()
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
         actions = []
 
         # a) Overdue invoices
@@ -406,10 +448,11 @@ def get_sales_action_queue(filters=None):
         # Trim to 50 total (priority order is maintained by append order)
         actions = actions[:50]
 
-        # Enrich with sales rep from CSR Assignment and N/A-safe
+        # Enrich with sales rep display name from CSR Assignment and N/A-safe
         for row in actions:
-            row["sales_rep"] = csr_map.get(row.get("customer"), "")
-            row["sales_rep_name"] = row["sales_rep"]
+            rep_email = csr_map.get(row.get("customer"), "")
+            row["sales_rep"] = rep_email
+            row["sales_rep_name"] = resolve_display_name(rep_email, display_map) if rep_email else ""
             for key in row:
                 if row[key] is None:
                     row[key] = "" if isinstance(row.get(key), str) else 0
@@ -530,6 +573,7 @@ def get_collections_alerts(filters=None):
 
         role_filter = get_role_filter()
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
 
         # Build customer filter from CSR Assignment
         customer_condition = ""
@@ -605,8 +649,9 @@ def get_collections_alerts(filters=None):
             row["days_60_plus"] = flt(row.get("days_60_plus"))
             row["oldest_invoice_age_days"] = cint(row.get("oldest_invoice_age_days"))
 
-            # Sales rep from CSR Assignment
-            row["sales_rep_name"] = csr_map.get(row.get("customer"), "")
+            # Sales rep display name from CSR Assignment
+            rep_email = csr_map.get(row.get("customer"), "")
+            row["sales_rep_name"] = resolve_display_name(rep_email, display_map) if rep_email else ""
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
 
@@ -625,6 +670,7 @@ def search_customer_quick(query="", filters=None):
 
         role_filter = get_role_filter()
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
 
         if len(query) < 2:
             result = get_collections_alerts(filters)
@@ -696,8 +742,9 @@ def search_customer_quick(query="", filters=None):
             })
             row["open_quotations_count"] = cint(open_quotes)
 
-            # Sales rep from CSR Assignment
-            row["sales_rep_name"] = csr_map.get(cust, "")
+            # Sales rep display name from CSR Assignment
+            rep_email = csr_map.get(cust, "")
+            row["sales_rep_name"] = resolve_display_name(rep_email, display_map) if rep_email else ""
 
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
@@ -736,8 +783,10 @@ def get_customer_snapshot(customer):
             as_dict=True
         )
 
-        # Sales Person from CSR Assignment
-        sales_person = csr_map.get(customer, "")
+        # Sales Person display name from CSR Assignment
+        display_map = get_display_name_map()
+        rep_email = csr_map.get(customer, "")
+        sales_person = resolve_display_name(rep_email, display_map) if rep_email else ""
 
         # Outstanding
         outstanding = frappe.db.sql("""
@@ -802,6 +851,7 @@ def get_outstanding_invoices(filters=None):
 
         role_filter = get_role_filter()
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
 
         conditions = ["si.docstatus = 1", "si.outstanding_amount > 0"]
         values = {"today": today()}
@@ -871,9 +921,10 @@ def get_outstanding_invoices(filters=None):
             LIMIT 100
         """, values, as_dict=True)
 
-        # Enrich with sales person from CSR Assignment
+        # Enrich with sales person display name from CSR Assignment
         for inv in invoices:
-            inv["sales_person"] = csr_map.get(inv.get("customer"), "")
+            rep_email = csr_map.get(inv.get("customer"), "")
+            inv["sales_person"] = resolve_display_name(rep_email, display_map) if rep_email else ""
             inv["grand_total"] = flt(inv.get("grand_total"))
             inv["outstanding_amount"] = flt(inv.get("outstanding_amount"))
             inv["posting_date"] = str(inv["posting_date"]) if inv.get("posting_date") else ""
@@ -968,6 +1019,7 @@ def get_sales_by_person():
 
         # Aggregate by sales rep using CSR map
         from collections import defaultdict
+        display_map = get_display_name_map()
 
         mtd_agg = defaultdict(float)
         for inv in mtd_invoices:
@@ -979,12 +1031,15 @@ def get_sales_by_person():
             rep = csr_map.get(inv.customer, "Unassigned")
             ytd_agg[rep] += flt(inv.net_total)
 
+        # Convert to display names, exclude system users
         mtd_rows = sorted(
-            [{"sales_person": k, "net_total": flt(v)} for k, v in mtd_agg.items()],
+            [{"sales_person": resolve_display_name(k, display_map), "net_total": flt(v)}
+             for k, v in mtd_agg.items() if not is_system_user(k)],
             key=lambda x: -x["net_total"]
         )
         ytd_rows = sorted(
-            [{"sales_person": k, "net_total": flt(v)} for k, v in ytd_agg.items()],
+            [{"sales_person": resolve_display_name(k, display_map), "net_total": flt(v)}
+             for k, v in ytd_agg.items() if not is_system_user(k)],
             key=lambda x: -x["net_total"]
         )
 

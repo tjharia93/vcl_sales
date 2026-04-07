@@ -1,6 +1,6 @@
 import frappe
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
-from vcl_sales_dashboard.api.sales_dashboard import get_csr_map
+from vcl_sales_dashboard.api.sales_dashboard import get_csr_map, get_display_name_map, resolve_display_name, is_system_user
 
 
 def get_role_filter():
@@ -40,6 +40,7 @@ def get_rep_performance(filters=None):
 
         get_role_filter()  # Permission check
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
 
         month_start = get_first_day(today())
         from collections import defaultdict
@@ -108,15 +109,17 @@ def get_rep_performance(filters=None):
             overdue_by_rep[rep]["value"] += flt(r.total)
             overdue_by_rep[rep]["customers"].add(r.customer)
 
-        # Combine all reps
+        # Combine all reps, exclude system users
         all_reps = set(sales_by_rep.keys()) | set(collections_by_rep.keys()) | set(quotes_by_rep.keys()) | set(overdue_by_rep.keys())
 
         result = []
         for rep in all_reps:
+            if is_system_user(rep):
+                continue
             overdue_data = overdue_by_rep.get(rep, {"value": 0, "customers": set()})
             result.append({
                 "sales_rep": rep,
-                "sales_rep_name": rep,
+                "sales_rep_name": resolve_display_name(rep, display_map),
                 "sales_mtd": sales_by_rep.get(rep, 0),
                 "collections_mtd": collections_by_rep.get(rep, 0),
                 "open_quotes_value": quotes_by_rep.get(rep, 0),
@@ -204,6 +207,7 @@ def get_team_collection_risk(filters=None):
 
         get_role_filter()  # Permission check
         csr_map = get_csr_map()
+        display_map = get_display_name_map()
         from collections import defaultdict
 
         territory_condition = ""
@@ -228,25 +232,28 @@ def get_team_collection_risk(filters=None):
             ORDER BY overdue_amount DESC
         """, extra_values, as_dict=True)
 
-        # Aggregate by CSR rep
+        # Aggregate by CSR rep, exclude system users
         rep_agg = defaultdict(lambda: {"overdue_amount": 0, "customers": set()})
         for row in overdue_raw:
             rep = csr_map.get(row.customer, "Unassigned")
+            if is_system_user(rep):
+                continue
             rep_agg[rep]["overdue_amount"] += flt(row.overdue_amount)
             rep_agg[rep]["customers"].add(row.customer)
 
         overdue_by_rep = sorted([
-            {"sales_rep": rep, "sales_rep_name": rep, "overdue_amount": flt(d["overdue_amount"]), "customer_count": len(d["customers"])}
+            {"sales_rep": rep, "sales_rep_name": resolve_display_name(rep, display_map), "overdue_amount": flt(d["overdue_amount"]), "customer_count": len(d["customers"])}
             for rep, d in rep_agg.items()
         ], key=lambda x: -x["overdue_amount"])
 
-        # Top overdue customers with CSR rep
+        # Top overdue customers with CSR rep display name
         top_customers = overdue_raw[:10]
         for row in top_customers:
             row["overdue_amount"] = flt(row.get("overdue_amount"))
             row["oldest_age"] = cint(row.get("oldest_age"))
-            row["sales_rep"] = csr_map.get(row.get("customer"), "")
-            row["sales_rep_name"] = row["sales_rep"]
+            rep_email = csr_map.get(row.get("customer"), "")
+            row["sales_rep"] = rep_email
+            row["sales_rep_name"] = resolve_display_name(rep_email, display_map) if rep_email else ""
             if not row.get("customer_name"):
                 row["customer_name"] = row.get("customer", "")
 
@@ -272,6 +279,7 @@ def get_key_sales_exceptions(filters=None):
             filters = frappe.parse_json(filters)
 
         get_role_filter()  # Permission check
+        display_map = get_display_name_map()
 
         exceptions = []
         today_date = today()
@@ -376,8 +384,7 @@ def get_key_sales_exceptions(filters=None):
             if not row.get("docname"):
                 row["docname"] = ""
 
-            rep_name = frappe.db.get_value("User", row.get("sales_rep"), "full_name")
-            row["sales_rep_name"] = rep_name or row.get("sales_rep", "")
+            row["sales_rep_name"] = resolve_display_name(row.get("sales_rep", ""), display_map)
 
         return {"status": "ok", "data": exceptions}
     except frappe.PermissionError:

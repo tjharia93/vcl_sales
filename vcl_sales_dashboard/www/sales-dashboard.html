@@ -354,7 +354,7 @@
           <span class="eyebrow">Sales Invoice Overview</span>
           <h1>VCL Sales Dashboard</h1>
           <p class="type-body text-secondary mb-0">
-            Outstanding and overdue Sales Invoices. Filter by Sales Person, Territory, or date range.
+            Outstanding and overdue Sales Invoices. Filter by Sales Representative, Territory, or date range.
           </p>
         </div>
         <div class="btn-row">
@@ -369,7 +369,7 @@
             <h2 style="margin-top:10px; margin-bottom:10px;">Sales Invoice overview</h2>
             <p class="type-body text-secondary mb-0">
               Net sales from <span class="font-semibold">Sales Invoice</span> (submitted) vs 2026 targets.
-              Filter by Sales Person or Territory.
+              Filter by Sales Representative or Territory.
             </p>
           </div>
           <div class="mini-stat">
@@ -403,8 +403,8 @@
               </div>
             </div>
             <div class="filter-group">
-              <label>Sales Person / Partner</label>
-              <select id="filter-sales-person"><option value="">All Sales Persons</option></select>
+              <label>Sales Representative</label>
+              <select id="filter-sales-person"><option value="">All Sales Representatives</option></select>
             </div>
             <div class="filter-group">
               <label>Territory</label>
@@ -465,8 +465,8 @@
         <div class="card__body">
           <div class="section-title">
             <div>
-              <div class="type-label">Sales by Sales Person</div>
-              <h3>Invoice totals by Sales Person</h3>
+              <div class="type-label">Sales by Representative</div>
+              <h3>Invoice totals by Sales Representative</h3>
             </div>
             <div class="btn-row">
               <button class="btn" id="chart-toggle-mtd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__chartToggle('mtd')">MTD</button>
@@ -476,7 +476,7 @@
           <div style="position:relative; width:100%; overflow-x:auto;">
             <canvas id="sales-person-chart" height="280"></canvas>
           </div>
-          <div class="type-small mt-5" id="chart-note">Showing MTD net sales by Sales Person</div>
+          <div class="type-small mt-5" id="chart-note">Showing MTD net sales by Sales Representative</div>
         </div>
       </section>
 
@@ -498,7 +498,7 @@
               <th>Customer</th>
               <th>Posting Date</th>
               <th>Due Date</th>
-              <th>Sales Person</th>
+              <th>Sales Representative</th>
               <th>Territory</th>
               <th class="text-right">Grand Total</th>
               <th class="text-right">Outstanding</th>
@@ -780,7 +780,7 @@
         });
 
         var note = document.getElementById("chart-note");
-        if (note) note.textContent = mode === "mtd" ? "Showing MTD net sales by Sales Person" : "Showing YTD net sales by Sales Person";
+        if (note) note.textContent = mode === "mtd" ? "Showing MTD net sales by Sales Representative" : "Showing YTD net sales by Sales Representative";
       }
 
       window.__chartToggle = function (mode) {
@@ -844,7 +844,7 @@
             '<td>' + (inv.customer_name || inv.customer || '-') + '</td>',
             '<td>' + (inv.posting_date || '-') + '</td>',
             '<td>' + (inv.due_date || '-') + '</td>',
-            '<td>' + (inv.sales_person || inv.owner || '-') + '</td>',
+            '<td>' + (inv.sales_person || '-') + '</td>',
             '<td>' + (inv.territory || '-') + '</td>',
             '<td class="text-right">' + formatKES(inv.grand_total || 0) + '</td>',
             '<td class="text-right font-bold">' + formatKES(inv.outstanding_amount || 0) + '</td>',
