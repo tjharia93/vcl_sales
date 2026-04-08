@@ -318,7 +318,7 @@
       .page-container { padding-top: var(--space-6); }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- No external chart library needed -->
 </head>
 <body>
   <div class="page-shell">
@@ -354,7 +354,7 @@
           <span class="eyebrow">Sales Invoice Overview</span>
           <h1>VCL Sales Dashboard</h1>
           <p class="type-body text-secondary mb-0">
-            Outstanding and overdue Sales Invoices. Filter by Sales Representative, Territory, or date range.
+            Outstanding and overdue Sales Invoices. Filter by Sales Person, Territory, or date range.
           </p>
         </div>
         <div class="btn-row">
@@ -369,7 +369,7 @@
             <h2 style="margin-top:10px; margin-bottom:10px;">Sales Invoice overview</h2>
             <p class="type-body text-secondary mb-0">
               Net sales from <span class="font-semibold">Sales Invoice</span> (submitted) vs 2026 targets.
-              Filter by Sales Representative or Territory.
+              Filter by Sales Person or Territory.
             </p>
           </div>
           <div class="mini-stat">
@@ -403,8 +403,8 @@
               </div>
             </div>
             <div class="filter-group">
-              <label>Sales Representative</label>
-              <select id="filter-sales-person"><option value="">All Sales Representatives</option></select>
+              <label>Sales Person / Partner</label>
+              <select id="filter-sales-person"><option value="">All Sales Persons</option></select>
             </div>
             <div class="filter-group">
               <label>Territory</label>
@@ -465,84 +465,35 @@
         <div class="card__body">
           <div class="section-title">
             <div>
-              <div class="type-label">Sales by Representative</div>
-              <h3>Invoice totals by Sales Representative</h3>
+              <div class="type-label">Performance</div>
+              <h3>Sales vs Target by Representative</h3>
             </div>
             <div class="btn-row">
-              <button class="btn" id="chart-toggle-mtd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__chartToggle('mtd')">MTD</button>
-              <button class="btn btn--outline" id="chart-toggle-ytd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__chartToggle('ytd')">YTD</button>
+              <button class="btn" id="perf-toggle-mtd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__perfToggle('mtd')">MTD</button>
+              <button class="btn btn--outline" id="perf-toggle-ytd" style="font-size:12px;min-height:32px;padding:0 12px;" onclick="window.__perfToggle('ytd')">YTD</button>
             </div>
           </div>
-          <div style="position:relative; width:100%; overflow-x:auto;">
-            <canvas id="sales-person-chart" height="280"></canvas>
+          <div style="overflow-x:auto;">
+            <table id="perf-table">
+              <thead>
+                <tr>
+                  <th>Sales Representative</th>
+                  <th class="text-right" style="background:#edf4ff;">Actual</th>
+                  <th class="text-right" style="background:#fff7e6;">Target</th>
+                  <th class="text-right">Delta to Target</th>
+                  <th class="text-right">% Achieved</th>
+                </tr>
+              </thead>
+              <tbody id="perf-table-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">Loading performance data...</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="type-small mt-5" id="chart-note">Showing MTD net sales by Sales Representative</div>
+          <div class="type-small mt-5" id="perf-note">Showing MTD performance</div>
         </div>
       </section>
 
-      <section class="table-wrap mb-5">
-        <div class="card__body" style="padding-bottom:0;">
-          <div class="section-title">
-            <div>
-              <div class="type-label">Sales Invoice</div>
-              <h3>Outstanding invoices</h3>
-            </div>
-            <div class="type-small" id="invoice-table-count"></div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Customer</th>
-              <th>Posting Date</th>
-              <th>Due Date</th>
-              <th>Sales Representative</th>
-              <th>Territory</th>
-              <th class="text-right">Grand Total</th>
-              <th class="text-right">Outstanding</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="invoice-table-body">
-            <tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">Loading invoices...</td></tr>
-          </tbody>
-        </table>
-
-        <div class="table-note" id="invoice-table-note">
-          Showing submitted Sales Invoices with outstanding_amount > 0
-        </div>
-      </section>
-
-      <section class="grid grid--2 mb-5">
-        <div class="card" style="opacity:0.5;">
-          <div class="card__body">
-            <div class="section-title">
-              <div>
-                <div class="type-label">Coming Next</div>
-                <h3>Sales Orders</h3>
-              </div>
-              <span class="pill pill--draft">Pending Build</span>
-            </div>
-            <p class="type-body text-muted">Open sales orders, dispatch status, and delivery tracking will be added here.</p>
-          </div>
-        </div>
-        <div class="card" style="opacity:0.5;">
-          <div class="card__body">
-            <div class="section-title">
-              <div>
-                <div class="type-label">Coming Next</div>
-                <h3>Quotations</h3>
-              </div>
-              <span class="pill pill--draft">Pending Build</span>
-            </div>
-            <p class="type-body text-muted">Open quotations, expiring soon, and conversion tracking will be added here.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="debug-panel" id="debug-panel">
+      <section class="debug-panel" id="debug-panel" style="display:none;">
         <div class="debug-panel__header">
           <div class="debug-panel__title">Dashboard Debug / Failure Messages</div>
           <div class="debug-panel__status" id="debug-status">Waiting for checks...</div>
@@ -703,115 +654,72 @@
         pushDebug("success", "Net sales loaded: MTD=" + formatKES(mtdActual) + " YTD=" + formatKES(ytdActual), "loadNetSales");
       }
 
-      // ── Chart ──
-      var chartInstance = null;
-      var chartDataCache = { mtd: null, ytd: null };
-      var currentChartMode = "mtd";
+      // ── Performance Table ──
+      var perfDataCache = { mtd: [], ytd: [] };
+      var currentPerfMode = "mtd";
 
-      async function loadChartData() {
-        var data = await apiFetch("get_sales_by_person", {});
-        if (!data) { pushDebug("warn", "Could not load sales by person chart data", "loadChartData"); return; }
-        chartDataCache.mtd = data.mtd || [];
-        chartDataCache.ytd = data.ytd || [];
-        renderChart(currentChartMode);
-        pushDebug("success", "Chart data loaded: " + (data.mtd || []).length + " sales persons", "loadChartData");
+      async function loadPerfTable() {
+        var data = await apiFetch("get_rep_performance_table", {});
+        if (!data) { pushDebug("warn", "Could not load performance data", "loadPerfTable"); return; }
+        perfDataCache.mtd = data.mtd || [];
+        perfDataCache.ytd = data.ytd || [];
+        renderPerfTable(currentPerfMode);
+        pushDebug("success", "Performance data loaded: " + (data.mtd || []).length + " reps", "loadPerfTable");
       }
 
-      function renderChart(mode) {
-        var canvas = document.getElementById("sales-person-chart");
-        if (!canvas) return;
-
-        var rows = chartDataCache[mode] || [];
+      function renderPerfTable(mode) {
+        var tbody = document.getElementById("perf-table-body");
+        if (!tbody) return;
+        var rows = perfDataCache[mode] || [];
         if (rows.length === 0) {
-          if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
-          var ctx = canvas.getContext("2d");
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.font = "14px Inter, sans-serif";
-          ctx.fillStyle = "#7a8596";
-          ctx.textAlign = "center";
-          ctx.fillText("No data available", canvas.width / 2, 140);
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">No performance data available.</td></tr>';
           return;
         }
 
-        var labels = rows.map(function (r) { return r.sales_person || "Unassigned"; });
-        var values = rows.map(function (r) { return parseFloat(r.net_total) || 0; });
-        var colors = ["#2B3990", "#ED1C24", "#167c45", "#a16207", "#175cd3", "#6941c6", "#0f766e", "#9333ea", "#c2410c", "#64748b"];
+        var html = "";
+        rows.forEach(function (r) {
+          var isTotal = r.is_total;
+          var rowStyle = isTotal ? "font-weight:700;border-top:2px solid var(--border-strong);background:var(--bg-soft);" : "";
+          var delta = parseFloat(r.delta) || 0;
+          var deltaText = delta >= 0 ? formatKESFull(delta) : "(" + formatKESFull(Math.abs(delta)) + ")";
+          var deltaColor = delta >= 0 ? "color:var(--success);" : "color:var(--danger);";
+          var pct = parseFloat(r.pct_achieved) || 0;
+          var pctColor = pct >= 90 ? "var(--success)" : (pct >= 75 ? "var(--warning)" : "var(--danger)");
+          var dotStyle = "display:inline-block;width:8px;height:8px;border-radius:50%;background:" + pctColor + ";margin-right:6px;";
 
-        if (chartInstance) chartInstance.destroy();
-
-        chartInstance = new Chart(canvas, {
-          type: "bar",
-          data: {
-            labels: labels,
-            datasets: [{
-              label: mode === "mtd" ? "Net Sales MTD" : "Net Sales YTD",
-              data: values,
-              backgroundColor: labels.map(function (_, i) { return colors[i % colors.length]; }),
-              borderRadius: 6,
-              maxBarThickness: 60
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function (ctx) { return formatKES(ctx.raw); }
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  callback: function (val) { return formatKES(val); },
-                  font: { size: 11 }
-                },
-                grid: { color: "#eef1f5" }
-              },
-              x: {
-                ticks: { font: { size: 12, weight: 600 } },
-                grid: { display: false }
-              }
-            }
-          }
+          html += '<tr style="' + rowStyle + '">';
+          html += '<td class="font-semibold">' + (r.rep_name || "Unknown") + '</td>';
+          html += '<td class="text-right" style="background:#f8faff;">' + formatKESFull(r.actual) + '</td>';
+          html += '<td class="text-right" style="background:#fffcf0;">' + formatKESFull(r.target) + '</td>';
+          html += '<td class="text-right" style="' + deltaColor + '">' + deltaText + '</td>';
+          html += '<td class="text-right"><span style="' + dotStyle + '"></span>' + pct.toFixed(0) + '%</td>';
+          html += '</tr>';
         });
+        tbody.innerHTML = html;
 
-        var note = document.getElementById("chart-note");
-        if (note) note.textContent = mode === "mtd" ? "Showing MTD net sales by Sales Representative" : "Showing YTD net sales by Sales Representative";
+        var note = document.getElementById("perf-note");
+        if (note) note.textContent = mode === "mtd" ? "Showing MTD performance" : "Showing YTD performance";
       }
 
-      window.__chartToggle = function (mode) {
-        currentChartMode = mode;
-        renderChart(mode);
-        var mtdBtn = document.getElementById("chart-toggle-mtd");
-        var ytdBtn = document.getElementById("chart-toggle-ytd");
+      window.__perfToggle = function (mode) {
+        currentPerfMode = mode;
+        renderPerfTable(mode);
+        var mtdBtn = document.getElementById("perf-toggle-mtd");
+        var ytdBtn = document.getElementById("perf-toggle-ytd");
         if (mtdBtn && ytdBtn) {
           mtdBtn.className = mode === "mtd" ? "btn" : "btn btn--outline";
           ytdBtn.className = mode === "ytd" ? "btn" : "btn btn--outline";
         }
       };
 
-      // ── Load Sales Invoice list ──
-      async function loadInvoices() {
-        var filters = getFilters();
-        var data = await apiFetch("get_outstanding_invoices", { filters: filters });
-
-        if (!data) {
-          document.getElementById("invoice-table-body").innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">Failed to load invoices. Check debug panel.</td></tr>';
-          return;
-        }
-
-        var invoices = data.invoices || [];
+      // ── Load outstanding summary for KPIs (no table) ──
+      async function loadOutstandingSummary() {
+        var data = await apiFetch("get_outstanding_invoices", { filters: getFilters() });
+        if (!data) return;
         var summary = data.summary || {};
-
-        // Update outstanding KPIs
         setText("kpi-outstanding-total", formatKES(summary.total_outstanding || 0));
         setText("kpi-overdue-total", formatKES(summary.total_overdue || 0));
 
-        // Alert
         var alertBox = document.getElementById("credit-alert-box");
         var alertMsg = document.getElementById("credit-alert-message");
         if (alertBox && summary.total_overdue > 0) {
@@ -820,57 +728,6 @@
         } else if (alertBox) {
           alertBox.style.display = "none";
         }
-
-        // Render table
-        var tbody = document.getElementById("invoice-table-body");
-        if (!tbody) return;
-
-        if (invoices.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" class="text-muted" style="text-align:center;padding:24px;">No outstanding invoices found.</td></tr>';
-          setText("invoice-table-count", "0 invoices");
-          return;
-        }
-
-        setText("invoice-table-count", invoices.length + " invoices shown");
-        tbody.innerHTML = "";
-
-        invoices.forEach(function (inv) {
-          var isOverdue = inv.is_overdue ? true : false;
-          var pillClass = isOverdue ? "pill--overdue" : "pill--open";
-          var pillText = isOverdue ? "Overdue" : "Outstanding";
-          var tr = document.createElement("tr");
-          tr.innerHTML = [
-            '<td class="font-semibold"><a href="/app/sales-invoice/' + (inv.name || '') + '">' + (inv.name || '-') + '</a></td>',
-            '<td>' + (inv.customer_name || inv.customer || '-') + '</td>',
-            '<td>' + (inv.posting_date || '-') + '</td>',
-            '<td>' + (inv.due_date || '-') + '</td>',
-            '<td>' + (inv.sales_person || '-') + '</td>',
-            '<td>' + (inv.territory || '-') + '</td>',
-            '<td class="text-right">' + formatKES(inv.grand_total || 0) + '</td>',
-            '<td class="text-right font-bold">' + formatKES(inv.outstanding_amount || 0) + '</td>',
-            '<td><span class="pill ' + pillClass + '">' + pillText + '</span></td>'
-          ].join("");
-          tbody.appendChild(tr);
-        });
-
-        pushDebug("success", invoices.length + " invoices loaded", "loadInvoices");
-      }
-
-      // ── Filter change handlers ──
-      function bindFilters() {
-        ["filter-sales-person", "filter-territory", "filter-status", "filter-date-from", "filter-date-to"].forEach(function (id) {
-          var el = document.getElementById(id);
-          if (el) el.addEventListener("change", function () { loadInvoices(); });
-        });
-
-        var searchEl = document.getElementById("search-field");
-        var searchTimeout;
-        if (searchEl) {
-          searchEl.addEventListener("input", function () {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(function () { loadInvoices(); }, 400);
-          });
-        }
       }
 
       // ── Boot ──
@@ -878,8 +735,7 @@
         debugStore.length = 0;
         renderDebug();
         await loadFilterOptions();
-        await Promise.all([loadNetSales(), loadChartData(), loadInvoices()]);
-        bindFilters();
+        await Promise.all([loadNetSales(), loadPerfTable(), loadOutstandingSummary()]);
         renderDebug();
       }
 

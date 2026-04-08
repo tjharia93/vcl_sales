@@ -1108,7 +1108,121 @@ def get_sales_targets(month=None):
 
 
 @frappe.whitelist()
-def get_sales_rep_discrepancies(filters=None):
+def get_rep_performance_table():
+    """Return per-rep actual vs target for MTD and YTD.
+    Combines invoice actuals (via CSR map) with customer-level targets from JSON.
+    Returns rows with: rep_name, actual, target, delta, pct_achieved."""
+    try:
+        from collections import defaultdict
+
+        d = getdate(today())
+        month_key = f"{d.year}-{d.month:02d}"
+        month_start = get_first_day(today())
+        year_start = d.replace(month=1, day=1)
+
+        # Load targets
+        targets = _load_targets_json() or {}
+        by_customer_monthly = targets.get("by_customer_monthly", {})
+        monthly_targets = targets.get("monthly_targets", {})
+
+        # CSR map: {customer: resolved_user_or_label}
+        csr_map = get_csr_map()
+        # Also get display labels for clean names
+        csr_label_map = get_csr_label_map()
+
+        # Build reverse map: rep -> [customers]
+        rep_customers = defaultdict(list)
+        for cust, rep in csr_label_map.items():
+            if rep:
+                rep_customers[rep].append(cust)
+
+        # Get all distinct reps
+        all_reps = set(csr_label_map.values()) - {"", None}
+
+        # --- MTD Actuals ---
+        mtd_invoices = frappe.db.sql("""
+            SELECT si.customer, si.net_total
+            FROM `tabSales Invoice` si
+            WHERE si.docstatus = 1 AND si.posting_date >= %(start)s
+        """, {"start": month_start}, as_dict=True)
+
+        mtd_actual = defaultdict(float)
+        for inv in mtd_invoices:
+            rep = csr_label_map.get(inv.customer)
+            if rep:
+                mtd_actual[rep] += flt(inv.net_total)
+
+        # --- MTD Targets (sum customer targets for each rep's customers) ---
+        month_cust_targets = by_customer_monthly.get(month_key, {})
+        mtd_target = defaultdict(float)
+        for rep, custs in rep_customers.items():
+            for c in custs:
+                mtd_target[rep] += flt(month_cust_targets.get(c, 0))
+
+        # --- YTD Actuals ---
+        ytd_invoices = frappe.db.sql("""
+            SELECT si.customer, si.net_total
+            FROM `tabSales Invoice` si
+            WHERE si.docstatus = 1 AND si.posting_date >= %(start)s
+        """, {"start": year_start}, as_dict=True)
+
+        ytd_actual = defaultdict(float)
+        for inv in ytd_invoices:
+            rep = csr_label_map.get(inv.customer)
+            if rep:
+                ytd_actual[rep] += flt(inv.net_total)
+
+        # --- YTD Targets (sum all months up to current) ---
+        ytd_target = defaultdict(float)
+        for m_key, cust_targets in by_customer_monthly.items():
+            if m_key <= month_key:
+                for rep, custs in rep_customers.items():
+                    for c in custs:
+                        ytd_target[rep] += flt(cust_targets.get(c, 0))
+
+        # Build rows
+        def build_rows(actual_map, target_map):
+            rows = []
+            total_actual = 0
+            total_target = 0
+            for rep in sorted(all_reps):
+                act = flt(actual_map.get(rep, 0))
+                tgt = flt(target_map.get(rep, 0))
+                delta = act - tgt
+                pct = round((act / tgt) * 100, 1) if tgt > 0 else (100.0 if act > 0 else 0.0)
+                rows.append({
+                    "rep_name": rep,
+                    "actual": act,
+                    "target": tgt,
+                    "delta": delta,
+                    "pct_achieved": pct,
+                })
+                total_actual += act
+                total_target += tgt
+            # Total row
+            total_delta = total_actual - total_target
+            total_pct = round((total_actual / total_target) * 100, 1) if total_target > 0 else 0.0
+            rows.append({
+                "rep_name": "Sales Team Total",
+                "actual": total_actual,
+                "target": total_target,
+                "delta": total_delta,
+                "pct_achieved": total_pct,
+                "is_total": True,
+            })
+            return rows
+
+        return {
+            "status": "ok",
+            "data": {
+                "mtd": build_rows(mtd_actual, mtd_target),
+                "ytd": build_rows(ytd_actual, ytd_target),
+                "month": month_key,
+            }
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "get_rep_performance_table error")
+        return {"status": "error", "message": "An error occurred. Please try again.", "data": {"mtd": [], "ytd": []}}
     """Compare Sales Person on documents against Customer Sales Rep Assignment. Return mismatches."""
     try:
         if isinstance(filters, str):
