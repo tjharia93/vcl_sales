@@ -1172,9 +1172,24 @@ def get_rep_performance_table():
         # --- MTD Targets (sum customer targets for each rep's customers) ---
         month_cust_targets = by_customer_monthly.get(month_key, {})
         mtd_target = defaultdict(float)
+        accounted_mtd = set()
         for rep, custs in rep_customers.items():
             for c in custs:
-                mtd_target[rep] += flt(month_cust_targets.get(c, 0))
+                if c in month_cust_targets:
+                    mtd_target[rep] += flt(month_cust_targets[c])
+                    accounted_mtd.add(c)
+
+        # Pick up direct rep-name entries and unassigned customer targets
+        rep_name_lower = {r.lower(): r for r in all_reps}
+        for key, val in month_cust_targets.items():
+            if key in accounted_mtd:
+                continue
+            matched_rep = rep_name_lower.get(key.lower())
+            if matched_rep:
+                mtd_target[matched_rep] += flt(val)
+            else:
+                mtd_target["Other"] += flt(val)
+            accounted_mtd.add(key)
 
         # --- YTD Actuals (Draft + Submitted) ---
         ytd_invoices = frappe.db.sql("""
@@ -1193,9 +1208,27 @@ def get_rep_performance_table():
         ytd_target = defaultdict(float)
         for m_key, cust_targets in by_customer_monthly.items():
             if m_key <= month_key:
+                accounted_ytd = set()
                 for rep, custs in rep_customers.items():
                     for c in custs:
-                        ytd_target[rep] += flt(cust_targets.get(c, 0))
+                        if c in cust_targets:
+                            ytd_target[rep] += flt(cust_targets[c])
+                            accounted_ytd.add(c)
+                # Pick up direct rep-name entries and unassigned customer targets
+                for key, val in cust_targets.items():
+                    if key in accounted_ytd:
+                        continue
+                    matched_rep = rep_name_lower.get(key.lower())
+                    if matched_rep:
+                        ytd_target[matched_rep] += flt(val)
+                    else:
+                        ytd_target["Other"] += flt(val)
+                    accounted_ytd.add(key)
+
+        # Ensure "Other" appears if it received any unassigned targets
+        if not scope["is_restricted"]:
+            if mtd_target.get("Other") or ytd_target.get("Other"):
+                all_reps.add("Other")
 
         # Build rows
         def build_rows(actual_map, target_map):
