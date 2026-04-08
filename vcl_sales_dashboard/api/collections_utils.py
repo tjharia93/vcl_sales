@@ -488,8 +488,129 @@ def resolve_rep_user_from_label(label, label_map=None):
 
 # ── Role helpers ─────────────────────────────────────────────────────
 
+def get_user_scope():
+    """Return the permission scope for the current user.
+
+    Uses ERPNext User Permissions on Sales Person as the primary control.
+
+    Returns dict:
+        is_restricted: bool — True if Sales User (limited scope)
+        sales_persons: list of allowed Sales Person names (e.g. ["Neema", "Joyce"])
+        user: str — frappe.session.user
+        role: str — highest applicable role
+
+    For managers/admins, returns is_restricted=False with empty sales_persons
+    (meaning: show all data).
+
+    For Sales Users, returns the Sales Person(s) they are permitted for via
+    ERPNext User Permissions. If none configured, returns empty list (no data).
+    """
+    user = frappe.session.user
+    roles = frappe.get_roles(user)
+
+    # Determine highest role
+    if "System Manager" in roles:
+        role = "System Manager"
+    elif "Finance Manager" in roles:
+        role = "Finance Manager"
+    elif "Sales Manager" in roles:
+        role = "Sales Manager"
+    elif "Sales User" in roles:
+        role = "Sales User"
+    else:
+        role = "Guest"
+
+    # Managers and above see everything
+    if role in ("System Manager", "Finance Manager", "Sales Manager"):
+        return {
+            "is_restricted": False,
+            "sales_persons": [],
+            "user": user,
+            "role": role,
+        }
+
+    # Sales User: get allowed Sales Person(s) from User Permissions
+    allowed_sp = frappe.get_all(
+        "User Permission",
+        filters={
+            "user": user,
+            "allow": "Sales Person",
+        },
+        fields=["for_value"],
+        ignore_permissions=True,
+    )
+    sales_persons = [sp.for_value for sp in allowed_sp if sp.for_value]
+
+    return {
+        "is_restricted": True,
+        "sales_persons": sales_persons,
+        "user": user,
+        "role": role,
+    }
+
+
+def get_customers_for_scope(scope, as_of_date=None):
+    """Return list of customer names visible to the given scope.
+
+    For restricted users (Sales Users), returns customers assigned to
+    their permitted Sales Person(s) via Customer Sales Rep Assignment.
+
+    For unrestricted users, returns None (meaning: no customer filter needed).
+    """
+    if not scope["is_restricted"]:
+        return None  # No restriction
+
+    if not scope["sales_persons"]:
+        return []  # No Sales Person permission = no customers
+
+    if not as_of_date:
+        as_of_date = frappe.utils.today()
+
+    placeholders = ", ".join(["%s"] * len(scope["sales_persons"]))
+    assignments = frappe.db.sql(f"""
+        SELECT DISTINCT customer
+        FROM `tabCustomer Sales Rep Assignment`
+        WHERE status = 'Active'
+          AND sales_representative IN ({placeholders})
+          AND effective_from <= %s
+          AND (effective_to IS NULL OR effective_to = '' OR effective_to >= %s)
+    """, (*scope["sales_persons"], as_of_date, as_of_date))
+
+    return [row[0] for row in assignments]
+
+
+def apply_scope_filter(scope, conditions, values, customer_field="customer", table_alias=""):
+    """Apply scope-based customer filtering to SQL conditions.
+
+    For restricted users, adds a customer IN (...) condition.
+    For unrestricted users, does nothing.
+
+    Args:
+        scope: dict from get_user_scope()
+        conditions: list of SQL condition strings (modified in place)
+        values: dict of SQL parameter values (modified in place)
+        customer_field: the field name to filter on (default "customer")
+        table_alias: optional table alias prefix (e.g. "si")
+    """
+    if not scope["is_restricted"]:
+        return  # Manager — no filter
+
+    customers = get_customers_for_scope(scope)
+    prefix = f"{table_alias}." if table_alias else ""
+
+    if not customers:
+        conditions.append("1 = 0")  # No permitted customers — show nothing
+        return
+
+    ph = ", ".join([f"%(scope_c{i})s" for i in range(len(customers))])
+    conditions.append(f"{prefix}{customer_field} IN ({ph})")
+    for i, c in enumerate(customers):
+        values[f"scope_c{i}"] = c
+
+
 def get_collections_role_filter():
-    """Returns user email for Sales User filtering, or None for managers."""
+    """Returns user email for Sales User filtering, or None for managers.
+    DEPRECATED: Use get_user_scope() + apply_scope_filter() instead."""
     user = frappe.session.user
     roles = frappe.get_roles(user)
     if any(r in roles for r in ["Sales Manager", "Finance Manager", "System Manager"]):

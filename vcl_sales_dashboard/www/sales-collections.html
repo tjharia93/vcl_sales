@@ -371,7 +371,6 @@
   }
 
   async function loadRepOptions() {
-    if (!isManager) return;
     try {
       const periodVal = document.getElementById('f-period').value;
       const args = periodVal ? { period_end: periodVal } : {};

@@ -1,14 +1,31 @@
 import frappe
 import json
 from frappe.utils import flt, cint, now_datetime, getdate
-from vcl_sales_dashboard.api.collections_utils import get_collections_role_filter
+from vcl_sales_dashboard.api.collections_utils import get_collections_role_filter, get_user_scope
+
+
+def _apply_collections_scope(conditions, values, scope, sales_rep_filter=None):
+    """Apply scope filtering for collections snapshot queries.
+    For Sales Users: restricts by assigned_sales_representative matching permitted Sales Person(s).
+    For Managers with a selected rep filter: filters by that rep."""
+    if scope["is_restricted"]:
+        if scope["sales_persons"]:
+            ph = ", ".join([f"%(sp_{i})s" for i in range(len(scope["sales_persons"]))])
+            conditions.append(f"cs.assigned_sales_representative IN ({ph})")
+            for i, sp in enumerate(scope["sales_persons"]):
+                values[f"sp_{i}"] = sp
+        else:
+            conditions.append("1 = 0")  # No Sales Person permission = no data
+    elif sales_rep_filter:
+        conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
+        values["sales_rep"] = sales_rep_filter
 
 
 @frappe.whitelist()
 def get_collections_summary(period_end=None, sales_rep=None):
     """Return KPI summary for the collections dashboard."""
     try:
-        role_filter = get_collections_role_filter()
+        scope = get_user_scope()
 
         conditions = []
         values = {}
@@ -16,12 +33,7 @@ def get_collections_summary(period_end=None, sales_rep=None):
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
-        elif sales_rep:
-            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
-            values["sales_rep"] = sales_rep
+        _apply_collections_scope(conditions, values, scope, sales_rep)
 
         where = "WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -56,7 +68,7 @@ def get_collections_summary(period_end=None, sales_rep=None):
 def get_collections_rep_summary(period_end=None):
     """Return collections summary grouped by sales rep."""
     try:
-        role_filter = get_collections_role_filter()
+        scope = get_user_scope()
 
         conditions = ["sub.status = 'Processed'"]
         values = {}
@@ -64,9 +76,7 @@ def get_collections_rep_summary(period_end=None):
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
+        _apply_collections_scope(conditions, values, scope)
 
         where = "WHERE " + " AND ".join(conditions)
 
@@ -102,7 +112,7 @@ def get_collections_customer_list(filters=None):
             filters = json.loads(filters)
         filters = filters or {}
 
-        role_filter = get_collections_role_filter()
+        scope = get_user_scope()
 
         conditions = ["sub.status = 'Processed'"]
         values = {}
@@ -110,12 +120,7 @@ def get_collections_customer_list(filters=None):
         if filters.get("period_end"):
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = filters["period_end"]
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
-        elif filters.get("sales_rep"):
-            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
-            values["sales_rep"] = filters["sales_rep"]
+        _apply_collections_scope(conditions, values, scope, filters.get("sales_rep"))
         if filters.get("status"):
             conditions.append("cs.latest_follow_up_status = %(status)s")
             values["status"] = filters["status"]
@@ -183,8 +188,8 @@ def get_customer_snapshot_detail(snapshot_name):
     try:
         doc = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        role_filter = get_collections_role_filter()
-        if role_filter and doc.sales_rep_user != role_filter:
+        scope = get_user_scope()
+        if scope["is_restricted"] and doc.assigned_sales_representative not in (scope["sales_persons"] or []):
             frappe.throw("Not permitted", frappe.PermissionError)
 
         return {"status": "ok", "data": doc.as_dict()}
@@ -209,10 +214,14 @@ def get_customer_month_history(customer=None, excel_customer_name=None):
         else:
             return {"status": "error", "message": "Provide customer or excel_customer_name."}
 
-        role_filter = get_collections_role_filter()
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
+        scope = get_user_scope()
+        if scope["is_restricted"] and scope["sales_persons"]:
+            ph = ", ".join([f"%(msp_{i})s" for i in range(len(scope["sales_persons"]))])
+            conditions.append(f"cs.assigned_sales_representative IN ({ph})")
+            for i, sp in enumerate(scope["sales_persons"]):
+                values[f"msp_{i}"] = sp
+        elif scope["is_restricted"]:
+            conditions.append("1 = 0")
 
         where = "WHERE " + " AND ".join(conditions)
 
@@ -243,8 +252,8 @@ def add_follow_up(snapshot_name, payload=None):
 
         snapshot = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        role_filter = get_collections_role_filter()
-        if role_filter and snapshot.sales_rep_user != role_filter:
+        scope = get_user_scope()
+        if scope["is_restricted"] and snapshot.assigned_sales_representative not in (scope["sales_persons"] or []):
             frappe.throw("Not permitted", frappe.PermissionError)
 
         follow_up = frappe.new_doc("Collections Follow Up")
@@ -281,8 +290,8 @@ def get_follow_ups(snapshot_name):
     try:
         snapshot = frappe.get_doc("Collections Customer Snapshot", snapshot_name)
 
-        role_filter = get_collections_role_filter()
-        if role_filter and snapshot.sales_rep_user != role_filter:
+        scope = get_user_scope()
+        if scope["is_restricted"] and snapshot.assigned_sales_representative not in (scope["sales_persons"] or []):
             frappe.throw("Not permitted", frappe.PermissionError)
 
         result = frappe.get_all(
@@ -418,7 +427,7 @@ def get_sales_rep_options(period_end=None):
 def get_warning_queues(period_end=None, sales_rep=None):
     """Return warning/review queue counts and rows for the selected period."""
     try:
-        role_filter = get_collections_role_filter()
+        scope = get_user_scope()
 
         conditions = ["sub.status = 'Processed'"]
         values = {}
@@ -426,12 +435,7 @@ def get_warning_queues(period_end=None, sales_rep=None):
         if period_end:
             conditions.append("cs.period_end = %(period_end)s")
             values["period_end"] = period_end
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
-        elif sales_rep:
-            conditions.append("cs.assigned_sales_representative = %(sales_rep)s")
-            values["sales_rep"] = sales_rep
+        _apply_collections_scope(conditions, values, scope, sales_rep)
 
         where = "WHERE " + " AND ".join(conditions)
 
@@ -532,10 +536,14 @@ def get_customer_month_trend(customer=None, excel_customer_name=None):
         else:
             return {"status": "error", "message": "Provide customer or excel_customer_name."}
 
-        role_filter = get_collections_role_filter()
-        if role_filter:
-            conditions.append("cs.sales_rep_user = %(role_filter)s")
-            values["role_filter"] = role_filter
+        scope = get_user_scope()
+        if scope["is_restricted"] and scope["sales_persons"]:
+            ph = ", ".join([f"%(msp_{i})s" for i in range(len(scope["sales_persons"]))])
+            conditions.append(f"cs.assigned_sales_representative IN ({ph})")
+            for i, sp in enumerate(scope["sales_persons"]):
+                values[f"msp_{i}"] = sp
+        elif scope["is_restricted"]:
+            conditions.append("1 = 0")
 
         where = "WHERE " + " AND ".join(conditions)
 

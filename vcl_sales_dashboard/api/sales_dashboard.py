@@ -2,16 +2,18 @@ import frappe
 import json
 import os
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
-from vcl_sales_dashboard.api.collections_utils import resolve_sales_rep_user
+from vcl_sales_dashboard.api.collections_utils import (
+    resolve_sales_rep_user, get_user_scope, get_customers_for_scope, apply_scope_filter,
+)
 
 
 def get_role_filter():
-    """Returns user email for Sales Rep filtering, or None for managers."""
-    user = frappe.session.user
-    roles = frappe.get_roles(user)
-    if any(r in roles for r in ["Sales Manager", "Finance Manager", "System Manager"]):
+    """Returns user email for Sales Rep filtering, or None for managers.
+    DEPRECATED: Use get_user_scope() instead."""
+    scope = get_user_scope()
+    if not scope["is_restricted"]:
         return None
-    return user
+    return scope["user"]
 
 
 def apply_filters_to_conditions(filters, conditions, values, table_alias=""):
@@ -34,32 +36,33 @@ def apply_filters_to_conditions(filters, conditions, values, table_alias=""):
 
 
 def apply_owner_filter(role_filter, filters, conditions, values, table_alias=""):
-    """Apply CSR-based filtering. Uses Customer Sales Rep Assignment to filter by customer.
-    Compares resolved User.name values (emails) for permission-based filtering."""
+    """Apply scope-based filtering using ERPNext User Permissions on Sales Person.
+
+    For Sales Users: restricts to customers assigned to their permitted Sales Person(s).
+    For Managers: if a sales_rep filter is selected, restricts to that rep's customers.
+    """
     prefix = f"{table_alias}." if table_alias else ""
-    csr_map = get_csr_map()
+    scope = get_user_scope()
 
-    # Determine which sales rep to filter by
-    target_rep = None
-    if role_filter:
-        target_rep = role_filter
-    elif filters and filters.get("my_records"):
-        target_rep = frappe.session.user
+    if scope["is_restricted"]:
+        # Sales User: enforce Sales Person permission scope
+        apply_scope_filter(scope, conditions, values, "customer", table_alias)
+        return
 
+    # Manager with optional sales_rep filter
+    target_sp = None
     if filters and filters.get("sales_rep"):
-        # sales_rep from filter could be a label — resolve to User.name
-        target_rep = resolve_sales_rep_user(filters["sales_rep"]) or filters["sales_rep"]
+        target_sp = filters["sales_rep"]
+    elif filters and filters.get("my_records"):
+        # Manager viewing their own records — get their Sales Person
+        my_scope = get_user_scope()
+        if my_scope["sales_persons"]:
+            target_sp = my_scope["sales_persons"][0]
 
-    if target_rep:
-        target_lower = (target_rep or "").strip().lower()
-        rep_customers = [c for c, r in csr_map.items() if (r or "").strip().lower() == target_lower]
-        if rep_customers:
-            ph = ", ".join([f"%(csr_c{i})s" for i in range(len(rep_customers))])
-            conditions.append(f"{prefix}customer IN ({ph})")
-            for i, c in enumerate(rep_customers):
-                values[f"csr_c{i}"] = c
-        else:
-            conditions.append("1 = 0")  # No customers assigned
+    if target_sp:
+        # Get customers for the selected Sales Person
+        temp_scope = {"is_restricted": True, "sales_persons": [target_sp]}
+        apply_scope_filter(temp_scope, conditions, values, "customer", table_alias)
 
 
 def get_csr_map(as_of_date=None):
@@ -154,37 +157,41 @@ def get_customers_for_rep(sales_rep, as_of_date=None):
 
 @frappe.whitelist()
 def get_filter_options():
-    """Return filter dropdown options for sales reps (from CSR Assignment), territories, customer groups."""
+    """Return filter dropdown options. For Sales Users, restricts to their permitted scope."""
     try:
+        scope = get_user_scope()
         display_map = get_display_name_map()
 
-        # Get distinct active sales reps from Customer Sales Rep Assignment
-        raw_reps = frappe.db.sql("""
-            SELECT DISTINCT sales_representative
-            FROM `tabCustomer Sales Rep Assignment`
-            WHERE status = 'Active'
-              AND sales_representative IS NOT NULL
-              AND sales_representative != ''
-            ORDER BY sales_representative
-        """, as_dict=True)
-
-        if raw_reps:
-            sales_reps = []
-            for row in raw_reps:
-                label = row.get("sales_representative") or ""
-                # Resolve the label to a User.name (email) via the same logic used elsewhere
-                user_email = resolve_sales_rep_user(label) or label
-                if is_system_user(user_email):
-                    continue
-                full_name = resolve_display_name(user_email, display_map)
-                sales_reps.append({"name": label, "full_name": full_name})
+        # Sales Person dropdown
+        if scope["is_restricted"]:
+            # Sales User: only show their permitted Sales Person(s)
+            sales_reps = [{"name": sp, "full_name": sp, "locked": True} for sp in scope["sales_persons"]]
         else:
-            # Fallback to Sales Person doctype if CSR Assignment is empty
-            sales_reps = frappe.get_all(
-                "Sales Person",
-                fields=["name", "sales_person_name as full_name"],
-                order_by="name"
-            )
+            # Manager: show all Sales Persons from CSR Assignment
+            raw_reps = frappe.db.sql("""
+                SELECT DISTINCT sales_representative
+                FROM `tabCustomer Sales Rep Assignment`
+                WHERE status = 'Active'
+                  AND sales_representative IS NOT NULL
+                  AND sales_representative != ''
+                ORDER BY sales_representative
+            """, as_dict=True)
+
+            if raw_reps:
+                sales_reps = []
+                for row in raw_reps:
+                    label = row.get("sales_representative") or ""
+                    user_email = resolve_sales_rep_user(label) or label
+                    if is_system_user(user_email):
+                        continue
+                    full_name = resolve_display_name(user_email, display_map)
+                    sales_reps.append({"name": label, "full_name": full_name})
+            else:
+                sales_reps = frappe.get_all(
+                    "Sales Person",
+                    fields=["name", "sales_person_name as full_name"],
+                    order_by="name"
+                )
 
         territories = frappe.get_all(
             "Territory",
@@ -205,7 +212,12 @@ def get_filter_options():
             "data": {
                 "sales_reps": sales_reps,
                 "territories": territories,
-                "customer_groups": customer_groups
+                "customer_groups": customer_groups,
+                "user_scope": {
+                    "is_restricted": scope["is_restricted"],
+                    "role": scope["role"],
+                    "sales_persons": scope["sales_persons"],
+                },
             }
         }
     except Exception as e:
@@ -1136,8 +1148,13 @@ def get_rep_performance_table():
             if rep:
                 rep_customers[rep].append(cust)
 
-        # Get all distinct reps
+        # Get all distinct reps, filtered by scope
+        scope = get_user_scope()
         all_reps = set(csr_label_map.values()) - {"", None}
+        if scope["is_restricted"] and scope["sales_persons"]:
+            all_reps = all_reps & set(scope["sales_persons"])
+        elif scope["is_restricted"]:
+            all_reps = set()  # No Sales Person permission = no data
 
         # --- MTD Actuals ---
         mtd_invoices = frappe.db.sql("""

@@ -586,14 +586,34 @@
         if (!data) { pushDebug("warn", "Could not load filter options", "loadFilterOptions"); return; }
 
         var spSelect = document.getElementById("filter-sales-person");
+        var userScope = data.user_scope || {};
+
         if (spSelect && data.sales_reps) {
-          data.sales_reps.forEach(function (sp) {
-            var opt = document.createElement("option");
-            opt.value = sp.name;
-            opt.textContent = sp.full_name || sp.name;
-            spSelect.appendChild(opt);
-          });
-          pushDebug("success", data.sales_reps.length + " sales persons loaded", "loadFilterOptions");
+          spSelect.innerHTML = '';
+          if (userScope.is_restricted && data.sales_reps.length > 0) {
+            // Sales User: locked to their own rep(s), no "All" option
+            data.sales_reps.forEach(function (sp) {
+              var opt = document.createElement("option");
+              opt.value = sp.name;
+              opt.textContent = sp.full_name || sp.name;
+              spSelect.appendChild(opt);
+            });
+            spSelect.disabled = true;
+            spSelect.style.opacity = "0.7";
+          } else {
+            // Manager: show "All" + all reps
+            var allOpt = document.createElement("option");
+            allOpt.value = "";
+            allOpt.textContent = "All Sales Persons";
+            spSelect.appendChild(allOpt);
+            data.sales_reps.forEach(function (sp) {
+              var opt = document.createElement("option");
+              opt.value = sp.name;
+              opt.textContent = sp.full_name || sp.name;
+              spSelect.appendChild(opt);
+            });
+          }
+          pushDebug("success", data.sales_reps.length + " sales persons loaded (restricted=" + (userScope.is_restricted || false) + ")", "loadFilterOptions");
         }
 
         var tSelect = document.getElementById("filter-territory");
@@ -606,6 +626,9 @@
           });
           pushDebug("success", data.territories.length + " territories loaded", "loadFilterOptions");
         }
+
+        // Store scope for other functions
+        window._userScope = userScope;
       }
 
       // ── Load Net Sales KPIs + Targets ──
