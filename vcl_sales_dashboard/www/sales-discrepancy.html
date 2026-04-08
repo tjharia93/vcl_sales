@@ -237,6 +237,40 @@
           Compares Sales Team child table on each document against the Customer Sales Rep Assignment DocType.
         </div>
       </section>
+
+      <section class="table-wrap mb-5">
+        <div class="card__body" style="padding-bottom:0;">
+          <div class="section-title">
+            <div>
+              <div class="type-label" style="color:var(--warning);">TARGET MAPPING</div>
+              <h3>Unmapped Customer Targets</h3>
+              <p class="type-small" style="color:var(--text-muted);margin-top:2px;">
+                Customer names in the targets file with no CSR assignment. These targets are excluded from the performance table until a mapping is created.
+              </p>
+            </div>
+            <div>
+              <div class="type-small" id="target-disc-count"></div>
+              <div class="type-small" id="target-disc-gap" style="color:var(--danger);margin-top:4px;"></div>
+            </div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Customer Name</th>
+              <th class="text-right">Month</th>
+              <th class="text-right">Target Amount</th>
+              <th>Action Needed</th>
+            </tr>
+          </thead>
+          <tbody id="target-disc-table-body">
+            <tr><td colspan="4" class="text-secondary" style="text-align:center;padding:24px;">Loading...</td></tr>
+          </tbody>
+        </table>
+        <div class="table-note">
+          To fix: create a Customer Sales Rep Assignment for each listed customer, then refresh.
+        </div>
+      </section>
     </main>
   </div>
 
@@ -346,9 +380,63 @@
         });
       }
 
+      function formatKESFull(val) {
+        val = parseFloat(val) || 0;
+        return "KES " + val.toLocaleString("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+
+      async function loadTargetDiscrepancies() {
+        var data = await apiFetch("get_target_discrepancies", {});
+        var tbody = document.getElementById("target-disc-table-body");
+        if (!tbody) return;
+
+        if (!data) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-secondary" style="text-align:center;padding:24px;">Failed to load target discrepancies.</td></tr>';
+          return;
+        }
+
+        var mtdUnmapped = data.mtd_unmapped || [];
+        var mtdUnmappedTotal = parseFloat(data.mtd_unmapped_total) || 0;
+        var mtdExpected = parseFloat(data.mtd_expected_target) || 0;
+        var allDisc = data.discrepancies || [];
+
+        setText("target-disc-count", allDisc.length + " unmapped entries (all months to date)");
+        if (mtdUnmappedTotal > 0) {
+          var gapEl = document.getElementById("target-disc-gap");
+          if (gapEl) gapEl.textContent = "Current month gap: " + formatKESFull(mtdUnmappedTotal) + " of " + formatKESFull(mtdExpected) + " unmapped";
+        }
+
+        if (allDisc.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-secondary" style="text-align:center;padding:24px;">All target entries are mapped to a sales rep. No discrepancies.</td></tr>';
+          return;
+        }
+
+        // Sort: current month first, then by target desc
+        var month = data.month || "";
+        allDisc.sort(function (a, b) {
+          if (a.month === month && b.month !== month) return -1;
+          if (b.month === month && a.month !== month) return 1;
+          return (parseFloat(b.target) || 0) - (parseFloat(a.target) || 0);
+        });
+
+        tbody.innerHTML = "";
+        allDisc.forEach(function (r) {
+          var tr = document.createElement("tr");
+          var isCurrent = r.month === month;
+          if (isCurrent) tr.style.background = "#fffbf0";
+          tr.innerHTML = [
+            '<td class="font-semibold">' + (r.customer || '-') + '</td>',
+            '<td class="text-right">' + (r.month || '-') + (isCurrent ? ' <span style="font-size:10px;color:var(--warning);">(current)</span>' : '') + '</td>',
+            '<td class="text-right font-semibold">' + formatKESFull(r.target) + '</td>',
+            '<td><span class="pill pill--unassigned">Create CSR Assignment</span></td>'
+          ].join("");
+          tbody.appendChild(tr);
+        });
+      }
+
       async function boot() {
         await loadRepOptions();
-        await loadDiscrepancies();
+        await Promise.all([loadDiscrepancies(), loadTargetDiscrepancies()]);
         bindFilters();
       }
 

@@ -1179,17 +1179,18 @@ def get_rep_performance_table():
                     mtd_target[rep] += flt(month_cust_targets[c])
                     accounted_mtd.add(c)
 
-        # Pick up direct rep-name entries and unassigned customer targets
+        # Pick up direct rep-name entries (case-insensitive); track unmapped entries
         rep_name_lower = {r.lower(): r for r in all_reps}
+        mtd_unmapped = []
         for key, val in month_cust_targets.items():
             if key in accounted_mtd:
                 continue
             matched_rep = rep_name_lower.get(key.lower())
             if matched_rep:
                 mtd_target[matched_rep] += flt(val)
+                accounted_mtd.add(key)
             else:
-                mtd_target["Other"] += flt(val)
-            accounted_mtd.add(key)
+                mtd_unmapped.append({"customer": key, "target": flt(val), "month": month_key})
 
         # --- YTD Actuals (Draft + Submitted) ---
         ytd_invoices = frappe.db.sql("""
@@ -1206,6 +1207,7 @@ def get_rep_performance_table():
 
         # --- YTD Targets (sum all months up to current) ---
         ytd_target = defaultdict(float)
+        ytd_unmapped_total = 0
         for m_key, cust_targets in by_customer_monthly.items():
             if m_key <= month_key:
                 accounted_ytd = set()
@@ -1214,7 +1216,7 @@ def get_rep_performance_table():
                         if c in cust_targets:
                             ytd_target[rep] += flt(cust_targets[c])
                             accounted_ytd.add(c)
-                # Pick up direct rep-name entries and unassigned customer targets
+                # Pick up direct rep-name entries; track unmapped
                 for key, val in cust_targets.items():
                     if key in accounted_ytd:
                         continue
@@ -1222,13 +1224,7 @@ def get_rep_performance_table():
                     if matched_rep:
                         ytd_target[matched_rep] += flt(val)
                     else:
-                        ytd_target["Other"] += flt(val)
-                    accounted_ytd.add(key)
-
-        # Ensure "Other" appears if it received any unassigned targets
-        if not scope["is_restricted"]:
-            if mtd_target.get("Other") or ytd_target.get("Other"):
-                all_reps.add("Other")
+                        ytd_unmapped_total += flt(val)
 
         # Build rows
         def build_rows(actual_map, target_map):
@@ -1262,17 +1258,110 @@ def get_rep_performance_table():
             })
             return rows
 
+        mtd_expected = flt(monthly_targets.get(month_key, 0))
+        ytd_expected = sum(flt(v) for k, v in monthly_targets.items() if k <= month_key)
+        mtd_rows = build_rows(mtd_actual, mtd_target)
+        ytd_rows = build_rows(ytd_actual, ytd_target)
+
+        # Mapped total is the total row's target
+        mtd_mapped = mtd_rows[-1]["target"] if mtd_rows else 0
+        ytd_mapped = ytd_rows[-1]["target"] if ytd_rows else 0
+
         return {
             "status": "ok",
             "data": {
-                "mtd": build_rows(mtd_actual, mtd_target),
-                "ytd": build_rows(ytd_actual, ytd_target),
+                "mtd": mtd_rows,
+                "ytd": ytd_rows,
                 "month": month_key,
+                "unmapped_targets": mtd_unmapped,
+                "mtd_expected_target": mtd_expected,
+                "mtd_mapped_target": mtd_mapped,
+                "ytd_expected_target": ytd_expected,
+                "ytd_mapped_target": ytd_mapped,
+                "ytd_unmapped_total": ytd_unmapped_total,
             }
         }
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "get_rep_performance_table error")
         return {"status": "error", "message": "An error occurred. Please try again.", "data": {"mtd": [], "ytd": []}}
+
+
+@frappe.whitelist()
+def get_target_discrepancies():
+    """Return customer names from the targets JSON that have no CSR assignment.
+    These are target entries that cannot be mapped to any sales rep."""
+    try:
+        from collections import defaultdict
+
+        d = getdate(today())
+        month_key = f"{d.year}-{d.month:02d}"
+
+        targets = _load_targets_json() or {}
+        by_customer_monthly = targets.get("by_customer_monthly", {})
+        monthly_targets = targets.get("monthly_targets", {})
+
+        csr_label_map = get_csr_label_map()
+
+        # Build set of all known reps
+        all_reps = set(csr_label_map.values()) - {"", None}
+        rep_name_lower = {r.lower(): r for r in all_reps}
+
+        # Set of all assigned customers
+        assigned_customers = set(csr_label_map.keys())
+
+        discrepancies = []
+
+        # Check each month up to current
+        for m_key in sorted(by_customer_monthly.keys()):
+            if m_key > month_key:
+                continue
+            cust_targets = by_customer_monthly[m_key]
+            for key, val in cust_targets.items():
+                # Skip if it's an assigned customer
+                if key in assigned_customers:
+                    continue
+                # Skip if it matches a rep name (direct rep entry)
+                if key.lower() in rep_name_lower:
+                    continue
+                # This is an unmapped customer
+                discrepancies.append({
+                    "customer": key,
+                    "month": m_key,
+                    "target": flt(val),
+                })
+
+        # Summary: current month unmapped vs expected
+        mtd_cust_targets = by_customer_monthly.get(month_key, {})
+        mtd_unmapped = []
+        mtd_unmapped_total = 0
+        for key, val in mtd_cust_targets.items():
+            if key in assigned_customers:
+                continue
+            if key.lower() in rep_name_lower:
+                continue
+            mtd_unmapped.append({"customer": key, "target": flt(val)})
+            mtd_unmapped_total += flt(val)
+
+        mtd_expected = flt(monthly_targets.get(month_key, 0))
+
+        return {
+            "status": "ok",
+            "data": {
+                "discrepancies": discrepancies,
+                "mtd_unmapped": mtd_unmapped,
+                "mtd_unmapped_total": mtd_unmapped_total,
+                "mtd_expected_target": mtd_expected,
+                "month": month_key,
+                "total_unmapped_entries": len(discrepancies),
+            }
+        }
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "get_target_discrepancies error")
+        return {"status": "error", "message": "An error occurred.", "data": {}}
+
+
+@frappe.whitelist()
+def get_sales_rep_discrepancies(filters=None):
     """Compare Sales Person on documents against Customer Sales Rep Assignment. Return mismatches."""
     try:
         if isinstance(filters, str):

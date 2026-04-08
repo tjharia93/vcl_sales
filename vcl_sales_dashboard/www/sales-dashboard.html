@@ -490,6 +490,11 @@
             </table>
           </div>
           <div class="type-small mt-5" id="perf-note">Showing MTD performance</div>
+          <div id="perf-unmapped-banner" style="display:none;margin-top:12px;padding:10px 14px;background:#fff7e6;border:1px solid #ffe0b2;border-radius:6px;font-size:13px;color:#7a5c00;">
+            <strong style="color:#b45309;">Target mapping gap:</strong>
+            <span id="perf-unmapped-text"></span>
+            <a href="/sales-discrepancy" style="margin-left:8px;color:#1a73e8;text-decoration:underline;">View in Discrepancy Report &rarr;</a>
+          </div>
         </div>
       </section>
 
@@ -698,6 +703,21 @@
           perfDataCache.mtd = data.mtd || [];
           perfDataCache.ytd = data.ytd || [];
           renderPerfTable(currentPerfMode);
+
+          // Show unmapped targets warning if there is a gap
+          var unmapped = data.unmapped_targets || [];
+          var banner = document.getElementById("perf-unmapped-banner");
+          var bannerText = document.getElementById("perf-unmapped-text");
+          if (banner && bannerText && unmapped.length > 0) {
+            var unmappedTotal = 0;
+            unmapped.forEach(function (u) { unmappedTotal += parseFloat(u.target) || 0; });
+            bannerText.textContent = unmapped.length + " customer(s) with " + formatKESFull(unmappedTotal) +
+              " in targets have no CSR assignment and are excluded from the table.";
+            banner.style.display = "block";
+          } else if (banner) {
+            banner.style.display = "none";
+          }
+
           pushDebug("success", "Performance data loaded: " + (data.mtd || []).length + " reps", "loadPerfTable");
         } catch (err) {
           pushDebug("error", "Performance table render failed: " + err.message, "loadPerfTable");
