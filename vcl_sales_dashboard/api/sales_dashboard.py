@@ -1156,11 +1156,11 @@ def get_rep_performance_table():
         elif scope["is_restricted"]:
             all_reps = set()  # No Sales Person permission = no data
 
-        # --- MTD Actuals ---
+        # --- MTD Actuals (Draft + Submitted) ---
         mtd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(start)s
         """, {"start": month_start}, as_dict=True)
 
         mtd_actual = defaultdict(float)
@@ -1176,11 +1176,11 @@ def get_rep_performance_table():
             for c in custs:
                 mtd_target[rep] += flt(month_cust_targets.get(c, 0))
 
-        # --- YTD Actuals ---
+        # --- YTD Actuals (Draft + Submitted) ---
         ytd_invoices = frappe.db.sql("""
             SELECT si.customer, si.net_total
             FROM `tabSales Invoice` si
-            WHERE si.docstatus = 1 AND si.posting_date >= %(start)s
+            WHERE si.docstatus IN (0, 1) AND si.posting_date >= %(start)s
         """, {"start": year_start}, as_dict=True)
 
         ytd_actual = defaultdict(float)
