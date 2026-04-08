@@ -1,0 +1,191 @@
+{
+  "actions": [],
+  "creation": "2026-04-08 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "raw_line_text",
+    "raw_customer_text",
+    "column_break_customer",
+    "matched_customer",
+    "matched_customer_name",
+    "customer_match_type",
+    "customer_match_score",
+    "classification_section",
+    "report_type",
+    "status",
+    "column_break_classification",
+    "priority",
+    "sentiment",
+    "action_details_section",
+    "action_required",
+    "followup_date",
+    "column_break_action",
+    "order_value_text",
+    "quantity_text",
+    "product_reference_text",
+    "confidence_section",
+    "confidence",
+    "needs_review",
+    "column_break_review",
+    "is_primary_line",
+    "review_notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "raw_line_text",
+      "fieldtype": "Small Text",
+      "in_list_view": 1,
+      "label": "Raw Line Text"
+    },
+    {
+      "fieldname": "raw_customer_text",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Raw Customer Text"
+    },
+    {
+      "fieldname": "column_break_customer",
+      "fieldtype": "Section Break",
+      "label": "Customer Matching"
+    },
+    {
+      "fieldname": "matched_customer",
+      "fieldtype": "Link",
+      "label": "Matched Customer",
+      "options": "Customer"
+    },
+    {
+      "fieldname": "matched_customer_name",
+      "fieldtype": "Data",
+      "label": "Matched Customer Name"
+    },
+    {
+      "fieldname": "customer_match_type",
+      "fieldtype": "Select",
+      "label": "Customer Match Type",
+      "options": "\nExact\nFuzzy\nCandidate Only\nUnmatched"
+    },
+    {
+      "fieldname": "customer_match_score",
+      "fieldtype": "Float",
+      "label": "Customer Match Score",
+      "precision": "2"
+    },
+    {
+      "fieldname": "classification_section",
+      "fieldtype": "Section Break",
+      "label": "Classification"
+    },
+    {
+      "fieldname": "report_type",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Report Type",
+      "options": "\nVisit Update\nCall Update\nOrder Opportunity\nQuotation Follow-up\nPayment Follow-up\nComplaint\nDelivery Follow-up\nRelationship Visit\nNo Opportunity\nOther"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "Status",
+      "options": "\nNew Lead\nVisited\nFollow-up Required\nQuote Requested\nQuote Sent\nAwaiting Customer Feedback\nAwaiting PO\nOrder Likely\nOrder Confirmed\nDelivery Pending\nDelivered\nPayment Follow-up\nComplaint Open\nClosed No Opportunity\nEscalate to Management"
+    },
+    {
+      "fieldname": "column_break_classification",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priority",
+      "options": "\nLow\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "sentiment",
+      "fieldtype": "Select",
+      "label": "Sentiment",
+      "options": "\nPositive\nNeutral\nNegative\nMixed"
+    },
+    {
+      "fieldname": "action_details_section",
+      "fieldtype": "Section Break",
+      "label": "Action Details"
+    },
+    {
+      "fieldname": "action_required",
+      "fieldtype": "Small Text",
+      "label": "Action Required"
+    },
+    {
+      "fieldname": "followup_date",
+      "fieldtype": "Date",
+      "label": "Follow-up Date"
+    },
+    {
+      "fieldname": "column_break_action",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "order_value_text",
+      "fieldtype": "Data",
+      "label": "Order Value Text"
+    },
+    {
+      "fieldname": "quantity_text",
+      "fieldtype": "Data",
+      "label": "Quantity Text"
+    },
+    {
+      "fieldname": "product_reference_text",
+      "fieldtype": "Data",
+      "label": "Product Reference Text"
+    },
+    {
+      "fieldname": "confidence_section",
+      "fieldtype": "Section Break",
+      "label": "Confidence & Review"
+    },
+    {
+      "fieldname": "confidence",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "Confidence",
+      "precision": "2"
+    },
+    {
+      "fieldname": "needs_review",
+      "fieldtype": "Check",
+      "in_list_view": 1,
+      "label": "Needs Review"
+    },
+    {
+      "fieldname": "column_break_review",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "is_primary_line",
+      "fieldtype": "Check",
+      "label": "Is Primary Line"
+    },
+    {
+      "fieldname": "review_notes",
+      "fieldtype": "Small Text",
+      "label": "Review Notes"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "istable": 1,
+  "links": [],
+  "modified": "2026-04-08 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "AI Daily Sales Report Line",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 0
+}
