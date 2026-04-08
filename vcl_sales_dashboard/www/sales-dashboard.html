@@ -540,6 +540,11 @@
         return "KES " + val.toFixed(0);
       }
 
+      function formatKESFull(val) {
+        val = parseFloat(val) || 0;
+        return "KES " + val.toLocaleString("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
+
       function setText(id, val) {
         var el = document.getElementById(id);
         if (el) el.textContent = (val !== null && val !== undefined) ? val : "--";
@@ -682,12 +687,23 @@
       var currentPerfMode = "mtd";
 
       async function loadPerfTable() {
-        var data = await apiFetch("get_rep_performance_table", {});
-        if (!data) { pushDebug("warn", "Could not load performance data", "loadPerfTable"); return; }
-        perfDataCache.mtd = data.mtd || [];
-        perfDataCache.ytd = data.ytd || [];
-        renderPerfTable(currentPerfMode);
-        pushDebug("success", "Performance data loaded: " + (data.mtd || []).length + " reps", "loadPerfTable");
+        try {
+          var data = await apiFetch("get_rep_performance_table", {});
+          if (!data) {
+            pushDebug("warn", "Could not load performance data", "loadPerfTable");
+            var tbody = document.getElementById("perf-table-body");
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">Could not load performance data</td></tr>';
+            return;
+          }
+          perfDataCache.mtd = data.mtd || [];
+          perfDataCache.ytd = data.ytd || [];
+          renderPerfTable(currentPerfMode);
+          pushDebug("success", "Performance data loaded: " + (data.mtd || []).length + " reps", "loadPerfTable");
+        } catch (err) {
+          pushDebug("error", "Performance table render failed: " + err.message, "loadPerfTable");
+          var tbody = document.getElementById("perf-table-body");
+          if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px;">Could not load performance data</td></tr>';
+        }
       }
 
       function renderPerfTable(mode) {
