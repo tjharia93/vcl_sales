@@ -1,0 +1,173 @@
+{
+  "actions": [],
+  "creation": "2026-04-08 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "issingle": 1,
+  "field_order": [
+    "enabled_section",
+    "enable_sales_ai",
+    "openai_section",
+    "openai_api_key",
+    "openai_model",
+    "column_break_openai",
+    "request_timeout_seconds",
+    "max_retries",
+    "matching_section",
+    "customer_match_threshold_high",
+    "customer_match_threshold_low",
+    "column_break_matching",
+    "max_candidate_customers",
+    "allow_auto_fill_candidate_customer",
+    "classification_section",
+    "classification_confidence_threshold",
+    "default_review_required_below_confidence",
+    "column_break_classification",
+    "active_prompt_version"
+  ],
+  "fields": [
+    {
+      "fieldname": "enabled_section",
+      "fieldtype": "Section Break",
+      "label": "General"
+    },
+    {
+      "fieldname": "enable_sales_ai",
+      "fieldtype": "Check",
+      "label": "Enable Sales AI",
+      "default": "0",
+      "description": "Enable or disable AI classification for sales reports."
+    },
+    {
+      "fieldname": "openai_section",
+      "fieldtype": "Section Break",
+      "label": "OpenAI Configuration"
+    },
+    {
+      "fieldname": "openai_api_key",
+      "fieldtype": "Password",
+      "label": "OpenAI API Key",
+      "description": "Server-side only. Never exposed to browser."
+    },
+    {
+      "fieldname": "openai_model",
+      "fieldtype": "Data",
+      "label": "OpenAI Model",
+      "default": "gpt-4o",
+      "description": "e.g. gpt-4o, gpt-4o-mini"
+    },
+    {
+      "fieldname": "column_break_openai",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "request_timeout_seconds",
+      "fieldtype": "Int",
+      "label": "Request Timeout (seconds)",
+      "default": "30"
+    },
+    {
+      "fieldname": "max_retries",
+      "fieldtype": "Int",
+      "label": "Max Retries",
+      "default": "2"
+    },
+    {
+      "fieldname": "matching_section",
+      "fieldtype": "Section Break",
+      "label": "Customer Matching"
+    },
+    {
+      "fieldname": "customer_match_threshold_high",
+      "fieldtype": "Float",
+      "label": "High Confidence Threshold",
+      "default": "0.90",
+      "precision": "2",
+      "description": ">= this score: acceptable match, review optional"
+    },
+    {
+      "fieldname": "customer_match_threshold_low",
+      "fieldtype": "Float",
+      "label": "Low Confidence Threshold",
+      "default": "0.75",
+      "precision": "2",
+      "description": "Below this score: mark as unmatched, review required"
+    },
+    {
+      "fieldname": "column_break_matching",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "max_candidate_customers",
+      "fieldtype": "Int",
+      "label": "Max Candidate Customers",
+      "default": "20",
+      "description": "Maximum number of customer candidates sent to OpenAI."
+    },
+    {
+      "fieldname": "allow_auto_fill_candidate_customer",
+      "fieldtype": "Check",
+      "label": "Allow Auto-fill Candidate Customer",
+      "default": "1",
+      "description": "Auto-fill customer link when confidence is above high threshold."
+    },
+    {
+      "fieldname": "classification_section",
+      "fieldtype": "Section Break",
+      "label": "Classification"
+    },
+    {
+      "fieldname": "classification_confidence_threshold",
+      "fieldtype": "Float",
+      "label": "Classification Confidence Threshold",
+      "default": "0.75",
+      "precision": "2",
+      "description": "Below this confidence, the classification is flagged for review."
+    },
+    {
+      "fieldname": "default_review_required_below_confidence",
+      "fieldtype": "Float",
+      "label": "Review Required Below Confidence",
+      "default": "0.80",
+      "precision": "2",
+      "description": "Reports with average confidence below this are auto-flagged for review."
+    },
+    {
+      "fieldname": "column_break_classification",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "active_prompt_version",
+      "fieldtype": "Data",
+      "label": "Active Prompt Version",
+      "default": "v1.0",
+      "description": "Version identifier for the active prompt template."
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-08 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "Sales AI Settings",
+  "naming_rule": "Expression",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 0
+}

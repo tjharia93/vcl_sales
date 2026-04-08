@@ -14,3 +14,11 @@ website_route_rules = [
     {"from_route": "/sales-collections", "to_route": "sales-collections"},
     {"from_route": "/sales-collections-submission", "to_route": "sales-collections-submission"},
 ]
+
+# DocType fixtures for the AI Sales Report feature
+fixtures = [
+    {
+        "dt": "Custom DocPerm",
+        "filters": [["parent", "in", ["AI Daily Sales Report"]]],
+    },
+]
