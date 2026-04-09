@@ -4,6 +4,7 @@
 **Version:** Production Hardening Release
 **Date:** April 2026
 **Prepared for:** Vimit Converters Limited
+**Last Updated:** 2026-04-09 — Updated for performance table rendering fix, target mapping discrepancy report, draft invoice inclusion, and target mapping gap visibility.
 
 ---
 
@@ -59,17 +60,24 @@ This UAT validates that the VCL Sales Dashboard meets the business requirements 
 | A2.9 | Rep names are clean display names | No email addresses, no "Administrator", no technical IDs | | |
 | A2.10 | Delta formatting correct | Positive = normal/green, Negative = brackets + red | | |
 | A2.11 | % Achieved indicators correct | Green dot >=90%, Amber 75-89%, Red <75% | | |
+| A2.12 | Unmapped targets warning banner visible below table | Yellow banner shows count of unmapped customers, total excluded amount, and link to Discrepancy Report | | |
+| A2.13 | Warning banner hidden when all targets are fully mapped | Banner not visible if no unmapped entries | | |
+| A2.14 | Clicking "View in Discrepancy Report" link in banner | Navigates to `/sales-discrepancy` page | | |
 
 #### A3: Performance Table — Data Accuracy
 
 | # | Step | Expected Result | Status | Notes |
 |---|------|----------------|--------|-------|
-| A3.1 | Compare MTD Actual for one rep against ERPNext Sales Invoice report | Values match | | |
-| A3.2 | Compare YTD Actual for one rep against ERPNext | Values match | | |
-| A3.3 | Verify Target values come from targets file | Monthly target for current month matches JSON | | |
+| A3.1 | Compare MTD Actual for one rep against ERPNext Sales Invoice report (Draft + Submitted) | Values match — table includes both draft and submitted invoices | | |
+| A3.2 | Compare YTD Actual for one rep against ERPNext (Draft + Submitted) | Values match | | |
+| A3.3 | Verify Target values come from targets file | Monthly target for current month matches JSON (for mapped customers only) | | |
 | A3.4 | Verify Delta = Actual - Target | Math correct for each row | | |
 | A3.5 | Verify % = (Actual / Target) * 100 | Calculation correct, handles zero target safely | | |
 | A3.6 | Rep with no target | % shows 100% if actual > 0, 0% if no actual | | |
+| A3.7 | Direct rep-name entries in targets JSON (e.g. "Gideon": 250000) counted in rep target | Rep target includes customer-mapped + direct rep-name entries | | |
+| A3.8 | Customer names in targets JSON without CSR assignment excluded from table | Not inflating "Other" or any rep — tracked as unmapped in discrepancy report | | |
+| A3.9 | Sales Team Total target = sum of all individual rep targets in table | Total row target matches column sum; may be less than KPI card target due to unmapped entries | | |
+| A3.10 | Currency values display in full format (e.g. "KES 1,234,567") | `formatKESFull()` renders all Actual, Target, and Delta values | | |
 
 ---
 
@@ -179,11 +187,32 @@ This UAT validates that the VCL Sales Dashboard meets the business requirements 
 
 ### Module D: Sales Discrepancy Report (`/sales-discrepancy`)
 
+#### D1: Access & Document Rep Discrepancies
+
 | # | Step | Expected Result | Status | Notes |
 |---|------|----------------|--------|-------|
-| D1 | Manager navigates to page | Discrepancy report loads | | |
-| D2 | Sales User cannot access | 403 error | | |
-| D3 | Report shows mismatched rep assignments | Mismatches between CSR and document sales person visible | | |
+| D1.1 | Manager navigates to page | Discrepancy report loads with KPI cards and two table sections | | |
+| D1.2 | Sales User cannot access | 403 error | | |
+| D1.3 | KPI cards show Total Documents Checked, Mismatches, Missing on Doc, No CSR Assignment | All four cards populated with counts | | |
+| D1.4 | Filter by DocType (Sales Invoice / Sales Order / Quotation) | Table filters to selected DocType | | |
+| D1.5 | Filter by Discrepancy Type | Table filters to selected issue type | | |
+| D1.6 | Filter by CSR Assigned Rep | Table shows only that rep's discrepancies | | |
+| D1.7 | Report shows mismatched rep assignments | Mismatches between CSR and document sales person visible with pill badges | | |
+| D1.8 | Click document name link | Opens document in ERPNext (e.g. `/app/sales-invoice/SINV-00123`) | | |
+
+#### D2: Target Mapping Discrepancies (Unmapped Customer Targets)
+
+| # | Step | Expected Result | Status | Notes |
+|---|------|----------------|--------|-------|
+| D2.1 | "Unmapped Customer Targets" section visible below document discrepancies | Section heading, description, and table visible | | |
+| D2.2 | Table shows customer names from targets JSON that have no CSR assignment | Each row: Customer Name, Month, Target Amount, Action Needed | | |
+| D2.3 | Current month entries highlighted with "(current)" label | Rows for current month have yellow background and "(current)" tag | | |
+| D2.4 | Entries sorted: current month first, then by target amount descending | Highest-value unmapped customers prominent | | |
+| D2.5 | Gap summary shows unmapped total vs expected monthly target | e.g. "Current month gap: KES 4,667,966 of KES 51,863,112 unmapped" | | |
+| D2.6 | Entry count displayed | e.g. "42 unmapped entries (all months to date)" | | |
+| D2.7 | Action column shows "Create CSR Assignment" | Visual indicator of what the user needs to do | | |
+| D2.8 | After creating a CSR assignment for a listed customer and refreshing | That customer disappears from the unmapped list; their target flows into the performance table | | |
+| D2.9 | When all customers are mapped | Table shows "All target entries are mapped to a sales rep. No discrepancies." | | |
 
 ---
 
@@ -264,10 +293,12 @@ This UAT validates that the VCL Sales Dashboard meets the business requirements 
 | # | Check | Method | Status |
 |---|-------|--------|--------|
 | 5.1 | Total Book on dashboard = Sum of all customer total_balance | Compare KPI vs manual sum | |
-| 5.2 | Net Sales MTD = ERPNext Sales Invoice report (submitted, current month) | Cross-reference | |
-| 5.3 | Per-rep MTD Actual matches ERPNext when filtered by Sales Person | Cross-reference per rep | |
+| 5.2 | Net Sales MTD = ERPNext Sales Invoice report (submitted, current month) | Cross-reference KPI card values | |
+| 5.3 | Per-rep MTD Actual matches ERPNext when filtered by Sales Person (Draft + Submitted) | Cross-reference per rep in performance table | |
 | 5.4 | Customer count on collections = rows imported from file | Verify counts match | |
 | 5.5 | Follow-up status updates reflect in customer list | Status badge changes after follow-up | |
+| 5.6 | Performance table total target + unmapped target total = monthly_targets JSON value | `mtd_mapped_target + sum(unmapped) ≈ monthly_targets[current_month]` | |
+| 5.7 | Unmapped customer count on Discrepancy Report matches warning banner count on Sales Dashboard | Both show same number of unmapped customers | |
 
 ---
 
@@ -277,9 +308,12 @@ This UAT validates that the VCL Sales Dashboard meets the business requirements 
 |------|-------------|
 | Targets | Stored in JSON file; not yet in ERPNext DocType. Changes require code deployment. |
 | Sales Person matching | Relies on `sales_representative` field in Customer Sales Rep Assignment matching `Sales Person` name exactly. |
+| Target-to-rep matching | Direct rep-name entries in targets JSON are matched case-insensitively. If a rep name in the JSON doesn't match any CSR rep label, it falls to the unmapped list. |
 | Customer matching | Phase 1 uses exact/case-insensitive name match. No fuzzy matching. |
+| Performance table actuals | Include both Draft and Submitted invoices (docstatus IN (0,1)). KPI cards may use submitted-only — values can differ. |
 | Historical data | Dashboard shows current ownership, not historical attribution by transaction date. |
 | Ageing calculation | Supports 0/15/30/45/60/75/90 day terms only. Non-standard terms snap to nearest. |
+| Unmapped targets | Customers in the targets JSON without a CSR assignment are excluded from the performance table. Users must create CSR assignments via the Discrepancy Report to close the gap. |
 
 ---
 
@@ -287,9 +321,11 @@ This UAT validates that the VCL Sales Dashboard meets the business requirements 
 
 | # | Description | Severity | Found By | Status | Resolution |
 |---|-------------|----------|----------|--------|------------|
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| 1 | Performance table stuck on "Loading..." — `formatKESFull()` undefined in `sales-dashboard.html` | High | Dev | Fixed | Added `formatKESFull()` function definition; added try/catch in `loadPerfTable()` to show error message instead of permanent loading |
+| 2 | Performance table actuals excluded Draft invoices — only counted Submitted (docstatus=1) | Medium | User | Fixed | Changed MTD/YTD queries in `get_rep_performance_table` to use `docstatus IN (0, 1)` |
+| 3 | Target amounts incomplete — direct rep-name entries in targets JSON not matched to reps | High | User | Fixed | Added case-insensitive matching of target keys against rep names; unmatched entries now tracked as discrepancies |
+| 4 | Unmatched customer targets silently added to "Other" row, inflating Other's target | Medium | Dev | Fixed | Unmatched entries now excluded from table; surfaced in warning banner + Discrepancy Report |
+| 5 | `get_sales_rep_discrepancies` function missing `@frappe.whitelist()` decorator and `def` line — Discrepancy Report API was non-functional | Critical | Dev | Fixed | Added proper function definition and decorator |
 
 ---
 

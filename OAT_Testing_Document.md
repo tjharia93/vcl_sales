@@ -4,6 +4,7 @@
 **Version:** Production Hardening Release
 **Date:** April 2026
 **Prepared for:** Vimit Converters Limited
+**Last Updated:** 2026-04-09 — Updated for performance table rendering fix, target mapping discrepancy report, and draft invoice inclusion.
 
 ---
 
@@ -35,6 +36,8 @@ This OAT validates that the VCL Sales Dashboard module is operationally ready fo
 | 3.1.2 | No Jinja template errors in HTML files (no literal `{{` in JavaScript) | Pages render without TemplateSyntaxError | |
 | 3.1.3 | Chart.js CDN dependency removed (no external CDN) | No external script loads | |
 | 3.1.4 | No `sales-dashboard-gold.html` in deployment | File deleted | |
+| 3.1.5 | `formatKESFull()` helper defined in `sales-dashboard.html` | Performance table renders currency values without JS ReferenceError | |
+| 3.1.6 | `get_sales_rep_discrepancies` has `@frappe.whitelist()` decorator and function definition | Discrepancy Report API callable | |
 
 ### 3.2 Migration
 
@@ -68,10 +71,12 @@ This OAT validates that the VCL Sales Dashboard module is operationally ready fo
 |---|----------|--------|----------|-----------|
 | 4.1.1 | `get_filter_options` | GET | Returns sales_reps, territories, customer_groups, user_scope | |
 | 4.1.2 | `get_net_sales_summary` | GET | Returns mtd/ytd actual + target values | |
-| 4.1.3 | `get_rep_performance_table` | GET | Returns MTD and YTD rows per rep with actual, target, delta, pct | |
+| 4.1.3 | `get_rep_performance_table` | GET | Returns MTD and YTD rows per rep with actual, target, delta, pct; also returns `unmapped_targets`, `mtd_expected_target`, `mtd_mapped_target`, `ytd_expected_target`, `ytd_mapped_target` | |
 | 4.1.4 | `get_outstanding_invoices` | GET | Returns invoices array + summary | |
 | 4.1.5 | `get_sales_by_person` | GET | Returns MTD/YTD aggregations by rep | |
 | 4.1.6 | `get_sales_targets` | GET | Returns monthly/annual/YTD targets from JSON | |
+| 4.1.7 | `get_target_discrepancies` | GET | Returns unmapped customer target entries (customers in targets JSON with no CSR assignment), including `mtd_unmapped`, `mtd_unmapped_total`, and full `discrepancies` list across all months | |
+| 4.1.8 | `get_sales_rep_discrepancies` | GET | Returns document-level rep mismatches with summary counts (mismatch, missing_on_doc, no_csr_assignment) | |
 
 ### 4.2 Collections APIs
 
@@ -143,10 +148,22 @@ This OAT validates that the VCL Sales Dashboard module is operationally ready fo
 
 | # | Test | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 6.1.1 | Sales Invoice KPIs use only submitted records (docstatus=1) | Drafts excluded from totals | |
-| 6.1.2 | Payment Entry totals use only submitted records | Drafts excluded | |
-| 6.1.3 | Quotation pipeline includes drafts intentionally | Drafts + submitted shown | |
-| 6.1.4 | Net Sales MTD matches ERPNext Sales Invoice report for same period | Values align | |
+| 6.1.1 | Net Sales KPI cards use only submitted records (docstatus=1) | Drafts excluded from KPI card totals | |
+| 6.1.2 | Performance table actuals include Draft + Submitted invoices (docstatus IN (0,1)) | Both draft and submitted invoices counted in rep actual values | |
+| 6.1.3 | Payment Entry totals use only submitted records | Drafts excluded | |
+| 6.1.4 | Quotation pipeline includes drafts intentionally | Drafts + submitted shown | |
+| 6.1.5 | Net Sales MTD matches ERPNext Sales Invoice report for same period | Values align | |
+
+### 6.1a Target Mapping Integrity
+
+| # | Test | Expected | Pass/Fail |
+|---|------|----------|-----------|
+| 6.1a.1 | Direct rep-name entries in targets JSON (e.g. "Gideon", "Keenda") are matched case-insensitively to CSR rep names | Rep target includes both customer-mapped and direct entries | |
+| 6.1a.2 | Customer names in targets JSON without a CSR assignment are excluded from the performance table | Not added to "Other" or any rep; tracked as unmapped | |
+| 6.1a.3 | `unmapped_targets` returned by `get_rep_performance_table` lists each unmapped customer with name, target, month | Array contains one entry per unmapped customer | |
+| 6.1a.4 | `mtd_expected_target` matches `monthly_targets` value from targets JSON for current month | Values match exactly | |
+| 6.1a.5 | `mtd_mapped_target` equals Sales Team Total target row in the table | Mapped total = sum of all rep targets in table | |
+| 6.1a.6 | Gap between expected and mapped = sum of unmapped target amounts | `mtd_expected_target - mtd_mapped_target ≈ sum(unmapped_targets[].target)` | |
 
 ### 6.2 Collections Data
 
@@ -184,13 +201,16 @@ This OAT validates that the VCL Sales Dashboard module is operationally ready fo
 
 | # | Test | Expected | Pass/Fail |
 |---|------|----------|-----------|
-| 8.1 | All pages have consistent nav bar | Sales Invoice, Collections, Discrepancy Report, Desk | |
+| 8.1 | All pages have consistent nav bar | Sales Invoice, Collections, Discrepancy Report, Management, Desk | |
 | 8.2 | Active page highlighted in nav | Current page has `is-active` class | |
 | 8.3 | No disabled/placeholder nav links visible | All nav items lead to working pages | |
 | 8.4 | User name and role displayed in dashboard topbar | Shows full name + role badge | |
 | 8.5 | Login redirect returns to correct page | After login, lands on page user was accessing | |
 | 8.6 | Debug panel hidden in production | Not visible unless `?debug=1` in URL | |
 | 8.7 | Mobile: pages usable on phone screen | Content readable, horizontal scroll for tables | |
+| 8.8 | Unmapped targets warning banner visible below performance table when gap exists | Yellow banner showing count, amount, and link to Discrepancy Report | |
+| 8.9 | Warning banner hidden when all targets are fully mapped | Banner has `display:none` | |
+| 8.10 | Discrepancy Report page shows "Unmapped Customer Targets" section | Table with Customer Name, Month, Target Amount, Action Needed columns | |
 
 ---
 
@@ -203,6 +223,8 @@ This OAT validates that the VCL Sales Dashboard module is operationally ready fo
 | 9.3 | Invalid Excel file uploaded | "File must be an Excel file" error | |
 | 9.4 | Excel missing "Ageing Report" sheet | Clear error with available sheet names | |
 | 9.5 | Duplicate period submission blocked | Error with existing submission name unless Replace checked | |
+| 9.6 | Performance table API returns null/error | Table shows "Could not load performance data" instead of permanent "Loading..." | |
+| 9.7 | Performance table JS rendering throws error | Caught by try/catch; table shows "Could not load performance data" | |
 
 ---
 
