@@ -1,0 +1,415 @@
+{
+  "actions": [],
+  "autoname": "format:AISR-{YYYY}-{#####}",
+  "creation": "2026-04-08 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "field_order": [
+    "report_entry_section",
+    "naming_series",
+    "report_date",
+    "report_time",
+    "column_break_basic",
+    "sales_user",
+    "sales_employee",
+    "territory",
+    "report_source",
+    "raw_intake_section",
+    "raw_report_text",
+    "column_break_raw",
+    "raw_language",
+    "raw_customer_mentions",
+    "contains_multiple_updates",
+    "ai_processing_section",
+    "ai_processing_status",
+    "ai_processed_on",
+    "ai_model_used",
+    "column_break_ai",
+    "ai_confidence_avg",
+    "review_required",
+    "review_status",
+    "reviewed_by",
+    "reviewed_on",
+    "primary_summary_section",
+    "primary_customer",
+    "primary_customer_name_cleaned",
+    "primary_report_type",
+    "column_break_primary",
+    "primary_status",
+    "primary_priority",
+    "primary_sentiment",
+    "manager_attention_required",
+    "action_section",
+    "primary_action_required",
+    "primary_followup_date",
+    "column_break_action_summary",
+    "summary_notes",
+    "extracted_lines_section",
+    "extracted_lines",
+    "audit_section",
+    "ai_request_payload",
+    "ai_response_payload",
+    "column_break_audit",
+    "ai_error_log",
+    "processing_attempts",
+    "last_processing_duration_ms",
+    "version_hash",
+    "amended_from"
+  ],
+  "fields": [
+    {
+      "fieldname": "report_entry_section",
+      "fieldtype": "Section Break",
+      "label": "Report Entry"
+    },
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "label": "Naming Series",
+      "default": "AISR-.YYYY.-.#####"
+    },
+    {
+      "fieldname": "report_date",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "Report Date",
+      "reqd": 1,
+      "default": "Today"
+    },
+    {
+      "fieldname": "report_time",
+      "fieldtype": "Time",
+      "label": "Report Time"
+    },
+    {
+      "fieldname": "column_break_basic",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "sales_user",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Sales User",
+      "options": "User",
+      "default": "__user"
+    },
+    {
+      "fieldname": "sales_employee",
+      "fieldtype": "Link",
+      "label": "Sales Employee",
+      "options": "Employee"
+    },
+    {
+      "fieldname": "territory",
+      "fieldtype": "Link",
+      "label": "Territory",
+      "options": "Territory"
+    },
+    {
+      "fieldname": "report_source",
+      "fieldtype": "Select",
+      "label": "Report Source",
+      "options": "Manual Entry\nWebsite Entry\nMobile Entry\nAPI\nImported",
+      "default": "Manual Entry"
+    },
+    {
+      "fieldname": "raw_intake_section",
+      "fieldtype": "Section Break",
+      "label": "Raw Intake"
+    },
+    {
+      "fieldname": "raw_report_text",
+      "fieldtype": "Long Text",
+      "label": "Raw Report Text",
+      "reqd": 1,
+      "description": "Paste your daily sales report notes here. You can include one or multiple customer updates."
+    },
+    {
+      "fieldname": "column_break_raw",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "raw_language",
+      "fieldtype": "Data",
+      "label": "Raw Language",
+      "read_only": 1
+    },
+    {
+      "fieldname": "raw_customer_mentions",
+      "fieldtype": "Small Text",
+      "label": "Raw Customer Mentions",
+      "read_only": 1
+    },
+    {
+      "fieldname": "contains_multiple_updates",
+      "fieldtype": "Check",
+      "label": "Contains Multiple Updates",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ai_processing_section",
+      "fieldtype": "Section Break",
+      "label": "AI Processing"
+    },
+    {
+      "fieldname": "ai_processing_status",
+      "fieldtype": "Select",
+      "in_list_view": 1,
+      "label": "AI Processing Status",
+      "options": "Not Processed\nQueued\nProcessing\nProcessed\nFailed\nNeeds Review",
+      "default": "Not Processed",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ai_processed_on",
+      "fieldtype": "Datetime",
+      "label": "AI Processed On",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ai_model_used",
+      "fieldtype": "Data",
+      "label": "AI Model Used",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_ai",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "ai_confidence_avg",
+      "fieldtype": "Float",
+      "label": "AI Confidence (Avg)",
+      "precision": "2",
+      "read_only": 1
+    },
+    {
+      "fieldname": "review_required",
+      "fieldtype": "Check",
+      "label": "Review Required",
+      "read_only": 1
+    },
+    {
+      "fieldname": "review_status",
+      "fieldtype": "Select",
+      "label": "Review Status",
+      "options": "\nPending Review\nReviewed\nApproved\nRejected",
+      "depends_on": "eval:doc.ai_processing_status=='Processed' || doc.ai_processing_status=='Needs Review'"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "fieldtype": "Link",
+      "label": "Reviewed By",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "reviewed_on",
+      "fieldtype": "Datetime",
+      "label": "Reviewed On",
+      "read_only": 1
+    },
+    {
+      "fieldname": "primary_summary_section",
+      "fieldtype": "Section Break",
+      "label": "Primary Summary",
+      "depends_on": "eval:doc.ai_processing_status=='Processed' || doc.ai_processing_status=='Needs Review'"
+    },
+    {
+      "fieldname": "primary_customer",
+      "fieldtype": "Link",
+      "in_list_view": 1,
+      "label": "Primary Customer",
+      "options": "Customer"
+    },
+    {
+      "fieldname": "primary_customer_name_cleaned",
+      "fieldtype": "Data",
+      "label": "Primary Customer Name (Cleaned)"
+    },
+    {
+      "fieldname": "primary_report_type",
+      "fieldtype": "Select",
+      "label": "Primary Report Type",
+      "options": "\nVisit Update\nCall Update\nOrder Opportunity\nQuotation Follow-up\nPayment Follow-up\nComplaint\nDelivery Follow-up\nRelationship Visit\nNo Opportunity\nOther"
+    },
+    {
+      "fieldname": "column_break_primary",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "primary_status",
+      "fieldtype": "Select",
+      "label": "Primary Status",
+      "options": "\nNew Lead\nVisited\nFollow-up Required\nQuote Requested\nQuote Sent\nAwaiting Customer Feedback\nAwaiting PO\nOrder Likely\nOrder Confirmed\nDelivery Pending\nDelivered\nPayment Follow-up\nComplaint Open\nClosed No Opportunity\nEscalate to Management"
+    },
+    {
+      "fieldname": "primary_priority",
+      "fieldtype": "Select",
+      "label": "Primary Priority",
+      "options": "\nLow\nMedium\nHigh\nCritical"
+    },
+    {
+      "fieldname": "primary_sentiment",
+      "fieldtype": "Select",
+      "label": "Primary Sentiment",
+      "options": "\nPositive\nNeutral\nNegative\nMixed"
+    },
+    {
+      "fieldname": "manager_attention_required",
+      "fieldtype": "Check",
+      "label": "Manager Attention Required"
+    },
+    {
+      "fieldname": "action_section",
+      "fieldtype": "Section Break",
+      "label": "Action & Follow-up",
+      "depends_on": "eval:doc.ai_processing_status=='Processed' || doc.ai_processing_status=='Needs Review'"
+    },
+    {
+      "fieldname": "primary_action_required",
+      "fieldtype": "Small Text",
+      "label": "Primary Action Required"
+    },
+    {
+      "fieldname": "primary_followup_date",
+      "fieldtype": "Date",
+      "label": "Primary Follow-up Date"
+    },
+    {
+      "fieldname": "column_break_action_summary",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "summary_notes",
+      "fieldtype": "Small Text",
+      "label": "Summary Notes"
+    },
+    {
+      "fieldname": "extracted_lines_section",
+      "fieldtype": "Section Break",
+      "label": "Extracted Lines",
+      "depends_on": "eval:doc.ai_processing_status=='Processed' || doc.ai_processing_status=='Needs Review'"
+    },
+    {
+      "fieldname": "extracted_lines",
+      "fieldtype": "Table",
+      "label": "Extracted Lines",
+      "options": "AI Daily Sales Report Line"
+    },
+    {
+      "fieldname": "audit_section",
+      "fieldtype": "Section Break",
+      "label": "Audit & Debug",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "ai_request_payload",
+      "fieldtype": "Code",
+      "label": "AI Request Payload",
+      "options": "JSON",
+      "read_only": 1
+    },
+    {
+      "fieldname": "ai_response_payload",
+      "fieldtype": "Code",
+      "label": "AI Response Payload",
+      "options": "JSON",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_audit",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "ai_error_log",
+      "fieldtype": "Long Text",
+      "label": "AI Error Log",
+      "read_only": 1
+    },
+    {
+      "fieldname": "processing_attempts",
+      "fieldtype": "Int",
+      "label": "Processing Attempts",
+      "read_only": 1,
+      "default": "0"
+    },
+    {
+      "fieldname": "last_processing_duration_ms",
+      "fieldtype": "Int",
+      "label": "Last Processing Duration (ms)",
+      "read_only": 1
+    },
+    {
+      "fieldname": "version_hash",
+      "fieldtype": "Data",
+      "label": "Version Hash",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "no_copy": 1,
+      "options": "AI Daily Sales Report",
+      "print_hide": 1,
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-08 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "AI Daily Sales Report",
+  "naming_rule": "Expression",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales User",
+      "write": 1,
+      "submit": 0
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1,
+      "amend": 1
+    },
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1,
+      "amend": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}
