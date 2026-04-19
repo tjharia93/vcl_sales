@@ -1,10 +1,9 @@
 import frappe
-import json
-import os
 from frappe.utils import today, getdate, add_days, get_first_day, flt, cint
 from vcl_sales_dashboard.api.collections_utils import (
     resolve_sales_rep_user, get_user_scope, get_customers_for_scope, apply_scope_filter,
 )
+from vcl_sales_dashboard.api.sales_targets import aggregate_targets
 
 
 def get_role_filter():
@@ -1067,29 +1066,18 @@ def get_sales_by_person():
         return {"status": "error", "message": "An error occurred. Please try again.", "data": {"mtd": [], "ytd": []}}
 
 
-def _load_targets_json():
-    """Load the sales targets JSON file."""
-    data_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data", "sales_targets_2026.json"
-    )
-    if not os.path.exists(data_path):
-        return None
-    with open(data_path, "r") as f:
-        return json.load(f)
-
-
 @frappe.whitelist()
 def get_sales_targets(month=None):
     """Return sales targets for the given month or current month. Includes monthly, by_product, by_customer."""
     try:
-        targets = _load_targets_json()
-        if not targets:
-            return {"status": "error", "message": "Targets file not found", "data": {}}
-
         if not month:
             d = getdate(today())
             month = f"{d.year}-{d.month:02d}"
+
+        target_year = int(month.split("-")[0])
+        targets = aggregate_targets(target_year)
+        if not targets.get("monthly_targets"):
+            return {"status": "error", "message": "No Sales Target records found for this year.", "data": {}}
 
         monthly_target = targets.get("monthly_targets", {}).get(month, 0)
         annual_target = targets.get("annual_target", 0)
@@ -1133,7 +1121,7 @@ def get_rep_performance_table():
         year_start = d.replace(month=1, day=1)
 
         # Load targets
-        targets = _load_targets_json() or {}
+        targets = aggregate_targets(d.year) or {}
         by_customer_monthly = targets.get("by_customer_monthly", {})
         monthly_targets = targets.get("monthly_targets", {})
 
@@ -1296,7 +1284,7 @@ def get_target_discrepancies():
         d = getdate(today())
         month_key = f"{d.year}-{d.month:02d}"
 
-        targets = _load_targets_json() or {}
+        targets = aggregate_targets(d.year) or {}
         by_customer_monthly = targets.get("by_customer_monthly", {})
         monthly_targets = targets.get("monthly_targets", {})
 

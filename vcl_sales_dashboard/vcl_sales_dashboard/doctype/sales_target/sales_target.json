@@ -1,0 +1,161 @@
+{
+  "actions": [],
+  "autoname": "hash",
+  "creation": "2026-04-19 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "period_section",
+    "period_month",
+    "period_key",
+    "column_break_period",
+    "target_amount",
+    "comment",
+    "customer_section",
+    "customer_name_text",
+    "customer",
+    "product_section",
+    "product_level_1",
+    "product_level_2",
+    "column_break_product",
+    "product_level_3",
+    "product_level_4"
+  ],
+  "fields": [
+    {
+      "fieldname": "period_section",
+      "fieldtype": "Section Break",
+      "label": "Period"
+    },
+    {
+      "fieldname": "period_month",
+      "fieldtype": "Date",
+      "in_list_view": 1,
+      "label": "Period Month",
+      "reqd": 1,
+      "description": "First day of the target month, e.g. 2026-01-01"
+    },
+    {
+      "fieldname": "period_key",
+      "fieldtype": "Data",
+      "label": "Period Key",
+      "read_only": 1,
+      "in_standard_filter": 1,
+      "description": "Auto-derived YYYY-MM key for grouping"
+    },
+    {
+      "fieldname": "column_break_period",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "target_amount",
+      "fieldtype": "Currency",
+      "in_list_view": 1,
+      "label": "Target Amount",
+      "reqd": 1
+    },
+    {
+      "fieldname": "comment",
+      "fieldtype": "Small Text",
+      "label": "Comment"
+    },
+    {
+      "fieldname": "customer_section",
+      "fieldtype": "Section Break",
+      "label": "Customer"
+    },
+    {
+      "fieldname": "customer_name_text",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Customer Name (Source)",
+      "reqd": 1,
+      "description": "Raw customer name from the source file"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "description": "Optional matched ERPNext Customer"
+    },
+    {
+      "fieldname": "product_section",
+      "fieldtype": "Section Break",
+      "label": "Product Hierarchy"
+    },
+    {
+      "fieldname": "product_level_1",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Product Level 1"
+    },
+    {
+      "fieldname": "product_level_2",
+      "fieldtype": "Data",
+      "label": "Product Level 2"
+    },
+    {
+      "fieldname": "column_break_product",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "product_level_3",
+      "fieldtype": "Data",
+      "label": "Product Level 3"
+    },
+    {
+      "fieldname": "product_level_4",
+      "fieldtype": "Data",
+      "label": "Product Level 4"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-04-19 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "Sales Target",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Finance Manager",
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager"
+    },
+    {
+      "read": 1,
+      "role": "Sales User"
+    }
+  ],
+  "sort_field": "period_month",
+  "sort_order": "ASC",
+  "states": [],
+  "track_changes": 1
+}
