@@ -13,12 +13,25 @@ website_route_rules = [
     {"from_route": "/sales-manager", "to_route": "sales-manager"},
     {"from_route": "/sales-collections", "to_route": "sales-collections"},
     {"from_route": "/sales-collections-submission", "to_route": "sales-collections-submission"},
+    # VCL Quotation SPA — React/Vite build under www/quotation/
+    {"from_route": "/quotation", "to_route": "quotation/index"},
 ]
 
-# DocType fixtures for the AI Sales Report feature
+# DocType fixtures
 fixtures = [
     {
         "dt": "Custom DocPerm",
         "filters": [["parent", "in", ["AI Daily Sales Report"]]],
+    },
+    # VCL Quotation system — ship the three module DocTypes via fixtures so
+    # they land on Frappe Cloud through `bench migrate` without a manual
+    # console step.
+    {
+        "dt": "DocType",
+        "filters": [["name", "in", [
+            "VCL Costing Settings",
+            "VCL Quotation",
+            "VCL Quote Cost Row",
+        ]]],
     },
 ]
