@@ -55,6 +55,7 @@ export default function App() {
   const [page, setPage] = useState('quote')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState(null)
+  const [costOpen, setCostOpen] = useState(false)   // mobile bottom-sheet toggle
   const { rates } = useCosting()
   const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), [])
 
@@ -139,21 +140,41 @@ export default function App() {
         @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.5);}}
         @keyframes slide-up{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
         select optgroup{font-weight:600;color:#2B3990;}
+
+        /* Mobile responsive layout (QUOT-001) */
+        .q-topbar{padding:0 24px;}
+        .q-topbar__title{display:flex;flex-direction:column;}
+        .q-topbar__ref{display:inline;}
+        .q-cost-toggle{display:none;}
+        .q-main{display:grid;grid-template-columns:1fr 360px;min-height:calc(100vh - 52px);}
+        .q-form-col{padding:24px;overflow-y:auto;}
+        .q-cost-col{background:#fff;border-left:1px solid #e2e8f0;padding:24px 20px;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;}
+        @media (max-width: 900px){
+          .q-topbar{padding:0 12px;gap:8px;}
+          .q-topbar__title{display:none;}
+          .q-topbar__ref{display:none;}
+          .q-cost-toggle{display:inline-flex;}
+          .q-main{grid-template-columns:1fr;}
+          .q-form-col{padding:14px 12px 96px;}
+          .q-cost-col{position:fixed;left:0;right:0;bottom:0;top:auto;height:60vh;border-left:none;border-top:2px solid #2B3990;box-shadow:0 -8px 24px rgba(15,23,42,.18);transform:translateY(100%);transition:transform .25s ease;z-index:150;border-radius:14px 14px 0 0;padding:18px 14px 24px;}
+          .q-cost-col.is-open{transform:translateY(0);}
+          .q-tabs button{padding:5px 10px !important;font-size:10px !important;}
+        }
       `}</style>
 
       {/* TOP BAR */}
-      <div style={{background:'#2B3990',height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',position:'sticky',top:0,zIndex:200,boxShadow:'0 2px 12px rgba(43,57,144,.35)'}}>
+      <div className="q-topbar" style={{background:'#2B3990',height:52,display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:200,boxShadow:'0 2px 12px rgba(43,57,144,.35)'}}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
           <div style={{width:30,height:30,background:'rgba(255,255,255,.14)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center'}}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <div>
+          <div className="q-topbar__title">
             <div style={{fontSize:13,color:'#fff',fontWeight:600,letterSpacing:'.04em'}}>VCL Quotation System</div>
             <div style={{fontSize:9,color:'rgba(255,255,255,.45)',letterSpacing:'.1em',textTransform:'uppercase'}}>Internal · Cartons &amp; SFK</div>
           </div>
         </div>
         {/* Tab navigation */}
-        <div style={{display:'flex',gap:4,background:'rgba(255,255,255,.1)',borderRadius:8,padding:4}}>
+        <div className="q-tabs" style={{display:'flex',gap:4,background:'rgba(255,255,255,.1)',borderRadius:8,padding:4}}>
           {[['quote','Quote'],['dashboard','Dashboard'],['costing','Costing']].map(([p,label])=>(
             <button key={p} onClick={()=>setPage(p)} style={{padding:'5px 14px',border:'none',borderRadius:6,fontFamily:"'IBM Plex Mono',monospace",fontSize:11,cursor:'pointer',fontWeight:600,letterSpacing:'.04em',transition:'all .15s',background:page===p?'#fff':'transparent',color:page===p?'#2B3990':'rgba(255,255,255,.7)'}}>
               {label}
@@ -167,15 +188,15 @@ export default function App() {
             New
           </button>}
           {page==='quote'&&<button onClick={handleSave} disabled={!cost||saving} style={{padding:'5px 14px',background:cost&&!saving?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.25)',borderRadius:5,fontSize:10,color:cost&&!saving?'#fff':'rgba(255,255,255,.35)',cursor:cost&&!saving?'pointer':'not-allowed',fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,transition:'all .15s'}}>{saving?'Saving...':'Save Quote'}</button>}
-          <span style={{fontSize:10,color:'rgba(255,255,255,.5)'}}>{form.quoteRef}</span>
-          <button onClick={handleNewRef} style={{padding:'4px 10px',background:'rgba(255,255,255,.12)',border:'none',borderRadius:4,fontSize:10,color:'rgba(255,255,255,.7)',cursor:'pointer',fontFamily:"'IBM Plex Mono',monospace"}}>New Ref</button>
+          <span className="q-topbar__ref" style={{fontSize:10,color:'rgba(255,255,255,.5)'}}>{form.quoteRef}</span>
+          <button onClick={handleNewRef} className="q-topbar__ref" style={{padding:'4px 10px',background:'rgba(255,255,255,.12)',border:'none',borderRadius:4,fontSize:10,color:'rgba(255,255,255,.7)',cursor:'pointer',fontFamily:"'IBM Plex Mono',monospace"}}>New Ref</button>
         </div>
       </div>
 
       {/* Page routing */}
       {page==='dashboard' ? <Dashboard onOpenQuote={handleOpenFromDashboard}/> :
-       page==='costing'   ? <CostingPage/> : <div style={{display:'grid',gridTemplateColumns:'1fr 360px',minHeight:'calc(100vh - 52px)'}}>
-        <div style={{padding:24,overflowY:'auto'}}>
+       page==='costing'   ? <CostingPage/> : <div className="q-main">
+        <div className="q-form-col">
 
           {/* Product type switcher */}
           <div style={{display:'flex',background:'#e2e8f0',borderRadius:8,padding:3,marginBottom:20}}>
@@ -435,10 +456,20 @@ export default function App() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div style={{background:'#fff',borderLeft:'1px solid #e2e8f0',padding:'24px 20px',position:'sticky',top:52,height:'calc(100vh - 52px)',overflowY:'auto'}}>
-          <div style={{fontSize:10,fontFamily:"'IBM Plex Mono',monospace",color:'#2B3990',letterSpacing:'.1em',textTransform:'uppercase',fontWeight:600,marginBottom:16}}>Live Cost Analysis</div>
+        <div className={'q-cost-col' + (costOpen ? ' is-open' : '')}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+            <div style={{fontSize:10,fontFamily:"'IBM Plex Mono',monospace",color:'#2B3990',letterSpacing:'.1em',textTransform:'uppercase',fontWeight:600}}>Live Cost Analysis</div>
+            <button onClick={()=>setCostOpen(false)} className="q-cost-toggle" style={{border:'none',background:'transparent',color:'#64748b',fontSize:18,cursor:'pointer',padding:'4px 10px',lineHeight:1}} aria-label="Close cost panel">×</button>
+          </div>
           <CostPanel cost={cost} isSFK={isSFK} form={form} style={style} board={board}/>
         </div>
+
+        {/* Mobile floating cost-panel toggle */}
+        <button onClick={()=>setCostOpen(o=>!o)}
+          className="q-cost-toggle"
+          style={{position:'fixed',right:14,bottom:14,zIndex:160,padding:'12px 18px',borderRadius:999,border:'none',background:'#2B3990',color:'#fff',boxShadow:'0 8px 22px rgba(43,57,144,.35)',fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,letterSpacing:'.06em',cursor:'pointer',alignItems:'center',gap:8}}>
+          {costOpen ? 'Close Cost' : (cost && cost.marginPct != null ? `Margin ${fmt(cost.marginPct,0)}%` : 'View Cost')}
+        </button>
       </div>}
 
       {form.showModal&&cost&&(

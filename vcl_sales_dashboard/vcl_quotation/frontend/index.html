@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VCL Quotation System</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <!-- Frappe web bundle gives us window.frappe.call + CSRF on the www route. -->
-    <script src="/assets/frappe/dist/js/frappe-web.bundle.js" defer></script>
+    <!-- Frappe web bundle gives us window.frappe.call + CSRF on the www route.
+         Use the unhashed alias path — the hashed bundle URL changes on every
+         Frappe build and 404s in v16 production. -->
+    <script src="/assets/frappe/js/frappe-web.bundle.js" defer></script>
   </head>
   <body>
     <div id="root"></div>

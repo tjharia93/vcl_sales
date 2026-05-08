@@ -105,4 +105,10 @@ export async function fetchNextRef() {
     return genRef()
   }
 }
-export const GRID    = { two:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}, three:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}, four:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:12} }
+// Use auto-fit / minmax so multi-column groups collapse to fewer columns on
+// narrow viewports instead of overflowing the screen.
+export const GRID    = {
+  two:  {display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12},
+  three:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12},
+  four: {display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12},
+}
