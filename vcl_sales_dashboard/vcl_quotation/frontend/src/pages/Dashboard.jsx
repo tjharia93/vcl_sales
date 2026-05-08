@@ -103,7 +103,7 @@ export function Dashboard({ onOpenQuote }) {
   )
 
   return (
-    <div style={{ background:'#f1f5f9', minHeight:'calc(100vh - 52px)', padding:24 }}>
+    <div style={{ background:'#f1f5f9', minHeight:'calc(100vh - 52px)', padding:'clamp(12px, 3vw, 24px)' }}>
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
 
         {/* ── HEADER ── */}
@@ -121,7 +121,7 @@ export function Dashboard({ onOpenQuote }) {
         </div>
 
         {/* ── STAT CARDS ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12, marginBottom:20 }}>
           {[
             { label:'Total Quotes',   value:total,                 sub:'all time',          color:BLUE,     bg:'#f0f4ff' },
             { label:'Open / Pending', value:pending,               sub:'awaiting decision', color:'#92400e',bg:'#fffbeb' },
@@ -160,8 +160,9 @@ export function Dashboard({ onOpenQuote }) {
           </div>
         </div>
 
-        {/* ── TABLE ── */}
-        <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e2e8f0', overflow:'hidden' }}>
+        {/* ── TABLE ── (horizontal scroll on narrow viewports) */}
+        <div style={{ background:'#fff', borderRadius:10, border:'1px solid #e2e8f0', overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+         <div style={{ minWidth:910 }}>
           {/* Table header */}
           <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 120px 90px 90px 100px 110px 110px', gap:0, borderBottom:'2px solid #2B3990', background:'#f8fafc' }}>
             {['Ref','Customer / Product','Sales Rep','Type','Dims (mm)','Qty','Price / pc','Status'].map((h,i) => (
@@ -258,6 +259,7 @@ export function Dashboard({ onOpenQuote }) {
               </div>
             )
           })}
+         </div>
         </div>
 
         {visible.length > 0 && (

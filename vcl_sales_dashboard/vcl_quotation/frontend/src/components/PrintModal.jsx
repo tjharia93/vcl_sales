@@ -540,16 +540,46 @@ ${form.remarks?`<div class="remarks-box"><div style="font-size:6pt;color:#666;ma
 }
 
 
-// Main print dispatcher — generates fresh HTML from data, not DOM clone
+// Main print dispatcher — generates fresh HTML from data, not DOM clone.
+// Mobile browsers commonly block `window.open` when not from a tightly-scoped
+// user gesture; if that happens we fall back to a hidden iframe and trigger
+// the print there. This keeps the same A4-fit output without depending on
+// popups or a separate tab.
 function doPrint(tabId, { form, cost, style, board, isSFK, rates }) {
   const isApproval = tabId === 'approval-tab-body'
   const html = isApproval
     ? buildApprovalHTML({ form, cost, style, board, isSFK, rates })
     : buildManagementHTML({ form, cost, style, board, isSFK, rates })
-  const w = window.open('', '_blank', 'width=900,height=700')
-  if (!w) { alert('Please allow popups to print.'); return }
-  w.document.write(html)
-  w.document.close()
+
+  // 1) Preferred path — open a tab, write the document, browser auto-prints.
+  let w = null
+  try { w = window.open('', '_blank', 'width=900,height=700') } catch { w = null }
+  if (w && w.document) {
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
+    return
+  }
+
+  // 2) Mobile / popup-blocked fallback — render into a hidden iframe and
+  //    invoke print on its contentWindow. Removed after the print dialog
+  //    closes so we don't leak DOM nodes.
+  const iframe = document.createElement('iframe')
+  iframe.setAttribute('aria-hidden', 'true')
+  iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;'
+  document.body.appendChild(iframe)
+  const cleanup = () => { try { document.body.removeChild(iframe) } catch {} }
+  iframe.onload = () => {
+    try {
+      const cw = iframe.contentWindow
+      cw.focus()
+      cw.print()
+    } catch (e) {
+      alert('Could not start print. Please use the browser menu → Print, or allow popups for this site.')
+    }
+    setTimeout(cleanup, 1500)
+  }
+  iframe.srcdoc = html
 }
 
 
