@@ -1,0 +1,478 @@
+{
+  "actions": [],
+  "autoname": "naming_series:",
+  "creation": "2026-05-08 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "field_order": [
+    "header_section",
+    "naming_series",
+    "quote_ref",
+    "product_type",
+    "status",
+    "column_break_header",
+    "customer",
+    "prepared_by",
+    "valid_until",
+    "details_section",
+    "product_desc",
+    "remarks",
+    "column_break_details",
+    "payment_terms",
+    "carton_section",
+    "style_code",
+    "ply",
+    "flute_code",
+    "column_break_carton",
+    "dim_l",
+    "dim_w",
+    "dim_h",
+    "qty",
+    "board_layers_section",
+    "gsm_top_liner",
+    "type_top_liner",
+    "gsm_medium1",
+    "gsm_mid_liner",
+    "column_break_layers",
+    "gsm_medium2",
+    "gsm_bot_liner",
+    "type_bot_liner",
+    "finishing_section",
+    "ink_colours",
+    "has_lam",
+    "has_die_cut",
+    "has_uv",
+    "column_break_finishing",
+    "labour_type",
+    "selling_price",
+    "sfk_section",
+    "sfk_width",
+    "sfk_metres",
+    "sfk_qty",
+    "sfk_application",
+    "column_break_sfk",
+    "sfk_liner",
+    "sfk_medium",
+    "sfk_flute",
+    "sfk_core",
+    "sfk_selling_price",
+    "results_section",
+    "full_cost_each",
+    "margin_pct",
+    "price_status",
+    "column_break_results",
+    "cost_rows",
+    "amended_from"
+  ],
+  "fields": [
+    {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "label": "Header"
+    },
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Select",
+      "label": "Series",
+      "options": "VCL-CQ-.YYYY.-.####",
+      "default": "VCL-CQ-.YYYY.-.####",
+      "reqd": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "quote_ref",
+      "fieldtype": "Data",
+      "label": "Quote Ref",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "read_only": 1,
+      "description": "Mirrors document name; populated automatically from the naming series."
+    },
+    {
+      "fieldname": "product_type",
+      "fieldtype": "Select",
+      "label": "Product Type",
+      "options": "carton\nsfk",
+      "default": "carton",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Pending\nWon\nLost",
+      "default": "Pending",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "prepared_by",
+      "fieldtype": "Link",
+      "label": "Prepared By",
+      "options": "User",
+      "default": "__user"
+    },
+    {
+      "fieldname": "valid_until",
+      "fieldtype": "Date",
+      "label": "Valid Until"
+    },
+    {
+      "fieldname": "details_section",
+      "fieldtype": "Section Break",
+      "label": "Details"
+    },
+    {
+      "fieldname": "product_desc",
+      "fieldtype": "Data",
+      "label": "Product Description",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Small Text",
+      "label": "Remarks"
+    },
+    {
+      "fieldname": "column_break_details",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "payment_terms",
+      "fieldtype": "Data",
+      "label": "Payment Terms",
+      "default": "30 days net"
+    },
+    {
+      "fieldname": "carton_section",
+      "fieldtype": "Section Break",
+      "label": "Carton Specification",
+      "depends_on": "eval:doc.product_type=='carton'"
+    },
+    {
+      "fieldname": "style_code",
+      "fieldtype": "Data",
+      "label": "Style Code"
+    },
+    {
+      "fieldname": "ply",
+      "fieldtype": "Select",
+      "label": "Ply",
+      "options": "3\n5",
+      "default": "3"
+    },
+    {
+      "fieldname": "flute_code",
+      "fieldtype": "Select",
+      "label": "Flute",
+      "options": "B\nC\nE\nBC\nEB",
+      "default": "B"
+    },
+    {
+      "fieldname": "column_break_carton",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "dim_l",
+      "fieldtype": "Float",
+      "label": "Length (mm)",
+      "precision": "2"
+    },
+    {
+      "fieldname": "dim_w",
+      "fieldtype": "Float",
+      "label": "Width (mm)",
+      "precision": "2"
+    },
+    {
+      "fieldname": "dim_h",
+      "fieldtype": "Float",
+      "label": "Height (mm)",
+      "precision": "2"
+    },
+    {
+      "fieldname": "qty",
+      "fieldtype": "Int",
+      "label": "Quantity (pcs)"
+    },
+    {
+      "fieldname": "board_layers_section",
+      "fieldtype": "Section Break",
+      "label": "Board Layers (GSM / Type)",
+      "depends_on": "eval:doc.product_type=='carton'",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "gsm_top_liner",
+      "fieldtype": "Int",
+      "label": "Top Liner GSM"
+    },
+    {
+      "fieldname": "type_top_liner",
+      "fieldtype": "Data",
+      "label": "Top Liner Type"
+    },
+    {
+      "fieldname": "gsm_medium1",
+      "fieldtype": "Int",
+      "label": "Medium 1 GSM"
+    },
+    {
+      "fieldname": "gsm_mid_liner",
+      "fieldtype": "Int",
+      "label": "Mid Liner GSM (5-ply)"
+    },
+    {
+      "fieldname": "column_break_layers",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "gsm_medium2",
+      "fieldtype": "Int",
+      "label": "Medium 2 GSM (5-ply)"
+    },
+    {
+      "fieldname": "gsm_bot_liner",
+      "fieldtype": "Int",
+      "label": "Bottom Liner GSM"
+    },
+    {
+      "fieldname": "type_bot_liner",
+      "fieldtype": "Data",
+      "label": "Bottom Liner Type"
+    },
+    {
+      "fieldname": "finishing_section",
+      "fieldtype": "Section Break",
+      "label": "Finishing & Pricing",
+      "depends_on": "eval:doc.product_type=='carton'"
+    },
+    {
+      "fieldname": "ink_colours",
+      "fieldtype": "Int",
+      "label": "Ink Colours",
+      "default": "0"
+    },
+    {
+      "fieldname": "has_lam",
+      "fieldtype": "Check",
+      "label": "Lamination",
+      "default": "0"
+    },
+    {
+      "fieldname": "has_die_cut",
+      "fieldtype": "Check",
+      "label": "Die-Cut",
+      "default": "0"
+    },
+    {
+      "fieldname": "has_uv",
+      "fieldtype": "Check",
+      "label": "UV Varnish",
+      "default": "0"
+    },
+    {
+      "fieldname": "column_break_finishing",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "labour_type",
+      "fieldtype": "Select",
+      "label": "Labour Type",
+      "options": "hourly\npiecework",
+      "default": "hourly"
+    },
+    {
+      "fieldname": "selling_price",
+      "fieldtype": "Currency",
+      "label": "Selling Price (KES / pc)",
+      "options": "KES",
+      "precision": "2"
+    },
+    {
+      "fieldname": "sfk_section",
+      "fieldtype": "Section Break",
+      "label": "SFK Reel Specification",
+      "depends_on": "eval:doc.product_type=='sfk'"
+    },
+    {
+      "fieldname": "sfk_width",
+      "fieldtype": "Float",
+      "label": "Reel Width (mm)",
+      "precision": "2"
+    },
+    {
+      "fieldname": "sfk_metres",
+      "fieldtype": "Float",
+      "label": "Metres / Reel",
+      "precision": "2"
+    },
+    {
+      "fieldname": "sfk_qty",
+      "fieldtype": "Int",
+      "label": "Number of Reels"
+    },
+    {
+      "fieldname": "sfk_application",
+      "fieldtype": "Data",
+      "label": "End Use / Application"
+    },
+    {
+      "fieldname": "column_break_sfk",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "sfk_liner",
+      "fieldtype": "Data",
+      "label": "Liner",
+      "default": "K120"
+    },
+    {
+      "fieldname": "sfk_medium",
+      "fieldtype": "Data",
+      "label": "Medium",
+      "default": "M112"
+    },
+    {
+      "fieldname": "sfk_flute",
+      "fieldtype": "Data",
+      "label": "Flute",
+      "default": "B"
+    },
+    {
+      "fieldname": "sfk_core",
+      "fieldtype": "Data",
+      "label": "Core ID",
+      "default": "76mm"
+    },
+    {
+      "fieldname": "sfk_selling_price",
+      "fieldtype": "Currency",
+      "label": "Selling Price (KES / reel)",
+      "options": "KES",
+      "precision": "2"
+    },
+    {
+      "fieldname": "results_section",
+      "fieldtype": "Section Break",
+      "label": "Computed Results",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "full_cost_each",
+      "fieldtype": "Currency",
+      "label": "Full Cost / unit",
+      "options": "KES",
+      "precision": "4",
+      "read_only": 1
+    },
+    {
+      "fieldname": "margin_pct",
+      "fieldtype": "Float",
+      "label": "Margin %",
+      "precision": "2",
+      "in_list_view": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "price_status",
+      "fieldtype": "Select",
+      "label": "Price Status",
+      "options": "good\nbelow_target\napproval\nloss\nunset",
+      "default": "unset",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_results",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "cost_rows",
+      "fieldtype": "Table",
+      "label": "Cost Breakdown",
+      "options": "VCL Quote Cost Row"
+    },
+    {
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "no_copy": 1,
+      "options": "VCL Quotation",
+      "print_hide": 1,
+      "read_only": 1
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-05-08 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Quotation",
+  "name": "VCL Quotation",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales User",
+      "share": 1,
+      "submit": 0,
+      "write": 1
+    },
+    {
+      "amend": 1,
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1
+    },
+    {
+      "amend": 1,
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "quote_ref",
+  "track_changes": 1
+}

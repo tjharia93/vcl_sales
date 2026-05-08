@@ -1,0 +1,61 @@
+{
+  "actions": [],
+  "creation": "2026-05-08 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "istable": 1,
+  "field_order": [
+    "label",
+    "cost_each",
+    "cost_total",
+    "pct_of_total"
+  ],
+  "fields": [
+    {
+      "fieldname": "label",
+      "fieldtype": "Data",
+      "in_list_view": 1,
+      "label": "Cost Item",
+      "columns": 4
+    },
+    {
+      "fieldname": "cost_each",
+      "fieldtype": "Currency",
+      "in_list_view": 1,
+      "label": "Cost / unit",
+      "options": "KES",
+      "columns": 2,
+      "precision": "4"
+    },
+    {
+      "fieldname": "cost_total",
+      "fieldtype": "Currency",
+      "in_list_view": 1,
+      "label": "Cost Total",
+      "options": "KES",
+      "columns": 2,
+      "precision": "2"
+    },
+    {
+      "fieldname": "pct_of_total",
+      "fieldtype": "Float",
+      "in_list_view": 1,
+      "label": "% of Total",
+      "columns": 2,
+      "precision": "2"
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-05-08 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Quotation",
+  "name": "VCL Quote Cost Row",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 0
+}
