@@ -18,13 +18,21 @@ function getCsrfToken() {
 }
 
 function unwrap(payload, method) {
-  if (!payload || typeof payload !== 'object') {
+  if (payload === undefined || payload === null) {
     throw new Error('Empty response from ' + method)
   }
-  if (payload.status === 'error') {
-    throw new Error(payload.message || 'API error')
+  // Our own whitelist methods return { status:'ok'|'error', data | message }.
+  // Frappe-native methods (e.g. `frappe.client.get_list`) return the value
+  // directly under `.message`, so pass those through untouched.
+  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+    if (payload.status === 'error') {
+      throw new Error(payload.message || 'API error')
+    }
+    if (payload.status === 'ok') {
+      return payload.data
+    }
   }
-  return payload.data
+  return payload
 }
 
 function callViaFrappe({ method, args, type }) {
@@ -115,4 +123,43 @@ export async function apiUpdateCostingSettings(rates) {
     method: `${METHOD}.update_costing_settings`,
     args: { rates },
   })
+}
+
+// Lifecycle (QUOT note: Submit/Cancel/Amend) — Sales Manager+ only.
+export async function apiSubmitQuote(id) {
+  return frappeCall({ method: `${METHOD}.submit_quote`, args: { name: id } })
+}
+
+export async function apiCancelQuote(id) {
+  return frappeCall({ method: `${METHOD}.cancel_quote`, args: { name: id } })
+}
+
+export async function apiAmendQuote(id) {
+  return frappeCall({ method: `${METHOD}.amend_quote`, args: { name: id } })
+}
+
+// Customer typeahead. Uses Frappe's built-in `frappe.client.get_list` so we
+// don't need a bespoke whitelist on our side. Match by either `name` (the
+// Customer record id) or `customer_name` (the human-readable field) so reps
+// can type the casual name and still find the record.
+export async function apiSearchCustomers(term) {
+  if (!term || term.length < 2) return []
+  const filters = [
+    ['Customer', 'customer_name', 'like', '%' + term + '%'],
+  ]
+  const data = await frappeCall({
+    method: 'frappe.client.get_list',
+    type: 'GET',
+    args: {
+      doctype: 'Customer',
+      filters: JSON.stringify(filters),
+      fields: JSON.stringify(['name', 'customer_name']),
+      limit_page_length: 8,
+      order_by: 'customer_name asc',
+    },
+  })
+  // `frappe.client.get_list` returns the array directly under `.message`,
+  // not under `.message.data`, so our `unwrap` will hand us back `null` for
+  // the data envelope. Re-shape gracefully.
+  return Array.isArray(data) ? data : []
 }

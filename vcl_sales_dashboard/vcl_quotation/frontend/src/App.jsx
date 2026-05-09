@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useCosting } from './context/CostingContext.jsx'
 import { CostingPage } from './pages/CostingPage.jsx'
 import { Dashboard } from './pages/Dashboard.jsx'
-import { apiSaveQuote } from './api/quotes.js'
+import { apiSaveQuote, apiSubmitQuote, apiCancelQuote, apiAmendQuote, apiGetQuote } from './api/quotes.js'
 import {
   CARTON_STYLES, STYLE_GROUPS, STATUS_CONFIG,
   LINER_TYPES, FLUTE_TYPES,
@@ -17,7 +17,7 @@ import { PrintModal } from './components/PrintModal.jsx'
 import {
   SectionHeader, FieldLabel, TextInput, SelectInput,
   Toggle, PlyButton, Card, InfoStrip,
-  fmt, genRef, fetchNextRef, GRID,
+  fmt, genRef, fetchNextRef, GRID, CustomerAutocomplete,
 } from './components/UI.jsx'
 
 // ─── DEFAULT FORM STATE ───────────────────────────────────────────────────────
@@ -45,6 +45,11 @@ function makeBlank() {
     sfkLiner:'K120', sfkMedium:'M112', sfkFlute:'B',
     sfkSellingPrice:'',
     sfkApplication:'', sfkCore:'76mm',
+    // Lifecycle (set by API on save / load; not editable in the form)
+    id: null,
+    docstatus: 0,
+    amendedFrom: null,
+    customerText: '',
     // UI
     showModal: false,
   }
@@ -99,25 +104,103 @@ export default function App() {
 
   const sc = cost ? STATUS_CONFIG[cost.priceStatus] : STATUS_CONFIG.unset
 
-  // Save current quote to API (defined after cost is computed)
+  // Save current quote to API (defined after cost is computed). Sends the
+  // full cost rollup (`fullCostEach` + `costRows`) so the server persists
+  // historical cost rows and the Desk view shows non-zero margin (QUOT-007).
   const handleSave = useCallback(async () => {
     if (!cost) return
+    if (form.docstatus && form.docstatus !== 0) {
+      setSaveMsg({ type:'err', text:'Submitted / cancelled quotes cannot be saved' })
+      setTimeout(() => setSaveMsg(null), 4000)
+      return
+    }
     setSaving(true); setSaveMsg(null)
     try {
-      await apiSaveQuote({
+      const r = await apiSaveQuote({
         ...form,
-        marginPct:   cost.marginPct,
-        priceStatus: cost.priceStatus,
+        marginPct:    cost.marginPct,
+        priceStatus:  cost.priceStatus,
+        fullCostEach: cost.fullEach,
+        costRows:     cost.rows,
       })
-      setSaveMsg({ type:'ok', text:'Saved' })
+      // Server returns the canonical id + docstatus; keep the form in sync
+      // so subsequent saves update the same record instead of creating a
+      // sibling on every click.
+      setForm(f => ({ ...f, id: r.id, quoteRef: r.quoteRef || f.quoteRef, docstatus: r.docstatus ?? 0 }))
+      setSaveMsg({ type:'ok', text: r.created ? 'Saved' : 'Updated' })
       setTimeout(() => setSaveMsg(null), 2500)
     } catch (e) {
-      setSaveMsg({ type:'err', text:'Save failed — is the API running?' })
+      setSaveMsg({ type:'err', text: e.message || 'Save failed' })
       setTimeout(() => setSaveMsg(null), 4000)
     } finally {
       setSaving(false)
     }
   }, [form, cost])
+
+  // Lifecycle handlers — Sales Manager+ permissions enforced on the server.
+  // Each one re-loads the quote from the API after the action so the form
+  // reflects the new docstatus + any server-side mutations.
+  const refreshFromServer = useCallback(async (id) => {
+    try {
+      const fresh = await apiGetQuote(id)
+      setForm(f => ({ ...f, ...fresh }))
+    } catch (e) {
+      setSaveMsg({ type:'err', text: 'Reload failed: ' + (e.message || e) })
+    }
+  }, [])
+
+  const handleSubmit = useCallback(async () => {
+    if (!form.id) {
+      setSaveMsg({ type:'err', text:'Save the quote first.' })
+      setTimeout(() => setSaveMsg(null), 3000)
+      return
+    }
+    if (!confirm('Submit this quote? Once submitted it is locked from edits — only Cancel + Amend can change it.')) return
+    setSaving(true); setSaveMsg(null)
+    try {
+      await apiSubmitQuote(form.id)
+      await refreshFromServer(form.id)
+      setSaveMsg({ type:'ok', text:'Submitted' })
+      setTimeout(() => setSaveMsg(null), 2500)
+    } catch (e) {
+      setSaveMsg({ type:'err', text: e.message || 'Submit failed' })
+      setTimeout(() => setSaveMsg(null), 4000)
+    } finally { setSaving(false) }
+  }, [form.id, refreshFromServer])
+
+  const handleCancel = useCallback(async () => {
+    if (!form.id) return
+    if (!confirm('Cancel this quote? It becomes a locked audit record. You can still Amend it into a new draft afterwards.')) return
+    setSaving(true); setSaveMsg(null)
+    try {
+      await apiCancelQuote(form.id)
+      await refreshFromServer(form.id)
+      setSaveMsg({ type:'ok', text:'Cancelled' })
+      setTimeout(() => setSaveMsg(null), 2500)
+    } catch (e) {
+      setSaveMsg({ type:'err', text: e.message || 'Cancel failed' })
+      setTimeout(() => setSaveMsg(null), 4000)
+    } finally { setSaving(false) }
+  }, [form.id, refreshFromServer])
+
+  const handleAmend = useCallback(async () => {
+    if (!form.id) return
+    setSaving(true); setSaveMsg(null)
+    try {
+      const r = await apiAmendQuote(form.id)
+      const fresh = await apiGetQuote(r.id)
+      setForm(f => ({ ...makeBlank(), ...fresh, productType: f.productType }))
+      setSaveMsg({ type:'ok', text:'Amended → new draft ' + (r.quoteRef || r.id) })
+      setTimeout(() => setSaveMsg(null), 4000)
+    } catch (e) {
+      setSaveMsg({ type:'err', text: e.message || 'Amend failed' })
+      setTimeout(() => setSaveMsg(null), 4000)
+    } finally { setSaving(false) }
+  }, [form.id])
+
+  const isDraft     = (form.docstatus ?? 0) === 0
+  const isSubmitted = form.docstatus === 1
+  const isCancelled = form.docstatus === 2
 
   // Re-open a saved quote from the dashboard
   const handleOpenFromDashboard = useCallback((savedForm) => {
@@ -183,11 +266,16 @@ export default function App() {
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           {saveMsg&&<span style={{fontSize:10,fontFamily:"'IBM Plex Mono',monospace",color:saveMsg.type==='ok'?'#86efac':'#fca5a5'}}>{saveMsg.text}</span>}
-          {page==='quote'&&<button onClick={clearForm} style={{padding:'5px 14px',background:'rgba(255,255,255,.18)',border:'1px solid rgba(255,255,255,.35)',borderRadius:5,fontSize:10,color:'#fff',cursor:'pointer',fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,letterSpacing:'.04em',display:'flex',alignItems:'center',gap:5}}>
+          {page==='quote'&&isSubmitted&&<span style={{fontSize:9,fontFamily:"'IBM Plex Mono',monospace",color:'#fde68a',background:'rgba(255,255,255,.1)',padding:'3px 8px',borderRadius:4,letterSpacing:'.08em',textTransform:'uppercase'}}>Submitted · locked</span>}
+          {page==='quote'&&isCancelled&&<span style={{fontSize:9,fontFamily:"'IBM Plex Mono',monospace",color:'#fca5a5',background:'rgba(255,255,255,.1)',padding:'3px 8px',borderRadius:4,letterSpacing:'.08em',textTransform:'uppercase'}}>Cancelled</span>}
+          {page==='quote'&&isDraft&&<button onClick={clearForm} style={{padding:'5px 14px',background:'rgba(255,255,255,.18)',border:'1px solid rgba(255,255,255,.35)',borderRadius:5,fontSize:10,color:'#fff',cursor:'pointer',fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,letterSpacing:'.04em',display:'flex',alignItems:'center',gap:5}}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             New
           </button>}
-          {page==='quote'&&<button onClick={handleSave} disabled={!cost||saving} style={{padding:'5px 14px',background:cost&&!saving?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.25)',borderRadius:5,fontSize:10,color:cost&&!saving?'#fff':'rgba(255,255,255,.35)',cursor:cost&&!saving?'pointer':'not-allowed',fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,transition:'all .15s'}}>{saving?'Saving...':'Save Quote'}</button>}
+          {page==='quote'&&isDraft&&<button onClick={handleSave} disabled={!cost||saving} style={{padding:'5px 14px',background:cost&&!saving?'rgba(255,255,255,.18)':'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.25)',borderRadius:5,fontSize:10,color:cost&&!saving?'#fff':'rgba(255,255,255,.35)',cursor:cost&&!saving?'pointer':'not-allowed',fontFamily:"'IBM Plex Mono',monospace",fontWeight:600,transition:'all .15s'}}>{saving?'Saving...':'Save Quote'}</button>}
+          {page==='quote'&&isDraft&&form.id&&<button onClick={handleSubmit} disabled={!cost||saving} title="Lock this quote as the customer-facing version" style={{padding:'5px 14px',background:'#22c55e',border:'1px solid #16a34a',borderRadius:5,fontSize:10,color:'#fff',cursor:cost&&!saving?'pointer':'not-allowed',opacity:cost&&!saving?1:.5,fontFamily:"'IBM Plex Mono',monospace",fontWeight:700,letterSpacing:'.06em'}}>Submit</button>}
+          {page==='quote'&&isSubmitted&&<button onClick={handleCancel} disabled={saving} title="Withdraw this submitted quote" style={{padding:'5px 14px',background:'#ef4444',border:'1px solid #dc2626',borderRadius:5,fontSize:10,color:'#fff',cursor:saving?'not-allowed':'pointer',fontFamily:"'IBM Plex Mono',monospace",fontWeight:700,letterSpacing:'.06em'}}>Cancel Quote</button>}
+          {page==='quote'&&isCancelled&&<button onClick={handleAmend} disabled={saving} title="Spawn a new draft from this cancelled quote (chain via amended_from)" style={{padding:'5px 14px',background:'#2B3990',border:'1px solid #1f2a6d',borderRadius:5,fontSize:10,color:'#fff',cursor:saving?'not-allowed':'pointer',fontFamily:"'IBM Plex Mono',monospace",fontWeight:700,letterSpacing:'.06em'}}>Amend</button>}
           <span className="q-topbar__ref" style={{fontSize:10,color:'rgba(255,255,255,.5)'}}>{form.quoteRef}</span>
           <button onClick={handleNewRef} className="q-topbar__ref" style={{padding:'4px 10px',background:'rgba(255,255,255,.12)',border:'none',borderRadius:4,fontSize:10,color:'rgba(255,255,255,.7)',cursor:'pointer',fontFamily:"'IBM Plex Mono',monospace"}}>New Ref</button>
         </div>
@@ -210,7 +298,9 @@ export default function App() {
             <SectionHeader number="01" title="Quote Details" sub="Reference · Customer · Validity"/>
             <div style={{...GRID.three,marginBottom:12}}>
               <FieldLabel label="Prepared By"><TextInput value={form.preparedBy} onChange={v=>set('preparedBy',v)} placeholder="Your name"/></FieldLabel>
-              <FieldLabel label="Customer Name"><TextInput value={form.customer} onChange={v=>set('customer',v)} placeholder="Customer / Account"/></FieldLabel>
+              <FieldLabel label="Customer Name" hint="Existing customer? Tab/Enter to link. New customer? Just type — saves as free text.">
+                <CustomerAutocomplete value={form.customer} onChange={v=>set('customer',v)}/>
+              </FieldLabel>
               <FieldLabel label="Product Description"><TextInput value={form.productDesc} onChange={v=>set('productDesc',v)} placeholder="e.g. Mango Export Tray"/></FieldLabel>
             </div>
             <div style={GRID.three}>

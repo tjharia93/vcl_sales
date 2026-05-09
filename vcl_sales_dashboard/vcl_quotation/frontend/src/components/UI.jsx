@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { apiNextRef } from '../api/quotes.js'
+import { useState, useEffect, useRef } from 'react'
+import { apiNextRef, apiSearchCustomers } from '../api/quotes.js'
 
 export function SectionHeader({ number, title, sub }) {
   return (
@@ -24,6 +24,83 @@ export function FieldLabel({ label, hint, children }) {
 }
 
 const baseInput = { width:'100%', padding:'8px 11px', border:'1.5px solid #e2e8f0', borderRadius:6, fontSize:12, fontFamily:"'IBM Plex Mono',monospace", color:'#1e293b', background:'#fff', outline:'none', transition:'border-color .15s', boxSizing:'border-box' }
+
+// Customer autocomplete — typeahead against ERPNext Customer master.
+// Free-text on Enter / blur is the design contract: if the typed string
+// matches a Customer record, the server links it; otherwise it lands in
+// `customer_text` only. Reps are never blocked by missing master records.
+export function CustomerAutocomplete({ value, onChange, placeholder='Customer / Account' }) {
+  const [focused, setFocused] = useState(false)
+  const [results, setResults] = useState([])
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const debounce = useRef(null)
+
+  useEffect(() => {
+    if (!focused) return
+    const term = (value || '').trim()
+    if (term.length < 2) { setResults([]); setOpen(false); return }
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(async () => {
+      try {
+        const list = await apiSearchCustomers(term)
+        setResults(list || [])
+        setOpen((list || []).length > 0)
+        setHighlight(0)
+      } catch {
+        setResults([]); setOpen(false)
+      }
+    }, 200)
+    return () => { if (debounce.current) clearTimeout(debounce.current) }
+  }, [value, focused])
+
+  const pick = (item) => {
+    onChange(item.name)
+    setOpen(false)
+  }
+
+  const onKeyDown = (e) => {
+    if (!open || results.length === 0) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlight(h => Math.min(h + 1, results.length - 1)) }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlight(h => Math.max(h - 1, 0)) }
+    else if (e.key === 'Enter')     { e.preventDefault(); pick(results[highlight]) }
+    else if (e.key === 'Escape')    { setOpen(false) }
+  }
+
+  return (
+    <div style={{ position:'relative' }}>
+      <input
+        value={value || ''}
+        placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); setTimeout(() => setOpen(false), 120) }}
+        onKeyDown={onKeyDown}
+        style={{ ...baseInput, borderColor: focused ? '#2B3990' : '#e2e8f0' }}
+      />
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, background:'#fff', border:'1.5px solid #2B3990', borderTop:'none', borderRadius:'0 0 6px 6px', boxShadow:'0 8px 18px rgba(15,23,42,.12)', zIndex:50, maxHeight:240, overflowY:'auto' }}>
+          {results.map((r, i) => (
+            <div
+              key={r.name}
+              onMouseDown={(e) => { e.preventDefault(); pick(r) }}
+              onMouseEnter={() => setHighlight(i)}
+              style={{ padding:'8px 11px', fontSize:11, fontFamily:"'IBM Plex Mono',monospace", cursor:'pointer', background: i === highlight ? '#f0f4ff' : '#fff', borderBottom: i < results.length - 1 ? '1px solid #f1f5f9' : 'none' }}
+            >
+              <div style={{ color:'#1e293b', fontWeight:600 }}>{r.customer_name || r.name}</div>
+              {r.customer_name && r.name !== r.customer_name && (
+                <div style={{ color:'#94a3b8', fontSize:9, marginTop:2 }}>{r.name}</div>
+              )}
+            </div>
+          ))}
+          <div style={{ padding:'6px 11px', fontSize:9, fontFamily:"'IBM Plex Mono',monospace", color:'#94a3b8', background:'#f8fafc', borderTop:'1px solid #f1f5f9' }}>
+            ↵ to pick · Enter your own name to keep it as free text
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function TextInput({ value, onChange, type='text', placeholder, step, min }) {
   const [focused, setFocused] = useState(false)
