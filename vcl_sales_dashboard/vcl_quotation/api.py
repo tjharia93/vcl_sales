@@ -7,6 +7,7 @@ Replaces the Phase 1 Express endpoints documented in
 """
 
 import json
+import re
 
 import frappe
 from frappe import _
@@ -16,7 +17,11 @@ from frappe import _
 # Field mapping helpers
 # ---------------------------------------------------------------------------
 
-# camelCase form field (from React) -> snake_case DocType field
+# Explicit mappings from React form keys to DocType fields. Anything not in
+# this map falls through to the case-tolerant resolver in `_resolve_field`,
+# which also accepts native snake_case + generic camelCase. The map is kept
+# for clarity and to handle edge cases where a generic conversion would
+# round-trip badly (e.g. `hasUV` would become `has_u_v`, not `has_uv`).
 FORM_FIELD_MAP = {
     "quoteRef":         "quote_ref",
     "productType":      "product_type",
@@ -52,7 +57,11 @@ FORM_FIELD_MAP = {
     "priceStatus":      "price_status",
     "fullCostEach":     "full_cost_each",
     "status":           "status",
-    # Per-layer GSM / type fields (already snake_case in the React form)
+    "customerText":     "customer_text",
+    # Per-layer GSM / type fields — the React form emits the snake-prefixed
+    # camelCase shape (`gsm_topLiner`); a few helper scripts use camelCase
+    # (`gsmTopLiner`). Both are accepted explicitly so we don't depend on
+    # the generic camelCase fallback for these high-traffic fields.
     "gsm_topLiner":     "gsm_top_liner",
     "type_topLiner":    "type_top_liner",
     "gsm_medium1":      "gsm_medium1",
@@ -60,9 +69,21 @@ FORM_FIELD_MAP = {
     "gsm_medium2":      "gsm_medium2",
     "gsm_botLiner":     "gsm_bot_liner",
     "type_botLiner":    "type_bot_liner",
+    "gsmTopLiner":      "gsm_top_liner",
+    "typeTopLiner":     "type_top_liner",
+    "gsmMidLiner":      "gsm_mid_liner",
+    "gsmBotLiner":      "gsm_bot_liner",
+    "typeBotLiner":     "type_bot_liner",
+    "gsmMedium1":       "gsm_medium1",
+    "gsmMedium2":       "gsm_medium2",
 }
 
-DOC_TO_FORM_MAP = {v: k for k, v in FORM_FIELD_MAP.items()}
+DOC_TO_FORM_MAP = {}
+for k, v in FORM_FIELD_MAP.items():
+    # Prefer the snake-prefixed form (gsm_topLiner) when round-tripping to
+    # the React form so the existing layer-render code keeps working.
+    if v not in DOC_TO_FORM_MAP or "_" in k:
+        DOC_TO_FORM_MAP[v] = k
 
 CHECKBOX_FIELDS = {"has_lam", "has_die_cut", "has_uv"}
 INT_FIELDS = {"qty", "ink_colours", "sfk_qty", "gsm_top_liner", "gsm_medium1",
@@ -72,12 +93,15 @@ FLOAT_FIELDS = {"dim_l", "dim_w", "dim_h", "sfk_width", "sfk_metres",
                 "full_cost_each"}
 
 DASHBOARD_FIELDS = [
-    "name", "quote_ref", "customer", "product_desc", "product_type",
-    "qty", "selling_price", "sfk_qty", "sfk_selling_price", "sfk_width",
-    "prepared_by", "status", "creation", "modified", "margin_pct",
-    "price_status", "style_code", "dim_l", "dim_w", "dim_h", "ply",
-    "flute_code",
+    "name", "quote_ref", "customer", "customer_text", "product_desc",
+    "product_type", "qty", "selling_price", "sfk_qty", "sfk_selling_price",
+    "sfk_width", "prepared_by", "status", "docstatus", "creation",
+    "modified", "margin_pct", "price_status", "style_code", "dim_l",
+    "dim_w", "dim_h", "ply", "flute_code", "amended_from",
 ]
+
+VALID_STATUSES = ("Pending", "Won", "Lost")
+_CAMEL_RE = re.compile(r"([a-z0-9])([A-Z])")
 
 
 def _ok(data=None):
@@ -121,15 +145,40 @@ def _coerce(field, value):
     return value
 
 
+def _valid_columns():
+    """DocType field names — cached on the Frappe meta layer."""
+    return set(frappe.get_meta("VCL Quotation").get_valid_columns())
+
+
+def _resolve_field(form_key):
+    """Map an inbound form key to a DocType field name, or None to drop it.
+
+    Order:
+      1. Explicit FORM_FIELD_MAP (covers camelCase + snake-prefixed shapes)
+      2. Already a valid snake_case column name (QUOT-005)
+      3. Generic camelCase → snake_case conversion (catches anything new)
+    """
+    if form_key in FORM_FIELD_MAP:
+        return FORM_FIELD_MAP[form_key]
+    columns = _valid_columns()
+    if form_key in columns:
+        return form_key
+    converted = _CAMEL_RE.sub(r"\1_\2", form_key).lower()
+    if converted in columns:
+        return converted
+    return None
+
+
 def _form_to_doc(form):
-    """Convert the React form payload (camelCase) into DocType fields."""
+    """Convert a React form payload (any case convention) into DocType fields."""
     doc_data = {}
     for form_key, value in form.items():
         if form_key in ("id", "savedAt", "showModal", "costRows"):
             continue
-        if form_key in FORM_FIELD_MAP:
-            target = FORM_FIELD_MAP[form_key]
-            doc_data[target] = _coerce(target, value)
+        target = _resolve_field(form_key)
+        if target is None:
+            continue
+        doc_data[target] = _coerce(target, value)
     return doc_data
 
 
@@ -138,6 +187,8 @@ def _doc_to_form(doc):
     form = {
         "id": doc.name,
         "savedAt": doc.modified.isoformat() if doc.modified else None,
+        "docstatus": doc.docstatus,
+        "amendedFrom": doc.get("amended_from"),
     }
     for doc_field, form_key in DOC_TO_FORM_MAP.items():
         value = doc.get(doc_field)
@@ -177,12 +228,14 @@ def get_quote_list():
                 "id":            r.get("name"),
                 "quoteRef":      r.get("quote_ref") or r.get("name"),
                 "customer":      r.get("customer"),
+                "customerText":  r.get("customer_text"),
                 "productDesc":   r.get("product_desc"),
                 "productType":   r.get("product_type"),
                 "qty":           r.get("sfk_qty") if is_sfk else r.get("qty"),
                 "sellingPrice":  r.get("sfk_selling_price") if is_sfk else r.get("selling_price"),
                 "preparedBy":    r.get("prepared_by"),
                 "status":        r.get("status") or "Pending",
+                "docstatus":     r.get("docstatus") or 0,
                 "savedAt":       r.get("modified").isoformat() if r.get("modified") else None,
                 "marginPct":     r.get("margin_pct"),
                 "priceStatus":   r.get("price_status"),
@@ -193,6 +246,7 @@ def get_quote_list():
                 "ply":           r.get("ply"),
                 "fluteCode":     r.get("flute_code"),
                 "sfkWidth":      r.get("sfk_width"),
+                "amendedFrom":   r.get("amended_from"),
             })
         return _ok(out)
     except Exception as e:
@@ -212,11 +266,24 @@ def get_quote(name):
         return _err(e, "VCL Quotation Read Error")
 
 
+def _apply_customer_split(doc_data, form):
+    """Customer field design (Tanuj 2026-05-09): always preserve what the rep
+    typed; only set the link field when it matches a Customer master record."""
+    typed = form.get("customer") or form.get("customerText")
+    if not typed:
+        return
+    doc_data["customer_text"] = typed
+    if frappe.db.exists("Customer", typed):
+        doc_data["customer"] = typed
+    else:
+        doc_data["customer"] = None
+
+
 @frappe.whitelist()
 def save_quote(form=None, cost_rows=None):
     """Upsert a VCL Quotation from the React form payload.
 
-    `form`  — camelCase form state (same shape as the React `form` object)
+    `form`  — form state from the SPA, accepts camelCase or snake_case keys
     `cost_rows` — list of {label, each, tot, pct} cost breakdown rows
     """
     try:
@@ -226,10 +293,16 @@ def save_quote(form=None, cost_rows=None):
             frappe.throw(_("Invalid form payload"))
 
         doc_data = _form_to_doc(form)
+        _apply_customer_split(doc_data, form)
         existing_name = form.get("id") or form.get("quoteRef")
 
         if existing_name and frappe.db.exists("VCL Quotation", existing_name):
             doc = frappe.get_doc("VCL Quotation", existing_name)
+            if doc.docstatus != 0:
+                frappe.throw(_("Quote {0} is {1} and cannot be edited.").format(
+                    doc.name,
+                    "submitted" if doc.docstatus == 1 else "cancelled",
+                ))
             doc.update(doc_data)
             doc.set("cost_rows", [])
             for row in rows:
@@ -255,11 +328,14 @@ def save_quote(form=None, cost_rows=None):
             created = True
 
         return _ok({
-            "id":       doc.name,
-            "quoteRef": doc.quote_ref or doc.name,
-            "created":  created,
-            "updated":  not created,
+            "id":         doc.name,
+            "quoteRef":   doc.quote_ref or doc.name,
+            "docstatus":  doc.docstatus,
+            "created":    created,
+            "updated":    not created,
         })
+    except frappe.PermissionError:
+        raise
     except Exception as e:
         return _err(e, "VCL Quotation Save Error")
 
@@ -267,16 +343,89 @@ def save_quote(form=None, cost_rows=None):
 @frappe.whitelist()
 def update_quote_status(name, status):
     try:
-        if status not in ("Pending", "Won", "Lost"):
+        if status not in VALID_STATUSES:
             frappe.throw(_("Invalid status: {0}").format(status))
         if not frappe.db.exists("VCL Quotation", name):
             return {"status": "error", "message": _("Quote not found")}
         doc = frappe.get_doc("VCL Quotation", name)
         doc.status = status
+        # Status changes are allowed on Draft and Submitted quotes — they
+        # don't alter the cost rollup, just the sales-pipeline label. Skip
+        # validate so a submitted doc can still be moved Pending → Won/Lost
+        # without being amended first.
+        doc.flags.ignore_validate_update_after_submit = True
         doc.save()
         return _ok({"id": doc.name, "status": doc.status})
     except Exception as e:
         return _err(e, "VCL Quotation Status Error")
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle: submit / cancel / amend
+# ---------------------------------------------------------------------------
+
+@frappe.whitelist()
+def submit_quote(name):
+    """Move a Draft quote to Submitted (docstatus 1)."""
+    try:
+        if not frappe.db.exists("VCL Quotation", name):
+            return {"status": "error", "message": _("Quote not found")}
+        doc = frappe.get_doc("VCL Quotation", name)
+        if doc.docstatus != 0:
+            frappe.throw(_("Only Draft quotes can be submitted"))
+        doc.submit()
+        return _ok({"id": doc.name, "docstatus": doc.docstatus})
+    except frappe.PermissionError:
+        raise
+    except Exception as e:
+        return _err(e, "VCL Quotation Submit Error")
+
+
+@frappe.whitelist()
+def cancel_quote(name):
+    """Cancel a Submitted quote (docstatus 1 → 2)."""
+    try:
+        if not frappe.db.exists("VCL Quotation", name):
+            return {"status": "error", "message": _("Quote not found")}
+        doc = frappe.get_doc("VCL Quotation", name)
+        if doc.docstatus != 1:
+            frappe.throw(_("Only Submitted quotes can be cancelled"))
+        doc.cancel()
+        return _ok({"id": doc.name, "docstatus": doc.docstatus})
+    except frappe.PermissionError:
+        raise
+    except Exception as e:
+        return _err(e, "VCL Quotation Cancel Error")
+
+
+@frappe.whitelist()
+def amend_quote(name):
+    """Amend a Cancelled quote: create a new Draft with `amended_from = name`.
+
+    Frappe's amendment naming appends `-1`, `-2`, ... to the original ref so
+    `VCL-CQ-2026-0042` becomes `VCL-CQ-2026-0042-1` on first amend.
+    """
+    try:
+        if not frappe.db.exists("VCL Quotation", name):
+            return {"status": "error", "message": _("Quote not found")}
+        original = frappe.get_doc("VCL Quotation", name)
+        if original.docstatus != 2:
+            frappe.throw(_("Only Cancelled quotes can be amended"))
+        amended = frappe.copy_doc(original, ignore_no_copy=False)
+        amended.amended_from = original.name
+        amended.docstatus = 0
+        amended.status = "Pending"
+        amended.insert()
+        return _ok({
+            "id":          amended.name,
+            "quoteRef":    amended.quote_ref or amended.name,
+            "amendedFrom": original.name,
+            "docstatus":   amended.docstatus,
+        })
+    except frappe.PermissionError:
+        raise
+    except Exception as e:
+        return _err(e, "VCL Quotation Amend Error")
 
 
 # ---------------------------------------------------------------------------

@@ -74,15 +74,17 @@ export function Dashboard({ onOpenQuote }) {
     }
   }, [onOpenQuote])
 
-  // Filter + search
+  // Filter + search — search also matches `customerText` so reps can find
+  // unlinked quotes (e.g. customer not yet in master) by what they typed.
   const visible = quotes.filter(q => {
     const matchStatus = filter === 'All' || q.status === filter
     const term = search.toLowerCase()
     const matchSearch = !term ||
-      (q.customer    || '').toLowerCase().includes(term) ||
-      (q.quoteRef    || '').toLowerCase().includes(term) ||
-      (q.productDesc || '').toLowerCase().includes(term) ||
-      (q.preparedBy  || '').toLowerCase().includes(term)
+      (q.customer     || '').toLowerCase().includes(term) ||
+      (q.customerText || '').toLowerCase().includes(term) ||
+      (q.quoteRef     || '').toLowerCase().includes(term) ||
+      (q.productDesc  || '').toLowerCase().includes(term) ||
+      (q.preparedBy   || '').toLowerCase().includes(term)
     return matchStatus && matchSearch
   })
 
@@ -201,16 +203,26 @@ export function Dashboard({ onOpenQuote }) {
                 onMouseEnter={e => { if (!isOpening) e.currentTarget.style.background='#f8fafc' }}
                 onMouseLeave={e => { if (!isOpening) e.currentTarget.style.background='transparent' }}
               >
-                {/* Ref */}
+                {/* Ref + lifecycle chip (Draft / Submitted / Cancelled) */}
                 <div style={{ padding:'12px 12px', borderRight:'1px solid #f1f5f9' }}>
                   <div style={{ fontSize:10, fontFamily:MONO, fontWeight:700, color:BLUE }}>{q.quoteRef}</div>
-                  <div style={{ fontSize:9, fontFamily:MONO, color:'#94a3b8', marginTop:2 }}>
-                    {q.savedAt ? new Date(q.savedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                    <span style={{ fontSize:9, fontFamily:MONO, color:'#94a3b8' }}>
+                      {q.savedAt ? new Date(q.savedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'}
+                    </span>
+                    {q.docstatus === 1 && <span style={{ fontSize:8, fontFamily:MONO, fontWeight:700, padding:'1px 5px', borderRadius:3, background:'#fef3c7', color:'#92400e', textTransform:'uppercase', letterSpacing:'.06em' }}>Submitted</span>}
+                    {q.docstatus === 2 && <span style={{ fontSize:8, fontFamily:MONO, fontWeight:700, padding:'1px 5px', borderRadius:3, background:'#fee2e2', color:'#991b1b', textTransform:'uppercase', letterSpacing:'.06em' }}>Cancelled</span>}
                   </div>
                 </div>
-                {/* Customer / Product */}
+                {/* Customer / Product — italic when only the typed text is on file (no Customer master record yet) */}
                 <div style={{ padding:'12px 12px', borderRight:'1px solid #f1f5f9', minWidth:0 }}>
-                  <div style={{ fontSize:11, fontFamily:MONO, fontWeight:600, color:'#1e293b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.customer || '—'}</div>
+                  {q.customer ? (
+                    <div style={{ fontSize:11, fontFamily:MONO, fontWeight:600, color:'#1e293b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.customer}</div>
+                  ) : q.customerText ? (
+                    <div title="Free-text — not yet linked to a Customer master record" style={{ fontSize:11, fontFamily:MONO, fontWeight:500, fontStyle:'italic', color:'#64748b', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.customerText}</div>
+                  ) : (
+                    <div style={{ fontSize:11, fontFamily:MONO, fontWeight:600, color:'#1e293b' }}>—</div>
+                  )}
                   <div style={{ fontSize:10, fontFamily:MONO, color:'#64748b', marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{q.productDesc || '—'}</div>
                 </div>
                 {/* Sales Rep */}

@@ -13,6 +13,7 @@
     "status",
     "column_break_header",
     "customer",
+    "customer_text",
     "prepared_by",
     "valid_until",
     "details_section",
@@ -118,7 +119,15 @@
       "label": "Customer",
       "options": "Customer",
       "in_list_view": 1,
-      "in_standard_filter": 1
+      "in_standard_filter": 1,
+      "description": "Linked Customer master record. Auto-set from customer_text only when an exact match exists."
+    },
+    {
+      "fieldname": "customer_text",
+      "fieldtype": "Data",
+      "label": "Customer (free text)",
+      "in_standard_filter": 1,
+      "description": "What the rep typed. Mirrors `customer` when it matches a Customer master record; preserved here when it doesn't, so quotes can save before the customer is in the master."
     },
     {
       "fieldname": "prepared_by",
