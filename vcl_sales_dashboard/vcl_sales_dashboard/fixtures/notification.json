@@ -1,0 +1,67 @@
+[
+  {
+    "doctype": "Notification",
+    "name": "VCL CN Request - Pending Sales Manager",
+    "subject": "CN {{ doc.name }} awaiting your approval",
+    "channel": "Email",
+    "document_type": "VCL Credit Note Request",
+    "event": "Value Change",
+    "value_changed": "status",
+    "condition": "doc.status == 'Pending Sales Manager'",
+    "enabled": 1,
+    "send_to_all_assignees": 0,
+    "send_system_notification": 1,
+    "recipients": [
+      {"doctype": "Notification Recipient", "receiver_by_role": "Sales Manager"}
+    ],
+    "message": "<p>Credit Note Request <strong>{{ doc.name }}</strong> from {{ doc.sales_representative }} is awaiting your approval.</p><p>Customer: {{ doc.customer }}<br>Invoice: {{ doc.original_invoice_no }}<br>Total Credit: KES {{ '{:,.2f}'.format(doc.total_credit or 0) }}</p><p><a href=\"/app/vcl-credit-note-request/{{ doc.name }}\">Open Request</a></p>"
+  },
+  {
+    "doctype": "Notification",
+    "name": "VCL CN Request - Pending Finance",
+    "subject": "CN {{ doc.name }} approved by Sales - awaiting Finance sign-off",
+    "channel": "Email",
+    "document_type": "VCL Credit Note Request",
+    "event": "Value Change",
+    "value_changed": "status",
+    "condition": "doc.status == 'Pending Finance'",
+    "enabled": 1,
+    "send_system_notification": 1,
+    "recipients": [
+      {"doctype": "Notification Recipient", "receiver_by_role": "Accounts Manager"}
+    ],
+    "message": "<p>Credit Note Request <strong>{{ doc.name }}</strong> has been approved by Sales and is awaiting Finance sign-off.</p><p>Customer: {{ doc.customer }}<br>Invoice: {{ doc.original_invoice_no }}<br>KRA CU Invoice: {{ doc.kra_cu_invoice_no or '-' }}<br>Total Credit: KES {{ '{:,.2f}'.format(doc.total_credit or 0) }}</p><p><a href=\"/app/vcl-credit-note-request/{{ doc.name }}\">Open Request</a></p>"
+  },
+  {
+    "doctype": "Notification",
+    "name": "VCL CN Request - Approved",
+    "subject": "CN {{ doc.name }} fully approved",
+    "channel": "Email",
+    "document_type": "VCL Credit Note Request",
+    "event": "Value Change",
+    "value_changed": "status",
+    "condition": "doc.status == 'Approved'",
+    "enabled": 1,
+    "send_system_notification": 1,
+    "recipients": [
+      {"doctype": "Notification Recipient", "receiver_by_document_field": "owner"}
+    ],
+    "message": "<p>Your Credit Note Request <strong>{{ doc.name }}</strong> has been fully approved.</p><p>Customer: {{ doc.customer }}<br>Total Credit: KES {{ '{:,.2f}'.format(doc.total_credit or 0) }}</p><p>Finance will issue the ERPNext Credit Note shortly.</p>"
+  },
+  {
+    "doctype": "Notification",
+    "name": "VCL CN Request - Rejected",
+    "subject": "CN {{ doc.name }} was rejected",
+    "channel": "Email",
+    "document_type": "VCL Credit Note Request",
+    "event": "Value Change",
+    "value_changed": "status",
+    "condition": "doc.status == 'Rejected'",
+    "enabled": 1,
+    "send_system_notification": 1,
+    "recipients": [
+      {"doctype": "Notification Recipient", "receiver_by_document_field": "owner"}
+    ],
+    "message": "<p>Your Credit Note Request <strong>{{ doc.name }}</strong> has been rejected.</p><p>Please review the comments on the document and amend as required.</p><p><a href=\"/app/vcl-credit-note-request/{{ doc.name }}\">Open Request</a></p>"
+  }
+]

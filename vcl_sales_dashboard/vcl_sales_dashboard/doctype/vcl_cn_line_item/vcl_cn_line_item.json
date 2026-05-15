@@ -1,0 +1,101 @@
+{
+  "actions": [],
+  "creation": "2026-05-15 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "istable": 1,
+  "field_order": [
+    "description",
+    "supplied_qty",
+    "supplied_uom",
+    "supplied_unit_price",
+    "supplied_amount",
+    "correct_qty",
+    "correct_uom",
+    "correct_unit_price",
+    "correct_amount",
+    "difference"
+  ],
+  "fields": [
+    {
+      "fieldname": "description",
+      "fieldtype": "Data",
+      "label": "Description",
+      "in_list_view": 1,
+      "columns": 3,
+      "reqd": 1
+    },
+    {
+      "fieldname": "supplied_qty",
+      "fieldtype": "Float",
+      "label": "Supplied Qty",
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "supplied_uom",
+      "fieldtype": "Link",
+      "label": "Supplied UOM",
+      "options": "UOM"
+    },
+    {
+      "fieldname": "supplied_unit_price",
+      "fieldtype": "Currency",
+      "label": "Supplied Unit Price"
+    },
+    {
+      "fieldname": "supplied_amount",
+      "fieldtype": "Currency",
+      "label": "Supplied Amount",
+      "read_only": 1,
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "correct_qty",
+      "fieldtype": "Float",
+      "label": "Correct Qty",
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "correct_uom",
+      "fieldtype": "Link",
+      "label": "Correct UOM",
+      "options": "UOM"
+    },
+    {
+      "fieldname": "correct_unit_price",
+      "fieldtype": "Currency",
+      "label": "Correct Unit Price"
+    },
+    {
+      "fieldname": "correct_amount",
+      "fieldtype": "Currency",
+      "label": "Correct Amount",
+      "read_only": 1,
+      "in_list_view": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "difference",
+      "fieldtype": "Currency",
+      "label": "Difference",
+      "read_only": 1,
+      "in_list_view": 1,
+      "columns": 1
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [],
+  "modified": "2026-05-15 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "VCL CN Line Item",
+  "owner": "Administrator",
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}

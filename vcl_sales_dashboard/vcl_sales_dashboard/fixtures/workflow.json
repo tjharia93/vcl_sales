@@ -1,0 +1,95 @@
+[
+  {
+    "doctype": "Workflow",
+    "name": "VCL Credit Note Request Workflow",
+    "workflow_name": "VCL Credit Note Request Workflow",
+    "document_type": "VCL Credit Note Request",
+    "workflow_state_field": "status",
+    "is_active": 1,
+    "send_email_alert": 1,
+    "states": [
+      {
+        "doctype": "Workflow Document State",
+        "state": "Draft",
+        "doc_status": "0",
+        "style": "Primary",
+        "allow_edit": "Sales User",
+        "update_field": "status",
+        "update_value": "Draft"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Pending Sales Manager",
+        "doc_status": "1",
+        "style": "Warning",
+        "allow_edit": "Sales Manager",
+        "update_field": "status",
+        "update_value": "Pending Sales Manager"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Pending Finance",
+        "doc_status": "1",
+        "style": "Warning",
+        "allow_edit": "Accounts Manager",
+        "update_field": "status",
+        "update_value": "Pending Finance"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Approved",
+        "doc_status": "1",
+        "style": "Success",
+        "allow_edit": "Accounts Manager",
+        "update_field": "status",
+        "update_value": "Approved"
+      },
+      {
+        "doctype": "Workflow Document State",
+        "state": "Rejected",
+        "doc_status": "2",
+        "style": "Danger",
+        "allow_edit": "System Manager",
+        "update_field": "status",
+        "update_value": "Rejected"
+      }
+    ],
+    "transitions": [
+      {
+        "doctype": "Workflow Transition",
+        "state": "Draft",
+        "action": "Submit for Approval",
+        "next_state": "Pending Sales Manager",
+        "allowed": "Sales User"
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Pending Sales Manager",
+        "action": "Approve",
+        "next_state": "Pending Finance",
+        "allowed": "Sales Manager"
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Pending Sales Manager",
+        "action": "Reject",
+        "next_state": "Rejected",
+        "allowed": "Sales Manager"
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Pending Finance",
+        "action": "Approve",
+        "next_state": "Approved",
+        "allowed": "Accounts Manager"
+      },
+      {
+        "doctype": "Workflow Transition",
+        "state": "Pending Finance",
+        "action": "Reject",
+        "next_state": "Rejected",
+        "allowed": "Accounts Manager"
+      }
+    ]
+  }
+]

@@ -1,0 +1,345 @@
+{
+  "actions": [],
+  "autoname": "naming_series:",
+  "creation": "2026-05-15 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "track_changes": 1,
+  "field_order": [
+    "header_section",
+    "naming_series",
+    "cn_number",
+    "request_date",
+    "column_break_header",
+    "status",
+    "amended_from",
+    "customer_section",
+    "customer",
+    "account_code",
+    "contact_person",
+    "phone",
+    "column_break_customer",
+    "email",
+    "delivery_address",
+    "credit_terms",
+    "transaction_section",
+    "original_invoice_no",
+    "invoice_date",
+    "column_break_txn",
+    "kra_cu_invoice_no",
+    "sales_representative",
+    "reason_section",
+    "root_cause",
+    "complaint_ref",
+    "action_required",
+    "detailed_reason",
+    "items_section",
+    "line_items",
+    "totals_section",
+    "subtotal_supplied",
+    "subtotal_correct",
+    "column_break_totals",
+    "vat_amount",
+    "total_credit",
+    "linked_section",
+    "linked_credit_note"
+  ],
+  "fields": [
+    {
+      "fieldname": "header_section",
+      "fieldtype": "Section Break",
+      "label": "Header"
+    },
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Select",
+      "label": "Naming Series",
+      "options": "CN-.####",
+      "default": "CN-.####",
+      "reqd": 1,
+      "no_copy": 1,
+      "print_hide": 1,
+      "set_only_once": 1
+    },
+    {
+      "fieldname": "cn_number",
+      "fieldtype": "Data",
+      "label": "CN Number",
+      "read_only": 1,
+      "in_list_view": 1,
+      "description": "Mirrors the document name (set in validate)."
+    },
+    {
+      "fieldname": "request_date",
+      "fieldtype": "Date",
+      "label": "Request Date",
+      "default": "Today",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "column_break_header",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nPending Sales Manager\nPending Finance\nApproved\nRejected",
+      "default": "Draft",
+      "read_only": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "no_copy": 1
+    },
+    {
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "options": "VCL Credit Note Request",
+      "read_only": 1,
+      "no_copy": 1,
+      "print_hide": 1
+    },
+    {
+      "fieldname": "customer_section",
+      "fieldtype": "Section Break",
+      "label": "Customer"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "label": "Customer",
+      "options": "Customer",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "account_code",
+      "fieldtype": "Data",
+      "label": "Account Code",
+      "fetch_from": "customer.name",
+      "read_only": 1
+    },
+    {
+      "fieldname": "contact_person",
+      "fieldtype": "Data",
+      "label": "Contact Person"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone"
+    },
+    {
+      "fieldname": "column_break_customer",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "options": "Email"
+    },
+    {
+      "fieldname": "delivery_address",
+      "fieldtype": "Small Text",
+      "label": "Delivery / Billing Address"
+    },
+    {
+      "fieldname": "credit_terms",
+      "fieldtype": "Link",
+      "label": "Credit Terms",
+      "options": "Payment Terms Template"
+    },
+    {
+      "fieldname": "transaction_section",
+      "fieldtype": "Section Break",
+      "label": "Transaction Reference"
+    },
+    {
+      "fieldname": "original_invoice_no",
+      "fieldtype": "Link",
+      "label": "Original Invoice No.",
+      "options": "Sales Invoice",
+      "reqd": 1
+    },
+    {
+      "fieldname": "invoice_date",
+      "fieldtype": "Date",
+      "label": "Invoice Date",
+      "fetch_from": "original_invoice_no.posting_date",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_txn",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "kra_cu_invoice_no",
+      "fieldtype": "Data",
+      "label": "KRA CU Invoice No."
+    },
+    {
+      "fieldname": "sales_representative",
+      "fieldtype": "Link",
+      "label": "Sales Representative",
+      "options": "User",
+      "default": "__user"
+    },
+    {
+      "fieldname": "reason_section",
+      "fieldtype": "Section Break",
+      "label": "Reason"
+    },
+    {
+      "fieldname": "root_cause",
+      "fieldtype": "Select",
+      "label": "Root Cause",
+      "options": "\nPicking Error\nPricing Error\nProduction Defect\nCustomer Change\nLogistics Error\nOther",
+      "reqd": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "complaint_ref",
+      "fieldtype": "Data",
+      "label": "Customer Complaint Ref."
+    },
+    {
+      "fieldname": "action_required",
+      "fieldtype": "Small Text",
+      "label": "Action Required"
+    },
+    {
+      "fieldname": "detailed_reason",
+      "fieldtype": "Long Text",
+      "label": "Detailed Reason / Notes"
+    },
+    {
+      "fieldname": "items_section",
+      "fieldtype": "Section Break",
+      "label": "Line Items"
+    },
+    {
+      "fieldname": "line_items",
+      "fieldtype": "Table",
+      "label": "Line Items",
+      "options": "VCL CN Line Item",
+      "reqd": 1
+    },
+    {
+      "fieldname": "totals_section",
+      "fieldtype": "Section Break",
+      "label": "Totals"
+    },
+    {
+      "fieldname": "subtotal_supplied",
+      "fieldtype": "Currency",
+      "label": "Subtotal Supplied",
+      "read_only": 1
+    },
+    {
+      "fieldname": "subtotal_correct",
+      "fieldtype": "Currency",
+      "label": "Subtotal Correct",
+      "read_only": 1
+    },
+    {
+      "fieldname": "column_break_totals",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "vat_amount",
+      "fieldtype": "Currency",
+      "label": "VAT 16%",
+      "read_only": 1
+    },
+    {
+      "fieldname": "total_credit",
+      "fieldtype": "Currency",
+      "label": "Total Credit (KES)",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "linked_section",
+      "fieldtype": "Section Break",
+      "label": "Linked Credit Note",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "linked_credit_note",
+      "fieldtype": "Link",
+      "label": "Linked ERPNext Credit Note",
+      "options": "Sales Invoice",
+      "read_only": 1,
+      "description": "ERPNext Sales Invoice (Is Return) generated from this CN Request on Finance approval."
+    }
+  ],
+  "index_web_pages_for_search": 0,
+  "links": [
+    {
+      "group": "Reference",
+      "link_doctype": "Sales Invoice",
+      "link_fieldname": "vcl_cn_request"
+    }
+  ],
+  "modified": "2026-05-15 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "VCL Sales Dashboard",
+  "name": "VCL Credit Note Request",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "amend": 1,
+      "cancel": 1,
+      "submit": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "submit": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales User",
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales Manager",
+      "write": 1
+    },
+    {
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Accounts Manager",
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "title_field": "customer"
+}

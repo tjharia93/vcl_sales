@@ -1,0 +1,7 @@
+[
+  {"doctype": "Workflow State", "name": "Draft", "workflow_state_name": "Draft", "style": "Primary"},
+  {"doctype": "Workflow State", "name": "Pending Sales Manager", "workflow_state_name": "Pending Sales Manager", "style": "Warning"},
+  {"doctype": "Workflow State", "name": "Pending Finance", "workflow_state_name": "Pending Finance", "style": "Warning"},
+  {"doctype": "Workflow State", "name": "Approved", "workflow_state_name": "Approved", "style": "Success"},
+  {"doctype": "Workflow State", "name": "Rejected", "workflow_state_name": "Rejected", "style": "Danger"}
+]

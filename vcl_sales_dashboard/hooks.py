@@ -34,4 +34,37 @@ fixtures = [
             "VCL Quote Cost Row",
         ]]],
     },
+    # VCL Credit Note Request — Phase 1 backend
+    {
+        "dt": "Custom Field",
+        "filters": [["name", "in", ["Sales Invoice-vcl_cn_request"]]],
+    },
+    {
+        "dt": "Workflow Action Master",
+        "filters": [["name", "in", ["Submit for Approval", "Approve", "Reject"]]],
+    },
+    {
+        "dt": "Workflow State",
+        "filters": [["name", "in", [
+            "Draft", "Pending Sales Manager", "Pending Finance",
+            "Approved", "Rejected",
+        ]]],
+    },
+    {
+        "dt": "Workflow",
+        "filters": [["name", "=", "VCL Credit Note Request Workflow"]],
+    },
+    {
+        "dt": "Notification",
+        "filters": [["name", "in", [
+            "VCL CN Request - Pending Sales Manager",
+            "VCL CN Request - Pending Finance",
+            "VCL CN Request - Approved",
+            "VCL CN Request - Rejected",
+        ]]],
+    },
+    {
+        "dt": "Print Format",
+        "filters": [["name", "=", "VCL Credit Note Request"]],
+    },
 ]
